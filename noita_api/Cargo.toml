@@ -7,5 +7,5 @@ repository.workspace = true
 
 [dependencies]
 noita_api_macros = {workspace = true}
-noita_api = {git = "https://github.com/IntQuant/noita_entangled_worlds"}
 libloading = "0.9.0"
+eyre = "0.6.12"
