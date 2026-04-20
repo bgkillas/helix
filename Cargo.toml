@@ -1,0 +1,22 @@
+cargo-features = ["panic-immediate-abort"]
+[workspace.package]
+edition = "2024"
+license = "GPL-3.0-only"
+repository = "https://github.com/bgkillas/helix"
+
+[profile.release]
+lto = true
+strip = true
+panic = "immediate-abort"
+split-debuginfo = "packed"
+incremental=true
+codegen-units=1
+opt-level = 3
+
+[workspace]
+resolver = "3"
+members = ["helix", "noita_api", "noita_api_macros"]
+
+[workspace.dependencies]
+noita_api = {path = "noita_api"}
+noita_api_macros = {path = "noita_api_macros"}
