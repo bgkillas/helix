@@ -10,4 +10,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 noita_api = {workspace = true}
-eyre = "0.6.12"
+eyre = {workspace = true}

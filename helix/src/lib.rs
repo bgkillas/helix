@@ -1,15 +1,13 @@
-use std::sync::LazyLock;
-use std::sync::atomic::{AtomicUsize, Ordering};
-static COUNTER: LazyLock<AtomicUsize> = LazyLock::new(AtomicUsize::default);
-//noita_api::register_lua_functions!(init, update);
-noita_api::register_lua_functions_dont_unload!(helix, init, update);
-fn update() -> eyre::Result<()> {
-    let val = COUNTER.load(Ordering::Relaxed);
-    noita_api::game_print!("hi {val}");
-    Ok(())
+use noita_api::register_function;
+#[register_function]
+fn update(a: Option<usize>, b: Option<usize>) -> Option<usize> {
+    noita_api::game_print!("update");
 }
-fn init() -> eyre::Result<()> {
-    let val = COUNTER.load(Ordering::Relaxed);
-    COUNTER.store(val + 1, Ordering::Relaxed);
-    Ok(())
+#[register_function]
+fn init() {
+    noita_api::game_print!("init");
 }
+#[register_function]
+fn test() {}
+//noita_api::register_lua_functions!(helix, init, update, test);
+noita_api::register_lua_functions_dont_unload!(helix, init, update, test);
