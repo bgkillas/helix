@@ -22,7 +22,6 @@ fn parse_attribute(mut tokens: TokenStream, dont_unload: bool) -> TokenStream {
     let mut function = Function::default();
     let mut ret: Vec<TokenTree> = Vec::new();
     let mut inner_tokens = Vec::new();
-    inner_tokens.extend(quote! {use noita_api::lua_function;});
     let mut funs: Vec<Function> = Vec::new();
     let mut punct = false;
     let mut is_fun = false;
@@ -52,13 +51,13 @@ fn parse_attribute(mut tokens: TokenStream, dont_unload: bool) -> TokenStream {
                             start = false;
                             function
                                 .args
-                                .push(TokenStream::from_iter(mem::take(&mut arg)))
+                                .push(TokenStream::from_iter(mem::take(&mut arg)));
                         }
                         _ => {}
                     }
                 }
                 if !arg.is_empty() {
-                    function.args.push(TokenStream::from_iter(arg))
+                    function.args.push(TokenStream::from_iter(arg));
                 }
                 is_fun = false;
                 is_ret = 1;
@@ -99,6 +98,7 @@ fn parse_attribute(mut tokens: TokenStream, dont_unload: bool) -> TokenStream {
         inner_tokens.push(token);
     }
     let luaopen = luaopen(funs, dont_unload);
+    inner_tokens.extend(quote! {use noita_api::lua_function;});
     inner_tokens.extend(luaopen);
     let mut group = Group::new(Delimiter::Brace, TokenStream::from_iter(inner_tokens));
     group.set_span(span.unwrap());
@@ -160,10 +160,10 @@ fn add_lua_fn(fun: Function) -> TokenStream {
         .enumerate()
         .map(|(i, ts)| {
             let ident = format_ident!("a{}", i);
-            let index = if i != fun.args.len() - 1 {
-                quote! {index += <#ts as noita_api::lua::LuaGetValue>::size_on_stack();}
-            } else {
+            let index = if i == fun.args.len() - 1 {
                 quote! {}
+            } else {
+                quote! {index += <#ts as noita_api::lua::LuaGetValue>::size_on_stack();}
             };
             quote! {
                 let val: eyre::Result<#ts> = noita_api::lua::LuaGetValue::get(lua_state, index);
