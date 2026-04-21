@@ -163,7 +163,8 @@ impl LuaState {
     /// Raise an error with message `s`
     ///
     /// This takes String so that it gets deallocated properly, as this functions doesn't return.
-    unsafe fn raise_error(&self, s: String) -> ! {
+    #[allow(clippy::missing_safety_doc)]
+    pub unsafe fn raise_error(&self, s: String) -> ! {
         self.push_string(&s);
         drop(s);
         unsafe { LUA.lua_error(self.lua) };

@@ -3,9 +3,7 @@ pub mod lua_bindings;
 use crate::lua::LuaState;
 use eyre::Context;
 pub use libloading;
-pub use noita_api_macros::{
-    register_function, register_lua_functions, register_lua_functions_dont_unload,
-};
+pub use noita_api_macros::{lua_function, lua_module};
 pub fn print(value: &str) -> eyre::Result<()> {
     let lua = LuaState::current()?;
     lua.get_global(c"print");
