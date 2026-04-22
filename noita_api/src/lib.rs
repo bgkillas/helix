@@ -1,3 +1,4 @@
+pub mod alloc;
 pub mod lua;
 pub mod lua_bindings;
 use crate::lua::LuaState;
