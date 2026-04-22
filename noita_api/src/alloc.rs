@@ -17,19 +17,19 @@ static MSVCR: LazyLock<Msvcr> = LazyLock::new(|| unsafe {
     }
 });
 #[repr(transparent)]
-pub struct Ptr<T: Sized> {
+pub struct StdPtr<T: Sized> {
     ptr: NonNull<T>,
 }
 #[repr(transparent)]
-pub struct NoitaBoxOwned<T: Sized> {
-    ptr: Ptr<T>,
+pub struct StdBoxOwned<T: Sized> {
+    ptr: StdPtr<T>,
     phantom_data: PhantomData<T>,
 }
 #[repr(transparent)]
-pub struct NoitaBox<T: Sized> {
-    ptr: Ptr<T>,
+pub struct StdBox<T: Sized> {
+    ptr: StdPtr<T>,
 }
-impl<T: Sized> Ptr<T> {
+impl<T: Sized> StdPtr<T> {
     pub fn malloc() -> Self {
         let ptr = unsafe {
             NonNull::new_unchecked((MSVCR.operator_new)(size_of::<T>() as c_uint).cast())
@@ -40,17 +40,17 @@ impl<T: Sized> Ptr<T> {
         unsafe { (MSVCR.operator_delete)(self.ptr.as_ptr().cast()) }
     }
 }
-impl<T: Sized> NoitaBox<T> {
+impl<T: Sized> StdBox<T> {
     pub fn free(&mut self) {
         self.ptr.free()
     }
 }
-impl<T: Sized> NoitaBoxOwned<T> {
+impl<T: Sized> StdBoxOwned<T> {
     pub fn free(&mut self) {
         self.ptr.free()
     }
     pub fn new(value: T) -> Self {
-        let ptr = Ptr::malloc();
+        let ptr = StdPtr::malloc();
         unsafe {
             ptr.write(value);
         }
@@ -60,41 +60,41 @@ impl<T: Sized> NoitaBoxOwned<T> {
         }
     }
 }
-impl<T: Sized> Deref for NoitaBox<T> {
+impl<T: Sized> Deref for StdBox<T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         unsafe { self.ptr.as_ref() }
     }
 }
-impl<T: Sized> DerefMut for NoitaBox<T> {
+impl<T: Sized> DerefMut for StdBox<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { self.ptr.as_mut() }
     }
 }
-impl<T: Sized> Deref for NoitaBoxOwned<T> {
+impl<T: Sized> Deref for StdBoxOwned<T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         unsafe { self.ptr.as_ref() }
     }
 }
-impl<T: Sized> DerefMut for NoitaBoxOwned<T> {
+impl<T: Sized> DerefMut for StdBoxOwned<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { self.ptr.as_mut() }
     }
 }
-impl<T: Sized> Deref for Ptr<T> {
+impl<T: Sized> Deref for StdPtr<T> {
     type Target = NonNull<T>;
     fn deref(&self) -> &Self::Target {
         &self.ptr
     }
 }
-impl<T: Sized> DerefMut for Ptr<T> {
+impl<T: Sized> DerefMut for StdPtr<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.ptr
     }
 }
-impl<T: Sized> From<NoitaBoxOwned<T>> for NoitaBox<T> {
-    fn from(value: NoitaBoxOwned<T>) -> Self {
+impl<T: Sized> From<StdBoxOwned<T>> for StdBox<T> {
+    fn from(value: StdBoxOwned<T>) -> Self {
         Self { ptr: value.ptr }
     }
 }
