@@ -1,4 +1,5 @@
 use std::ffi::{c_uint, c_void};
+use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 use std::ptr::NonNull;
@@ -17,6 +18,7 @@ static MSVCR: LazyLock<Msvcr> = LazyLock::new(|| unsafe {
     }
 });
 #[repr(transparent)]
+#[derive(Debug, Clone, Copy)]
 pub struct StdPtr<T: Sized> {
     ptr: NonNull<T>,
 }
@@ -26,8 +28,20 @@ pub struct StdBoxOwned<T: Sized> {
     phantom_data: PhantomData<T>,
 }
 #[repr(transparent)]
+#[derive(Clone, Copy)]
 pub struct StdBox<T: Sized> {
     ptr: StdPtr<T>,
+}
+#[repr(transparent)]
+pub struct StdBoxConst<T: Sized> {
+    ptr: StdPtr<T>,
+}
+impl<T: Sized> StdBoxConst<T> {
+    pub const fn new(ptr: usize) -> Self {
+        let ptr = unsafe { NonNull::new_unchecked(ptr as *mut c_uint).cast() };
+        let ptr = StdPtr { ptr };
+        Self { ptr }
+    }
 }
 impl<T: Sized> StdPtr<T> {
     pub fn malloc() -> Self {
@@ -41,12 +55,12 @@ impl<T: Sized> StdPtr<T> {
     }
 }
 impl<T: Sized> StdBox<T> {
-    pub fn free(&mut self) {
+    pub fn free(mut self) {
         self.ptr.free()
     }
 }
 impl<T: Sized> StdBoxOwned<T> {
-    pub fn free(&mut self) {
+    pub fn free(mut self) {
         self.ptr.free()
     }
     pub fn new(value: T) -> Self {
@@ -82,6 +96,17 @@ impl<T: Sized> DerefMut for StdBoxOwned<T> {
         unsafe { self.ptr.as_mut() }
     }
 }
+impl<T: Sized> Deref for StdBoxConst<T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        unsafe { self.ptr.as_ref() }
+    }
+}
+impl<T: Sized> DerefMut for StdBoxConst<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { self.ptr.as_mut() }
+    }
+}
 impl<T: Sized> Deref for StdPtr<T> {
     type Target = NonNull<T>;
     fn deref(&self) -> &Self::Target {
@@ -96,5 +121,20 @@ impl<T: Sized> DerefMut for StdPtr<T> {
 impl<T: Sized> From<StdBoxOwned<T>> for StdBox<T> {
     fn from(value: StdBoxOwned<T>) -> Self {
         Self { ptr: value.ptr }
+    }
+}
+impl<T: Sized + Debug> Debug for StdBox<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.deref())
+    }
+}
+impl<T: Sized + Debug> Debug for StdBoxConst<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.deref())
+    }
+}
+impl<T: Sized + Debug> Debug for StdBoxOwned<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.deref())
     }
 }

@@ -1,0 +1,151 @@
+use crate::alloc::StdBox;
+use crate::types::aabb::AABB;
+use crate::types::chunk_map::Color;
+use crate::types::string::StdString;
+use crate::types::vec::{ValueRange, ValueRangeInt, Vec2};
+#[repr(C)]
+#[derive(Debug, Default)]
+pub struct ConfigExplosionVTable {}
+#[repr(C)]
+#[derive(Debug)]
+pub struct ConfigExplosion {
+    pub vftable: StdBox<ConfigExplosionVTable>,
+    pub never_cache: bool,
+    padding1: [u8; 3],
+    pub explosion_radius: f32,
+    pub explosion_sprite: StdString,
+    pub explosion_sprite_emissive: bool,
+    pub explosion_sprite_additive: bool,
+    pub explosion_sprite_random_rotation: bool,
+    padding2: u8,
+    pub explosion_sprite_lifetime: f32,
+    pub damage: f32,
+    pub damage_critical: ConfigDamageCritical,
+    pub camera_shake: f32,
+    pub particle_effect: bool,
+    padding3: [u8; 3],
+    pub load_this_entity: StdString,
+    pub light_enabled: bool,
+    padding4: [u8; 3],
+    pub light_fade_time: f32,
+    pub light_r: usize,
+    pub light_g: usize,
+    pub light_b: usize,
+    pub light_radius_coeff: f32,
+    pub hole_enabled: bool,
+    pub destroy_non_platform_solid_enabled: bool,
+    padding5: [u8; 2],
+    pub electricity_count: isize,
+    pub min_radius_for_cracks: isize,
+    pub crack_count: isize,
+    pub knockback_force: f32,
+    pub hole_destroy_liquid: bool,
+    pub hole_destroy_physics_dynamic: bool,
+    padding6: [u8; 2],
+    pub create_cell_material: StdString,
+    pub create_cell_probability: isize,
+    pub background_lightning_count: isize,
+    pub spark_material: StdString,
+    pub material_sparks_min_hp: isize,
+    pub material_sparks_probability: isize,
+    pub material_sparks_count: ValueRangeInt,
+    pub material_sparks_enabled: bool,
+    pub material_sparks_real: bool,
+    pub material_sparks_scale_with_hp: bool,
+    pub sparks_enabled: bool,
+    pub sparks_count: ValueRangeInt,
+    pub sparks_inner_radius_coeff: f32,
+    pub stains_enabled: bool,
+    padding7: [u8; 3],
+    pub stains_radius: f32,
+    pub ray_energy: isize,
+    pub max_durability_to_destroy: isize,
+    pub gore_particle_count: isize,
+    pub shake_vegetation: bool,
+    pub damage_mortals: bool,
+    pub physics_throw_enabled: bool,
+    padding8: u8,
+    pub physics_explosion_power: ValueRange,
+    pub physics_multiplier_ragdoll_force: f32,
+    pub cell_explosion_power: f32,
+    pub cell_explosion_radius_min: f32,
+    pub cell_explosion_radius_max: f32,
+    pub cell_explosion_velocity_min: f32,
+    pub cell_explosion_damage_required: f32,
+    pub cell_explosion_probability: f32,
+    pub cell_power_ragdoll_coeff: f32,
+    pub pixel_sprites_enabled: bool,
+    pub is_digger: bool,
+    pub audio_enabled: bool,
+    padding9: [u8; 1],
+    pub audio_event_name: StdString,
+    pub audio_liquid_amount_normalized: f32,
+    pub delay: ValueRangeInt,
+    pub explosion_delay_id: isize,
+    pub not_scaled_by_gamefx: bool,
+    padding10: [u8; 3],
+    pub who_is_responsible: usize,
+    pub null_damage: bool,
+    padding11: [u8; 3],
+    pub dont_damage_this: usize,
+    pub impl_send_message_to_this: usize,
+    pub impl_position: Vec2,
+    pub impl_delay_frame: isize,
+}
+#[repr(C)]
+#[derive(Debug, Default)]
+pub struct ConfigDamageCriticalVTable {
+    unk0: *const usize,
+    unk1: *const usize,
+    unk2: *const usize,
+    unk3: *const usize,
+    unk4: *const usize,
+    unk5: *const usize,
+    unk6: *const usize,
+    unk7: *const usize,
+}
+#[repr(C)]
+#[derive(Debug)]
+pub struct ConfigDamageCritical {
+    pub vftable: StdBox<ConfigDamageCriticalVTable>,
+    pub chance: isize,
+    pub damage_multiplier: f32,
+    pub m_succeeded: bool,
+    padding1: [u8; 3],
+}
+#[repr(C)]
+#[derive(Debug)]
+pub struct ConfigGridCosmeticParticle {
+    pub vftable: StdBox<ConfigGridCosmeticParticleVTable>,
+    pub m_material_id: isize,
+    pub vel: Vec2,
+    pub vel_random: AABB,
+    pub color: Color,
+    pub lifetime: ValueRange,
+    pub gravity: Vec2,
+    pub cosmetic_force_create: bool,
+    pub render_back: bool,
+    pub render_on_grid: bool,
+    pub draw_as_long: bool,
+    pub airflow_force: f32,
+    pub airflow_scale: f32,
+    pub friction: f32,
+    pub probability: f32,
+    pub count: ValueRangeInt,
+    pub particle_single_width: bool,
+    pub fade_based_on_lifetime: bool,
+    padding1: [u8; 2],
+}
+#[allow(dead_code)]
+#[repr(C)]
+#[derive(Debug, Default)]
+pub struct ConfigGridCosmeticParticleVTable {
+    unk0: *const usize,
+    unk1: *const usize,
+    unk2: *const usize,
+    unk3: *const usize,
+    unk4: *const usize,
+    unk5: *const usize,
+    unk6: *const usize,
+    unk7: *const usize,
+}

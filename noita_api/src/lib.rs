@@ -1,6 +1,8 @@
 pub mod alloc;
+pub mod constants;
 pub mod lua;
 pub mod lua_bindings;
+pub mod types;
 use crate::lua::LuaState;
 use eyre::Context;
 pub use libloading;
