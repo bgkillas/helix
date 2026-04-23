@@ -151,10 +151,39 @@ pub fn lua_module(
 }
 #[proc_macro_attribute]
 pub fn assert_size(
-    _: proc_macro::TokenStream,
+    arg: proc_macro::TokenStream,
     tokens: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    tokens
+    let arg: TokenStream = arg.into();
+    let tokens: TokenStream = tokens.into();
+    let mut struct_name = None;
+    let mut expect_name = false;
+    for token in tokens.clone().into_iter() {
+        match token {
+            TokenTree::Ident(ident)
+                if matches!(ident.to_string().as_str(), "struct" | "enum" | "union") =>
+            {
+                expect_name = true
+            }
+            TokenTree::Ident(ident) if expect_name => {
+                struct_name = Some(ident);
+                break;
+            }
+            _ => {}
+        }
+    }
+    let struct_name = struct_name.unwrap();
+    let assert = quote! {
+        #[cfg(target_arch = "x86")]
+        const _: () = assert!(size_of::<#struct_name>() == #arg);
+        #[cfg(target_arch = "x86_64")]
+        const _: () = assert!(size_of::<#struct_name>() >= #arg);
+    };
+    quote! {
+        #tokens
+        #assert
+    }
+    .into()
 }
 #[proc_macro_attribute]
 pub fn generate_global(

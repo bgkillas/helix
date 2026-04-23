@@ -3,7 +3,9 @@ use crate::types::cell_factory::CellFactory;
 use crate::types::game_world::GameWorld;
 use crate::types::grid_world::GridWorld;
 use crate::types::textures::Textures;
+use noita_api_macros::assert_size;
 #[repr(C)]
+#[assert_size(0x1a0)]
 #[derive(Debug)]
 pub struct GameGlobal {
     pub frame_num: usize,
