@@ -31,22 +31,6 @@ pub struct StdBoxOwned<T: Sized> {
 pub struct StdBox<T: Sized> {
     ptr: StdPtr<T>,
 }
-#[repr(transparent)]
-pub struct StdBoxConst<T: Sized> {
-    ptr: StdPtr<T>,
-}
-unsafe impl<T: Sized> Sync for StdBoxConst<T> {}
-unsafe impl<T: Sized> Send for StdBoxConst<T> {}
-impl<T: Sized> StdBoxConst<T> {
-    pub const fn new(ptr: usize) -> Self {
-        let ptr = unsafe { NonNull::new_unchecked(ptr as *mut c_uint).cast() };
-        let ptr = StdPtr { ptr };
-        Self { ptr }
-    }
-    pub fn read(self) -> T {
-        unsafe { self.ptr.read() }
-    }
-}
 impl<T: Sized> StdPtr<T> {
     pub fn malloc() -> Self {
         let ptr = unsafe {
@@ -57,6 +41,10 @@ impl<T: Sized> StdPtr<T> {
     pub fn free(&mut self) {
         unsafe { (MSVCR.operator_delete)(self.ptr.as_ptr().cast()) }
     }
+    pub const fn new(ptr: usize) -> Self {
+        let ptr = unsafe { NonNull::new_unchecked(ptr as *mut _) };
+        Self { ptr }
+    }
 }
 impl<T: Sized> StdBox<T> {
     pub fn free(mut self) {
@@ -64,6 +52,16 @@ impl<T: Sized> StdBox<T> {
     }
     pub fn read(self) -> T {
         unsafe { self.ptr.read() }
+    }
+}
+impl<T: Sized> From<StdPtr<T>> for StdBox<T> {
+    fn from(ptr: StdPtr<T>) -> Self {
+        Self { ptr }
+    }
+}
+impl<T: Sized> From<NonNull<T>> for StdPtr<T> {
+    fn from(ptr: NonNull<T>) -> Self {
+        Self { ptr }
     }
 }
 impl<T: Sized> StdBoxOwned<T> {
@@ -86,18 +84,12 @@ impl<T: Sized> StdBoxOwned<T> {
 }
 impl<T: Sized> Copy for StdPtr<T> {}
 impl<T: Sized> Copy for StdBox<T> {}
-impl<T: Sized> Copy for StdBoxConst<T> {}
 impl<T: Sized> Clone for StdPtr<T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 impl<T: Sized> Clone for StdBox<T> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-impl<T: Sized> Clone for StdBoxConst<T> {
     fn clone(&self) -> Self {
         *self
     }
@@ -124,17 +116,6 @@ impl<T: Sized> DerefMut for StdBoxOwned<T> {
         unsafe { self.ptr.as_mut() }
     }
 }
-impl<T: Sized> Deref for StdBoxConst<T> {
-    type Target = T;
-    fn deref(&self) -> &Self::Target {
-        unsafe { self.ptr.as_ref() }
-    }
-}
-impl<T: Sized> DerefMut for StdBoxConst<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { self.ptr.as_mut() }
-    }
-}
 impl<T: Sized> Deref for StdPtr<T> {
     type Target = NonNull<T>;
     fn deref(&self) -> &Self::Target {
@@ -152,11 +133,6 @@ impl<T: Sized> From<StdBoxOwned<T>> for StdBox<T> {
     }
 }
 impl<T: Sized + Debug> Debug for StdBox<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.deref())
-    }
-}
-impl<T: Sized + Debug> Debug for StdBoxConst<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.deref())
     }
