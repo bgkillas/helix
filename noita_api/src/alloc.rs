@@ -18,7 +18,7 @@ static MSVCR: LazyLock<Msvcr> = LazyLock::new(|| unsafe {
     }
 });
 #[repr(transparent)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct StdPtr<T: Sized> {
     ptr: NonNull<T>,
 }
@@ -28,7 +28,6 @@ pub struct StdBoxOwned<T: Sized> {
     phantom_data: PhantomData<T>,
 }
 #[repr(transparent)]
-#[derive(Clone, Copy)]
 pub struct StdBox<T: Sized> {
     ptr: StdPtr<T>,
 }
@@ -36,11 +35,16 @@ pub struct StdBox<T: Sized> {
 pub struct StdBoxConst<T: Sized> {
     ptr: StdPtr<T>,
 }
+unsafe impl<T: Sized> Sync for StdBoxConst<T> {}
+unsafe impl<T: Sized> Send for StdBoxConst<T> {}
 impl<T: Sized> StdBoxConst<T> {
     pub const fn new(ptr: usize) -> Self {
         let ptr = unsafe { NonNull::new_unchecked(ptr as *mut c_uint).cast() };
         let ptr = StdPtr { ptr };
         Self { ptr }
+    }
+    pub fn read(self) -> T {
+        unsafe { self.ptr.read() }
     }
 }
 impl<T: Sized> StdPtr<T> {
@@ -58,6 +62,9 @@ impl<T: Sized> StdBox<T> {
     pub fn free(mut self) {
         self.ptr.free()
     }
+    pub fn read(self) -> T {
+        unsafe { self.ptr.read() }
+    }
 }
 impl<T: Sized> StdBoxOwned<T> {
     pub fn free(mut self) {
@@ -72,6 +79,27 @@ impl<T: Sized> StdBoxOwned<T> {
             ptr,
             phantom_data: PhantomData,
         }
+    }
+    pub fn read(self) -> T {
+        unsafe { self.ptr.read() }
+    }
+}
+impl<T: Sized> Copy for StdPtr<T> {}
+impl<T: Sized> Copy for StdBox<T> {}
+impl<T: Sized> Copy for StdBoxConst<T> {}
+impl<T: Sized> Clone for StdPtr<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+impl<T: Sized> Clone for StdBox<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+impl<T: Sized> Clone for StdBoxConst<T> {
+    fn clone(&self) -> Self {
+        *self
     }
 }
 impl<T: Sized> Deref for StdBox<T> {
