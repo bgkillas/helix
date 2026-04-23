@@ -149,6 +149,109 @@ pub fn lua_module(
     };
     parse_attribute(tokens.into(), dont_unload).into()
 }
+#[proc_macro_attribute]
+pub fn assert_size(
+    _: proc_macro::TokenStream,
+    tokens: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    tokens
+}
+#[proc_macro_attribute]
+pub fn generate_global(
+    _: proc_macro::TokenStream,
+    tokens: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let tokens: TokenStream = tokens.into();
+    let mut is_ptr = false;
+    let mut is_ptr_ptr = false;
+    let mut type_name = Vec::new();
+    let mut global_name = None;
+    let mut global_const = None;
+    for token in tokens.clone().into_iter() {
+        match token {
+            TokenTree::Ident(ident) if global_name.is_none() && ident != "const" => {
+                global_const = Some(ident.clone());
+                global_name = Some(Ident::new(
+                    &ident
+                        .to_string()
+                        .split("_")
+                        .map(|s| {
+                            s.chars()
+                                .enumerate()
+                                .map(|(i, c)| if i == 0 { c } else { c.to_ascii_lowercase() })
+                                .collect::<String>()
+                        })
+                        .collect::<Vec<String>>()
+                        .join(""),
+                    ident.span(),
+                ));
+            }
+            TokenTree::Ident(ident) if ident == "StdPtr" => {
+                if !is_ptr {
+                    is_ptr = true;
+                } else if !is_ptr_ptr {
+                    is_ptr_ptr = true;
+                }
+            }
+            TokenTree::Ident(ident) if is_ptr || is_ptr_ptr => {
+                type_name.push(TokenTree::Ident(ident));
+            }
+            TokenTree::Punct(p) if (is_ptr || is_ptr_ptr) && p.as_char() == ':' => {
+                type_name.push(TokenTree::Punct(p));
+            }
+            TokenTree::Punct(p) if (is_ptr || is_ptr_ptr) && p.as_char() == '>' => break,
+            _ => {}
+        }
+    }
+    let type_name = TokenStream::from_iter(type_name);
+    let global_type = get_global_type(
+        global_name.unwrap(),
+        global_const.unwrap(),
+        type_name,
+        is_ptr_ptr,
+    );
+    quote! {
+        #tokens
+        #global_type
+    }
+    .into()
+}
+fn get_global_type(
+    global_name: Ident,
+    global_const: Ident,
+    type_name: TokenStream,
+    is_ptr_ptr: bool,
+) -> TokenStream {
+    let ptr_read = if is_ptr_ptr {
+        quote! {let ptr = unsafe { #global_const.read() };}
+    } else {
+        quote! {let ptr = #global_const;}
+    };
+    quote! {
+        #[repr(transparent)]
+        pub struct #global_name {
+            ptr: StdBox<#type_name>,
+        }
+        impl Default for #global_name {
+            fn default() -> Self {
+                #ptr_read
+                let ptr = StdBox::from(ptr);
+                Self { ptr }
+            }
+        }
+        impl Deref for #global_name {
+            type Target = #type_name;
+            fn deref(&self) -> &Self::Target {
+                self.ptr.deref()
+            }
+        }
+        impl DerefMut for #global_name {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                self.ptr.deref_mut()
+            }
+        }
+    }
+}
 fn add_lua_fn(fun: Function) -> TokenStream {
     let ident = fun.name.unwrap();
     let bridge_fn_name = format_ident!("{ident}_lua_bridge");
