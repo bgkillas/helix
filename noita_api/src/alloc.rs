@@ -19,11 +19,11 @@ static MSVCR: LazyLock<Msvcr> = LazyLock::new(|| unsafe {
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct StdPtr<T: Sized> {
-    ptr: NonNull<T>,
+    pub ptr: NonNull<T>,
 }
 #[repr(transparent)]
 pub struct StdBox<T: Sized> {
-    ptr: StdPtr<T>,
+    pub ptr: StdPtr<T>,
 }
 impl<T: Sized> StdPtr<T> {
     pub fn malloc() -> Self {

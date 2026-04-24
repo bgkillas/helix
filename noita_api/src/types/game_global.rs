@@ -19,7 +19,7 @@ pub struct GameGlobal {
     unknown3: [isize; 4],
     game_print: isize,
     unknown5: [isize; 5],
-    pub pause_state: isize,
+    pub pause_state: StdBox<isize>,
     unk: [isize; 5],
     pub inventory_open: usize,
     unk4: [isize; 79],
