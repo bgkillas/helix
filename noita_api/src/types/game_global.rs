@@ -24,3 +24,8 @@ pub struct GameGlobal {
     pub inventory_open: usize,
     unk4: [isize; 79],
 }
+impl GameGlobal {
+    pub fn pause(&mut self) {
+        *self.pause_state = 4;
+    }
+}

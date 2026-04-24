@@ -9,7 +9,9 @@ pub static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap()
 mod lua {
     use crate::{Message, NET, RUNTIME};
     use bevy_tangled::{ClientTrait, Compression, Reliability};
+    use noita_api::types::game_global::GameGlobal;
     use std::net::{IpAddr, Ipv4Addr};
+    static mut DO_RESTART: usize = 0;
     #[lua_function]
     fn update() {
         let mut net = NET.lock().unwrap();
@@ -29,6 +31,17 @@ mod lua {
     #[lua_function]
     fn world_seed_init() {}
     #[lua_function]
+    fn on_pause() {
+        if unsafe { DO_RESTART == 1 } {
+            unsafe {
+                DO_RESTART = 0;
+            }
+            noita_api::new_game();
+        } else if unsafe { DO_RESTART > 1 } {
+            unsafe { DO_RESTART -= 1 }
+        }
+    }
+    #[lua_function]
     fn text_msg(msg: &str) {
         if let Some(host) = msg.strip_prefix("/join ") {
             if host == "localhost" {
@@ -44,7 +57,10 @@ mod lua {
                 );
             }
         } else if msg == "/new" {
-            noita_api::new_game();
+            unsafe {
+                DO_RESTART = 8;
+            }
+            GameGlobal::global().pause();
         } else if msg == "/host" {
             let mut net = NET.lock().unwrap();
             noita_api::print!("{:?}", net.host_ip_runtime(None, None, &RUNTIME));

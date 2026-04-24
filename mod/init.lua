@@ -17,6 +17,9 @@ end
 function OnMagicNumbersAndWorldSeedInitialized()
     helix.world_seed_init()
 end
+function OnPausePreUpdate()
+    helix.on_pause()
+end
 function OnPlayerSpawned(entity)
     player = entity
 end
