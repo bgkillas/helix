@@ -28,4 +28,7 @@ impl GameGlobal {
     pub fn pause(&mut self) {
         *self.pause_state = 4;
     }
+    pub fn is_paused(&self) -> bool {
+        *self.pause_state != 0
+    }
 }

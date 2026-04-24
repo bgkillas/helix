@@ -9,3 +9,4 @@ repository.workspace = true
 noita_api_macros = {workspace = true}
 libloading = "0.9.0"
 eyre = {workspace = true}
+retour = {version = "0.4.0-alpha.4", features = ["static-detour", "thiscall-abi"]}

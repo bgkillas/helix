@@ -1,17 +1,20 @@
 use bevy_tangled::Client;
 use bevy_tangled::bitcode::{Decode, Encode};
 use std::sync::{LazyLock, Mutex};
-use tokio::runtime::Runtime;
 //const APPID: u32 = 881100;
 pub static NET: LazyLock<Mutex<Client>> = LazyLock::new(|| Mutex::new(Client::new().unwrap()));
-pub static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
 #[noita_api::lua_module(true)]
 mod lua {
-    use crate::{Message, NET, RUNTIME};
+    use crate::{Message, NET};
     use bevy_tangled::{ClientTrait, Compression, Reliability};
     use noita_api::types::game_global::GameGlobal;
+    use noita_api::{PAUSE_SIMULATE, disable_pause};
     use std::net::{IpAddr, Ipv4Addr};
-    static mut DO_RESTART: usize = 0;
+    use std::sync::LazyLock;
+    use tokio::runtime::Runtime;
+    static mut DO_RESTART: u8 = 0;
+    static mut HAS_INIT: bool = false;
+    static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
     #[lua_function]
     fn update() {
         let mut net = NET.lock().unwrap();
@@ -20,31 +23,53 @@ mod lua {
             Message::Text(s) => {
                 noita_api::game_print!("{s}");
             }
-        })
+        });
     }
     #[lua_function]
     fn post_update() {}
     #[lua_function]
     fn world_init() {}
     #[lua_function]
-    fn init() {}
+    fn init() {
+        unsafe {
+            PAUSE_SIMULATE = true;
+        }
+        if unsafe { !HAS_INIT } {
+            unsafe {
+                HAS_INIT = true;
+            }
+            disable_pause()
+        }
+    }
     #[lua_function]
     fn world_seed_init() {}
     #[lua_function]
     fn on_pause() {
         if unsafe { DO_RESTART == 1 } {
-            unsafe {
-                DO_RESTART = 0;
+            if GameGlobal::global().is_paused() {
+                unsafe {
+                    DO_RESTART = 0;
+                }
+                noita_api::new_game();
+            } else {
+                unsafe {
+                    DO_RESTART = 8;
+                }
+                GameGlobal::global().pause();
             }
-            noita_api::new_game();
         } else if unsafe { DO_RESTART > 1 } {
             unsafe { DO_RESTART -= 1 }
         }
     }
     #[lua_function]
     fn text_msg(msg: &str) {
-        if let Some(host) = msg.strip_prefix("/join ") {
+        if let Some(host) = msg.strip_prefix("/connect ") {
             if host == "localhost" {
+                unsafe {
+                    DO_RESTART = 8;
+                    PAUSE_SIMULATE = false;
+                }
+                GameGlobal::global().pause();
                 let mut net = NET.lock().unwrap();
                 noita_api::print!(
                     "{:?}",
@@ -56,11 +81,6 @@ mod lua {
                     )
                 );
             }
-        } else if msg == "/new" {
-            unsafe {
-                DO_RESTART = 8;
-            }
-            GameGlobal::global().pause();
         } else if msg == "/host" {
             let mut net = NET.lock().unwrap();
             noita_api::print!("{:?}", net.host_ip_runtime(None, None, &RUNTIME));
