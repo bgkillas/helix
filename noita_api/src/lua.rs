@@ -81,6 +81,17 @@ impl LuaState {
             .wrap_err("Attempting to get lua string, expecting it to be utf-8")
     }
 
+    pub fn to_str(&self, index: i32) -> eyre::Result<&'static str> {
+        let mut size = 0;
+        let buf = unsafe { LUA.lua_tolstring(self.lua, index, &mut size) };
+        if buf.is_null() {
+            bail!("Expected a string, but got a null pointer");
+        }
+        let slice = unsafe { slice::from_raw_parts(buf as *const u8, size) };
+
+        str::from_utf8(slice).wrap_err("Attempting to get lua string, expecting it to be utf-8")
+    }
+
     pub fn to_raw_string(&self, index: i32) -> eyre::Result<Vec<u8>> {
         let mut size = 0;
         let buf = unsafe { LUA.lua_tolstring(self.lua, index, &mut size) };
@@ -477,7 +488,13 @@ impl LuaGetValue for Option<ComponentID> {
 
 impl LuaGetValue for Cow<'static, str> {
     fn get(lua: LuaState, index: i32) -> eyre::Result<Self> {
-        Ok(lua.to_string(index)?.into())
+        Ok(lua.to_str(index)?.into())
+    }
+}
+
+impl LuaGetValue for &'static str {
+    fn get(lua: LuaState, index: i32) -> eyre::Result<Self> {
+        lua.to_str(index)
     }
 }
 

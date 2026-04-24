@@ -2,6 +2,8 @@ pub mod aabb;
 pub mod cell_factory;
 pub mod chunk_map;
 pub mod config;
+pub mod death_match;
+pub mod funs;
 pub mod game_global;
 pub mod game_world;
 pub mod grid_world;

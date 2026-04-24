@@ -1,4 +1,4 @@
-use crate::alloc::{StdBox, StdBoxOwned};
+use crate::alloc::StdBox;
 use crate::types::config::{ConfigExplosion, ConfigGridCosmeticParticle};
 use crate::types::string::StdString;
 use crate::types::textures::TextureInfo;
@@ -9,7 +9,7 @@ use std::ffi::c_void;
 pub struct ChunkMap {
     pub len: usize,
     pub unknown: isize,
-    pub chunk_array: StdBoxOwned<[Option<StdBoxOwned<Chunk>>; 512 * 512]>,
+    pub chunk_array: StdBox<[Option<StdBox<Chunk>>; 512 * 512]>,
     pub chunk_count: usize,
     pub min_chunk: Vec2i,
     pub max_chunk: Vec2i,
@@ -19,7 +19,7 @@ pub struct ChunkMap {
 #[repr(C)]
 #[derive(Debug)]
 pub struct Chunk {
-    pub data: StdBoxOwned<[Option<StdBoxOwned<Cell>>; 512 * 512]>,
+    pub data: StdBox<[Option<StdBox<Cell>>; 512 * 512]>,
 }
 #[repr(C)]
 #[derive(Debug)]
