@@ -1,7 +1,9 @@
 use crate::alloc::StdPtr;
+use noita_api_macros::assert_size;
 use std::fmt::{Debug, Formatter};
 use std::slice;
 #[repr(C)]
+#[assert_size(0x10)]
 union Buffer {
     buffer: StdPtr<u8>,
     sso_buffer: [u8; 16],
@@ -14,6 +16,7 @@ impl Default for Buffer {
     }
 }
 #[repr(C)]
+#[assert_size(0x18)]
 #[derive(Default)]
 pub struct StdString {
     buffer: Buffer,
@@ -23,7 +26,7 @@ pub struct StdString {
 impl Debug for StdString {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("StdString")
-            .field("buffer", &unsafe { self.buffer.sso_buffer })
+            .field("value", &self.as_str())
             .field("size", &self.size)
             .field("capacity", &self.capacity)
             .finish()
@@ -45,13 +48,8 @@ impl From<&str> for StdString {
         };
         if res.capacity > 16 {
             let buffer = StdPtr::malloc_array(value.len());
-            let mut ptr = buffer.ptr;
-            for b in value.as_bytes().iter().copied() {
-                unsafe {
-                    ptr.write(b);
-                    ptr = ptr.offset(1)
-                }
-            }
+            let slice = unsafe { slice::from_raw_parts_mut(buffer.as_ptr(), value.len()) };
+            slice.copy_from_slice(value.as_bytes());
             res.buffer.buffer = buffer;
         } else {
             let mut iter = value.as_bytes().iter().copied();

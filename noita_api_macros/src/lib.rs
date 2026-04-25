@@ -304,39 +304,3 @@ fn make_inner_funs(idents: Vec<Function>) -> Vec<TokenStream> {
     }
     inner_funs
 }
-#[proc_macro]
-pub fn this_call(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let tokens: TokenStream = tokens.into();
-    #[cfg(target_os = "windows")]
-    {
-        quote! {extern "thiscall" #tokens}.into()
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        quote! {extern "C" #tokens}.into()
-    }
-}
-#[proc_macro]
-pub fn std_call(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let tokens: TokenStream = tokens.into();
-    #[cfg(target_os = "windows")]
-    {
-        quote! {extern "stdcall" #tokens}.into()
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        quote! {extern "C" #tokens}.into()
-    }
-}
-#[proc_macro]
-pub fn fast_call(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let tokens: TokenStream = tokens.into();
-    #[cfg(target_os = "windows")]
-    {
-        quote! {extern "fastcall" #tokens}.into()
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        quote! {extern "C" #tokens}.into()
-    }
-}

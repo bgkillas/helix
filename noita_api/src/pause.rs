@@ -1,4 +1,5 @@
 use crate::alloc::StdBox;
+use crate::this_call;
 use crate::types::death_match::DeathMatch;
 use crate::types::game_global::GameGlobal;
 use retour::static_detour;
@@ -10,7 +11,7 @@ static_detour! {
 }
 #[cfg(not(target_os = "windows"))]
 static_detour! {
-  static PAUSE: fn(StdBox<DeathMatch>, f32);
+  static PAUSE: extern "C" fn(StdBox<DeathMatch>, f32);
 }
 fn pause(this: StdBox<DeathMatch>, dt: f32) {
     PAUSE.call(this, dt);
@@ -26,8 +27,8 @@ fn pause(this: StdBox<DeathMatch>, dt: f32) {
 }
 pub fn disable_pause() {
     unsafe {
-        #[allow(clippy::missing_transmute_annotations)]
-        let old_pause = mem::transmute::<usize, _>(0x006b26f0);
+        let old_pause =
+            mem::transmute::<usize, this_call!(fn(StdBox<DeathMatch>, f32))>(0x006b26f0);
         PAUSE.initialize(old_pause, pause).unwrap();
         PAUSE.enable().unwrap();
     }

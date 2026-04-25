@@ -1,7 +1,7 @@
 use crate::alloc::StdBox;
+use crate::this_call;
 use crate::types::game_global::GameGlobal;
 use crate::types::string::StdString;
-use noita_api_macros::this_call;
 use std::ffi::c_void;
 use std::mem;
 pub fn print(value: &str) {

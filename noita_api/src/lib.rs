@@ -10,7 +10,7 @@ pub mod pause;
 pub mod print;
 pub mod types;
 pub use libloading;
-pub use noita_api_macros::{fast_call, lua_function, lua_module, std_call, this_call};
+pub use noita_api_macros::{lua_function, lua_module};
 use std::mem;
 pub fn dump_mem(s: &str) {
     unsafe {
@@ -32,4 +32,34 @@ pub fn dump_mem(s: &str) {
 pub fn new_game() {
     let fun = unsafe { mem::transmute::<usize, fast_call!(fn())>(0x009a2d70) };
     fun();
+}
+#[cfg(target_os = "windows")]
+#[macro_export]
+macro_rules! this_call {
+    ($($tt:tt)*) => {extern "thiscall" $($tt)*};
+}
+#[cfg(not(target_os = "windows"))]
+#[macro_export]
+macro_rules! this_call {
+    ($($tt:tt)*) => {extern "C" $($tt)*};
+}
+#[cfg(target_os = "windows")]
+#[macro_export]
+macro_rules! std_call {
+    ($($tt:tt)*) => {extern "stdcall" $($tt)*};
+}
+#[cfg(not(target_os = "windows"))]
+#[macro_export]
+macro_rules! std_call {
+    ($($tt:tt)*) => {extern "C" $($tt)*};
+}
+#[cfg(target_os = "windows")]
+#[macro_export]
+macro_rules! fast_call {
+    ($($tt:tt)*) => {extern "fastcall" $($tt)*};
+}
+#[cfg(not(target_os = "windows"))]
+#[macro_export]
+macro_rules! fast_call {
+    ($($tt:tt)*) => {extern "C" $($tt)*};
 }
