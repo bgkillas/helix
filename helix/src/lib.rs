@@ -32,7 +32,7 @@ mod lua {
     #[lua_function]
     fn init() {
         unsafe {
-            PAUSE_SIMULATE = true;
+            PAUSE_SIMULATE = false;
         }
         if unsafe { !HAS_INIT } {
             unsafe {
@@ -46,7 +46,8 @@ mod lua {
     #[lua_function]
     fn on_pause() {
         if unsafe { DO_RESTART == 1 } {
-            if GameGlobal::global().is_paused() {
+            let mut game_global = GameGlobal::global();
+            if game_global.is_paused() {
                 unsafe {
                     DO_RESTART = 0;
                 }
@@ -55,7 +56,7 @@ mod lua {
                 unsafe {
                     DO_RESTART = 8;
                 }
-                GameGlobal::global().pause();
+                game_global.pause();
             }
         } else if unsafe { DO_RESTART > 1 } {
             unsafe { DO_RESTART -= 1 }
@@ -68,13 +69,14 @@ mod lua {
             let addr = host
                 .parse()
                 .unwrap_or(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
-            unsafe {
-                DO_RESTART = 8;
-                PAUSE_SIMULATE = false;
-            }
-            GameGlobal::global().pause();
             let mut net = NET.lock().unwrap();
             noita_api::print!("{:?}", net.join_ip_runtime(addr, None, None, &RUNTIME));
+        } else if msg == "/new" {
+            unsafe {
+                DO_RESTART = 16;
+                PAUSE_SIMULATE = true;
+            }
+            GameGlobal::global().pause();
         } else if msg == "/host" {
             let mut net = NET.lock().unwrap();
             noita_api::print!("{:?}", net.host_ip_runtime(None, None, &RUNTIME));

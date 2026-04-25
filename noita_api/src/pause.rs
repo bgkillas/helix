@@ -3,7 +3,7 @@ use crate::types::death_match::DeathMatch;
 use crate::types::game_global::GameGlobal;
 use retour::static_detour;
 use std::mem;
-pub static mut PAUSE_SIMULATE: bool = true;
+pub static mut PAUSE_SIMULATE: bool = false;
 #[cfg(target_os = "windows")]
 static_detour! {
   static PAUSE: extern "thiscall" fn(StdBox<DeathMatch>, f32);
@@ -14,7 +14,7 @@ static_detour! {
 }
 fn pause(this: StdBox<DeathMatch>, dt: f32) {
     PAUSE.call(this, dt);
-    if unsafe { PAUSE_SIMULATE } {
+    if unsafe { !PAUSE_SIMULATE } {
         let mut game_global = GameGlobal::global();
         if game_global.is_paused() {
             let state = *game_global.pause_state;
