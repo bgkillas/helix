@@ -10,11 +10,14 @@ mod lua {
     use noita_api::pause::{PAUSE_SIMULATE, disable_pause};
     use noita_api::types::game_global::GameGlobal;
     use std::net::{IpAddr, Ipv4Addr};
-    use std::sync::LazyLock;
+    use std::sync::{LazyLock, Once};
     use tokio::runtime::Runtime;
     static mut DO_RESTART: u8 = 0;
-    static mut HAS_INIT: bool = false;
+    static ON_INIT: Once = Once::new();
     static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
+    fn init_once() {
+        disable_pause()
+    }
     #[lua_function]
     fn update() {
         let mut net = NET.lock().unwrap();
@@ -34,12 +37,7 @@ mod lua {
         unsafe {
             PAUSE_SIMULATE = false;
         }
-        if unsafe { !HAS_INIT } {
-            unsafe {
-                HAS_INIT = true;
-            }
-            disable_pause()
-        }
+        ON_INIT.call_once(init_once);
     }
     #[lua_function]
     fn world_seed_init() {}
@@ -73,7 +71,7 @@ mod lua {
             noita_api::print!("{:?}", net.join_ip_runtime(addr, None, None, &RUNTIME));
         } else if msg == "/new" {
             unsafe {
-                DO_RESTART = 16;
+                DO_RESTART = 8;
                 PAUSE_SIMULATE = true;
             }
             GameGlobal::global().pause();
