@@ -25,6 +25,9 @@ pub struct GameGlobal {
     unk4: [isize; 79],
 }
 impl GameGlobal {
+    pub fn unpause(&mut self) {
+        *self.pause_state = 0;
+    }
     pub fn pause(&mut self) {
         *self.pause_state = 4;
     }

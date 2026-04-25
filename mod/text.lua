@@ -37,7 +37,9 @@ function mod.update(helix, player)
         local x, y = InputGetMousePosOnScreen()
         x, y = x / 2, y / 2
         local new = GuiTextInput(gui, 421, x - 4, y - 6, " ", 8, 16)
-        if new ~= " " then
+        if new == "" then
+            text = string.sub(text, 0, -2)
+        elseif new ~= " " then
             text = text..string.sub(new, 2, -1)
         end
         GuiText(gui, 32, 256, text)
