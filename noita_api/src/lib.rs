@@ -5,9 +5,8 @@ pub mod lua_bindings;
 pub mod pause;
 pub mod print;
 pub mod types;
-use crate::types::funs::FastCall;
 pub use libloading;
-pub use noita_api_macros::{lua_function, lua_module};
+pub use noita_api_macros::{fast_call, lua_function, lua_module, std_call, this_call};
 use std::mem;
 pub fn dump_mem(s: &str) {
     unsafe {
@@ -27,6 +26,6 @@ pub fn dump_mem(s: &str) {
     }
 }
 pub fn new_game() {
-    let fun = unsafe { mem::transmute::<usize, FastCall<(), ()>>(0x009a2d70) };
-    fun.call(());
+    let fun = unsafe { mem::transmute::<usize, fast_call!(fn())>(0x009a2d70) };
+    fun();
 }

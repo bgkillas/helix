@@ -20,6 +20,7 @@ mod lua {
     }
     #[lua_function]
     fn update() {
+        noita_api::print!("hi");
         let mut net = NET.lock().unwrap();
         net.update().unwrap();
         net.recv(|_, msg| match msg.data {
@@ -34,6 +35,7 @@ mod lua {
     fn world_init() {}
     #[lua_function]
     fn init() {
+        noita_api::print!("TEST: INIT\n");
         unsafe {
             PAUSE_SIMULATE = false;
         }
