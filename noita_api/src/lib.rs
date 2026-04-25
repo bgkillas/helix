@@ -3,6 +3,7 @@
     feature(allocator_api)
 )]
 pub mod alloc;
+pub mod funs;
 pub mod globals;
 pub mod lua;
 pub mod lua_bindings;
@@ -13,53 +14,25 @@ pub use libloading;
 pub use noita_api_macros::{lua_function, lua_module};
 use std::mem;
 pub fn dump_mem(s: &str) {
+    let malloc_probe = format!(
+        "{}/malloc_probe.dll",
+        std::env::current_exe()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .to_str()
+            .unwrap()
+    );
     unsafe {
-        let lib = libloading::Library::new(format!(
-            "{}/malloc_probe.dll",
-            std::env::current_exe()
-                .unwrap()
-                .parent()
-                .unwrap()
-                .to_str()
-                .unwrap()
-        ))
-        .unwrap();
-        let func: libloading::Symbol<unsafe extern "C" fn(*const u8, usize)> =
-            lib.get("put_data").unwrap();
-        func(s.as_ptr(), s.len());
+        if let Ok(lib) = libloading::Library::new(malloc_probe)
+            && let Ok(func) =
+                lib.get::<libloading::Symbol<unsafe extern "C" fn(*const u8, usize)>>("put_data")
+        {
+            func(s.as_ptr(), s.len());
+        }
     }
 }
 pub fn new_game() {
-    let fun = unsafe { mem::transmute::<usize, fast_call!(fn())>(0x009a2d70) };
+    let fun = unsafe { get_this_call!(0x009a2d70, fn()) };
     fun();
-}
-#[cfg(target_os = "windows")]
-#[macro_export]
-macro_rules! this_call {
-    ($($tt:tt)*) => {extern "thiscall" $($tt)*};
-}
-#[cfg(not(target_os = "windows"))]
-#[macro_export]
-macro_rules! this_call {
-    ($($tt:tt)*) => {extern "C" $($tt)*};
-}
-#[cfg(target_os = "windows")]
-#[macro_export]
-macro_rules! std_call {
-    ($($tt:tt)*) => {extern "stdcall" $($tt)*};
-}
-#[cfg(not(target_os = "windows"))]
-#[macro_export]
-macro_rules! std_call {
-    ($($tt:tt)*) => {extern "C" $($tt)*};
-}
-#[cfg(target_os = "windows")]
-#[macro_export]
-macro_rules! fast_call {
-    ($($tt:tt)*) => {extern "fastcall" $($tt)*};
-}
-#[cfg(not(target_os = "windows"))]
-#[macro_export]
-macro_rules! fast_call {
-    ($($tt:tt)*) => {extern "C" $($tt)*};
 }

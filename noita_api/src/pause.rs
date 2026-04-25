@@ -1,5 +1,5 @@
 use crate::alloc::StdBox;
-use crate::this_call;
+use crate::get_this_call;
 use crate::types::death_match::DeathMatch;
 use crate::types::game_global::GameGlobal;
 use retour::static_detour;
@@ -27,8 +27,7 @@ fn pause(this: StdBox<DeathMatch>, dt: f32) {
 }
 pub fn disable_pause() {
     unsafe {
-        let old_pause =
-            mem::transmute::<usize, this_call!(fn(StdBox<DeathMatch>, f32))>(0x006b26f0);
+        let old_pause = get_this_call!(0x006b26f0, fn(StdBox<DeathMatch>, f32));
         PAUSE.initialize(old_pause, pause).unwrap();
         PAUSE.enable().unwrap();
     }
