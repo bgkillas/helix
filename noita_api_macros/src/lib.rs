@@ -313,7 +313,7 @@ pub fn this_call(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
     }
     #[cfg(not(target_os = "windows"))]
     {
-        quote! {#tokens}.into()
+        quote! {extern "C" #tokens}.into()
     }
 }
 #[proc_macro]
@@ -325,7 +325,7 @@ pub fn std_call(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
     }
     #[cfg(not(target_os = "windows"))]
     {
-        quote! {#tokens}.into()
+        quote! {extern "C" #tokens}.into()
     }
 }
 #[proc_macro]

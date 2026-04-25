@@ -4,6 +4,7 @@ use crate::types::game_world::GameWorld;
 use crate::types::grid_world::GridWorld;
 use crate::types::textures::Textures;
 use noita_api_macros::assert_size;
+use std::ffi::c_void;
 #[repr(C)]
 #[assert_size(0x1a0)]
 #[derive(Debug)]
@@ -17,7 +18,7 @@ pub struct GameGlobal {
     pub m_cell_factory: StdBox<CellFactory>,
     unknown2: isize,
     unknown3: [isize; 4],
-    game_print: isize,
+    pub game_print: Option<StdBox<c_void>>,
     unknown5: [isize; 5],
     pub pause_state: StdBox<isize>,
     unk: [isize; 5],

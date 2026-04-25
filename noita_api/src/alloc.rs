@@ -1,13 +1,19 @@
+#[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+use std::alloc::Global;
+#[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+use std::alloc::{Allocator, Layout};
+#[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 use std::ffi::{c_uint, c_void};
 use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, DerefMut};
 use std::ptr::NonNull;
-use std::sync::LazyLock;
+#[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 struct Msvcr {
     operator_new: unsafe extern "C" fn(n: c_uint) -> *mut c_void,
     operator_delete: unsafe extern "C" fn(*mut c_void),
 }
-static MSVCR: LazyLock<Msvcr> = LazyLock::new(|| unsafe {
+#[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+static MSVCR: std::sync::LazyLock<Msvcr> = std::sync::LazyLock::new(|| unsafe {
     let lib = libloading::Library::new("./msvcr120.dll").expect("library to exist");
     let operator_new = *lib.get(b"??2@YAPAXI@Z\0").expect("symbol to exist");
     let operator_delete = *lib.get(b"??3@YAXPAX@Z\0").expect("symbol to exist");
@@ -16,6 +22,8 @@ static MSVCR: LazyLock<Msvcr> = LazyLock::new(|| unsafe {
         operator_delete,
     }
 });
+#[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+const ALLOC: Global = Global;
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct StdPtr<T: Sized> {
@@ -26,14 +34,49 @@ pub struct StdBox<T: Sized> {
     pub ptr: StdPtr<T>,
 }
 impl<T: Sized> StdPtr<T> {
+    #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
     pub fn malloc() -> Self {
         let ptr = unsafe {
             NonNull::new_unchecked((MSVCR.operator_new)(size_of::<T>() as c_uint).cast())
         };
         Self { ptr }
     }
+    #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+    pub fn malloc_array(n: usize) -> Self {
+        let ptr = unsafe {
+            NonNull::new_unchecked((MSVCR.operator_new)((size_of::<T>() * n) as c_uint).cast())
+        };
+        Self { ptr }
+    }
+    #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+    pub fn malloc() -> Self {
+        let layout = Layout::new::<T>();
+        let ptr = ALLOC.allocate(layout).unwrap().cast();
+        Self { ptr }
+    }
+    #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+    pub fn malloc_array(n: usize) -> Self {
+        let layout = Layout::array::<T>(n).unwrap();
+        let ptr = ALLOC.allocate(layout).unwrap().cast();
+        Self { ptr }
+    }
+    #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
     pub fn free(&mut self) {
         unsafe { (MSVCR.operator_delete)(self.ptr.as_ptr().cast()) }
+    }
+    #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+    pub fn free_array(&mut self, _: usize) {
+        unsafe { (MSVCR.operator_delete)(self.ptr.as_ptr().cast()) }
+    }
+    #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+    pub fn free(&mut self) {
+        let layout = Layout::new::<T>();
+        unsafe { ALLOC.deallocate(self.ptr.cast(), layout) };
+    }
+    #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+    pub fn free_array(&mut self, n: usize) {
+        let layout = Layout::array::<T>(n).unwrap();
+        unsafe { ALLOC.deallocate(self.ptr.cast(), layout) };
     }
     pub const fn new(ptr: usize) -> Self {
         let ptr = unsafe { NonNull::new_unchecked(ptr as *mut _) };
@@ -46,6 +89,13 @@ impl<T: Sized> StdBox<T> {
     }
     pub fn read(self) -> T {
         unsafe { self.ptr.read() }
+    }
+    pub fn new(value: T) -> Self {
+        let ptr = StdPtr::malloc();
+        unsafe {
+            ptr.write(value);
+        }
+        Self { ptr }
     }
 }
 impl<T: Sized> From<StdPtr<T>> for StdBox<T> {
