@@ -16,6 +16,12 @@ macro_rules! print {
         $crate::print::print(&format!("{}\0", format_args!($($arg)*)))
     };
 }
+#[macro_export]
+macro_rules! println {
+    ($($arg:tt)*) => {
+        $crate::print::print(&format!("{}\n\0", format_args!($($arg)*)))
+    };
+}
 pub fn game_print(value: &str) {
     let game_global = GameGlobal::global();
     if let Some(ptr) = game_global.game_print {

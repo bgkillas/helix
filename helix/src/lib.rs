@@ -68,7 +68,7 @@ mod lua {
                 .parse()
                 .unwrap_or(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
             let mut net = NET.lock().unwrap();
-            noita_api::print!("{:?}", net.join_ip_runtime(addr, None, None, &RUNTIME));
+            noita_api::println!("{:?}", net.join_ip_runtime(addr, None, None, &RUNTIME));
         } else if msg == "/new" {
             unsafe {
                 DO_RESTART = 8;
@@ -77,7 +77,7 @@ mod lua {
             GameGlobal::global().pause();
         } else if msg == "/host" {
             let mut net = NET.lock().unwrap();
-            noita_api::print!("{:?}", net.host_ip_runtime(None, None, &RUNTIME));
+            noita_api::println!("{:?}", net.host_ip_runtime(None, None, &RUNTIME));
         } else {
             noita_api::game_print!("{msg}");
             let net = NET.lock().unwrap();
