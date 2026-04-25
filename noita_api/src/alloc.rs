@@ -1,3 +1,4 @@
+use noita_api_macros::assert_size_with;
 #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
 use std::alloc::Global;
 #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
@@ -25,11 +26,13 @@ static MSVCR: std::sync::LazyLock<Msvcr> = std::sync::LazyLock::new(|| unsafe {
 #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
 const ALLOC: Global = Global;
 #[repr(transparent)]
+#[assert_size_with(0x4, ())]
 #[derive(Debug)]
 pub struct StdPtr<T: Sized> {
     pub ptr: NonNull<T>,
 }
 #[repr(transparent)]
+#[assert_size_with(0x4, ())]
 pub struct StdBox<T: Sized> {
     pub ptr: StdPtr<T>,
 }

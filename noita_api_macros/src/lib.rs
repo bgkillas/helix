@@ -1,3 +1,4 @@
+#![feature(slice_split_once)]
 use proc_macro2::{Delimiter, Group, Ident, Literal, TokenStream, TokenTree};
 use quote::{format_ident, quote};
 use std::ffi::CString;
@@ -178,6 +179,54 @@ pub fn assert_size(
         const _: () = assert!(size_of::<#struct_name>() == #arg);
         #[cfg(target_arch = "x86_64")]
         const _: () = assert!(size_of::<#struct_name>() >= #arg);
+    };
+    quote! {
+        #tokens
+        #assert
+    }
+    .into()
+}
+#[proc_macro_attribute]
+pub fn assert_size_with(
+    arg: proc_macro::TokenStream,
+    tokens: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let arg: TokenStream = arg.into();
+    let arg = arg.into_iter().collect::<Vec<TokenTree>>();
+    let (arg, t) = arg
+        .rsplit_once(|t| {
+            if let TokenTree::Punct(p) = t {
+                p.as_char() == ','
+            } else {
+                false
+            }
+        })
+        .unwrap();
+    let t = TokenStream::from_iter(t.iter().cloned());
+    let arg = TokenStream::from_iter(arg.iter().cloned());
+    let tokens: TokenStream = tokens.into();
+    let mut struct_name = None;
+    let mut expect_name = false;
+    for token in tokens.clone().into_iter() {
+        match token {
+            TokenTree::Ident(ident)
+                if matches!(ident.to_string().as_str(), "struct" | "enum" | "union") =>
+            {
+                expect_name = true
+            }
+            TokenTree::Ident(ident) if expect_name => {
+                struct_name = Some(ident);
+                break;
+            }
+            _ => {}
+        }
+    }
+    let struct_name = struct_name.unwrap();
+    let assert = quote! {
+        #[cfg(target_arch = "x86")]
+        const _: () = assert!(size_of::<#struct_name::<#t>>() == #arg);
+        #[cfg(target_arch = "x86_64")]
+        const _: () = assert!(size_of::<#struct_name::<#t>>() >= #arg);
     };
     quote! {
         #tokens
