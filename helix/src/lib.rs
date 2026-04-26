@@ -13,6 +13,7 @@ mod lua {
     use std::sync::{LazyLock, Once};
     use tokio::runtime::Runtime;
     static mut DO_RESTART: u8 = 0;
+    const PAUSE_FRAME: u8 = 8;
     static ON_INIT: Once = Once::new();
     static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
     fn init_once() {
@@ -52,7 +53,7 @@ mod lua {
                 noita_api::new_game();
             } else {
                 unsafe {
-                    DO_RESTART = 8;
+                    DO_RESTART = PAUSE_FRAME;
                 }
                 game_global.pause();
             }
@@ -71,7 +72,7 @@ mod lua {
             noita_api::println!("{:?}", net.join_ip_runtime(addr, None, None, &RUNTIME));
         } else if msg == "/new" {
             unsafe {
-                DO_RESTART = 8;
+                DO_RESTART = PAUSE_FRAME;
                 PAUSE_SIMULATE = true;
             }
             GameGlobal::global().pause();

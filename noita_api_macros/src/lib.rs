@@ -108,12 +108,11 @@ fn parse_attribute(mut tokens: TokenStream, dont_unload: bool) -> TokenStream {
 }
 fn luaopen(funs: Vec<Function>, dont_unload: bool) -> TokenStream {
     let inner_funs = make_inner_funs(funs);
-    let dll = Literal::string(&format!("{}.dll", env!("CARGO_PKG_NAME")));
     let keep_loaded = if dont_unload {
         quote! {
-            static KEEP_SELF_LOADED: std::sync::OnceLock<Result<noita_api::libloading::Library, noita_api::libloading::Error>>
+            static KEEP_SELF_LOADED: std::sync::OnceLock<noita_api::libloading::Library>
                 = std::sync::OnceLock::new();
-            KEEP_SELF_LOADED.get_or_init(|| unsafe { noita_api::libloading::Library::new(#dll) });
+            KEEP_SELF_LOADED.get_or_init(|| unsafe { noita_api::libloading::Library::new(format!("{}.dll", env!("CARGO_PKG_NAME"))).unwrap() });
         }
     } else {
         quote! {}
