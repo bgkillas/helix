@@ -1,3 +1,4 @@
+use crate::LogPrint;
 use crate::alloc::{StdBox, StdPtr};
 use crate::types::death_match::DeathMatch;
 use crate::types::game_global::GameGlobal;
@@ -12,3 +13,5 @@ const DEATH_MATCH: StdPtr<StdPtr<DeathMatch>> = StdPtr::new(0x01204bc0);
 const WORLD_SEED: StdPtr<WorldSeed> = StdPtr::new(0x01205004);
 #[generate_global]
 const GAME_MODE: StdPtr<GameMode> = StdPtr::new(0x0120761c);
+#[generate_global]
+const LOG_PRINT: StdPtr<LogPrint> = StdPtr::new(0x01204fe0);

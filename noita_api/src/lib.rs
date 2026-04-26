@@ -36,6 +36,6 @@ pub fn dump_mem(s: &str) {
     }
 }
 pub fn new_game() {
-    let fun = unsafe { get_this_call!(0x009a2d70, fn()) };
+    let fun = unsafe { get_fast_call!(0x009a2d70, fn()) };
     fun();
 }

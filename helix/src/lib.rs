@@ -16,6 +16,7 @@ mod lua {
     static ON_INIT: Once = Once::new();
     static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
     fn init_once() {
+        LogPrint::global().do_print = true;
         disable_pause()
     }
     #[lua_function]
@@ -34,10 +35,11 @@ mod lua {
     fn world_init() {}
     #[lua_function]
     fn init() {
+        ON_INIT.call_once(init_once);
+        log_println!("test");
         unsafe {
             PAUSE_SIMULATE = false;
         }
-        ON_INIT.call_once(init_once);
     }
     #[lua_function]
     fn world_seed_init() {}
