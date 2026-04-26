@@ -1,19 +1,19 @@
 #[macro_export]
 macro_rules! get_this_call {
     ($addr:expr, $($tt:tt)*) => {
-        mem::transmute::<usize, $crate::this_call!($($tt)*)>($addr)
+        std::mem::transmute::<usize, $crate::this_call!($($tt)*)>($addr)
     };
 }
 #[macro_export]
 macro_rules! get_fast_call {
     ($addr:expr, $($tt:tt)*) => {
-        mem::transmute::<usize, $crate::fast_call!($($tt)*)>($addr)
+        std::mem::transmute::<usize, $crate::fast_call!($($tt)*)>($addr)
     };
 }
 #[macro_export]
 macro_rules! get_std_call {
     ($addr:expr, $($tt:tt)*) => {
-        mem::transmute::<usize, $crate::std_call!($($tt)*)>($addr)
+        std::mem::transmute::<usize, $crate::std_call!($($tt)*)>($addr)
     };
 }
 #[cfg(target_os = "windows")]

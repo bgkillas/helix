@@ -7,8 +7,7 @@ pub static NET: LazyLock<Mutex<Client>> = LazyLock::new(|| Mutex::new(Client::ne
 mod lua {
     use crate::{Message, NET};
     use bevy_tangled::{ClientTrait, Compression, Reliability};
-    use noita_api::pause::{PAUSE_SIMULATE, disable_pause};
-    use noita_api::types::game_global::GameGlobal;
+    use noita_api::*;
     use std::net::{IpAddr, Ipv4Addr};
     use std::sync::{LazyLock, Once};
     use tokio::runtime::Runtime;
@@ -50,7 +49,7 @@ mod lua {
                 unsafe {
                     DO_RESTART = 0;
                 }
-                noita_api::new_game();
+                new_game();
             } else {
                 unsafe {
                     DO_RESTART = PAUSE_FRAME;
@@ -69,7 +68,7 @@ mod lua {
                 .parse()
                 .unwrap_or(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
             let mut net = NET.lock().unwrap();
-            noita_api::println!("{:?}", net.join_ip_runtime(addr, None, None, &RUNTIME));
+            log_println!("{:?}", net.join_ip_runtime(addr, None, None, &RUNTIME));
         } else if msg == "/new" {
             unsafe {
                 DO_RESTART = PAUSE_FRAME;
@@ -78,7 +77,7 @@ mod lua {
             GameGlobal::global().pause();
         } else if msg == "/host" {
             let mut net = NET.lock().unwrap();
-            noita_api::println!("{:?}", net.host_ip_runtime(None, None, &RUNTIME));
+            log_println!("{:?}", net.host_ip_runtime(None, None, &RUNTIME));
         } else {
             noita_api::game_print!("{msg}");
             let net = NET.lock().unwrap();

@@ -3,7 +3,6 @@ use crate::get_this_call;
 use crate::types::death_match::DeathMatch;
 use crate::types::game_global::GameGlobal;
 use retour::static_detour;
-use std::mem;
 pub static mut PAUSE_SIMULATE: bool = false;
 #[cfg(target_os = "windows")]
 static_detour! {

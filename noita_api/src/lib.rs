@@ -3,16 +3,19 @@
     feature(allocator_api)
 )]
 pub mod alloc;
-pub mod funs;
-pub mod globals;
+mod funs;
+mod globals;
 pub mod lua;
 pub mod lua_bindings;
 pub mod pause;
 pub mod print;
 pub mod types;
+pub use alloc::*;
 pub use libloading;
 pub use noita_api_macros::{lua_function, lua_module};
-use std::mem;
+pub use pause::*;
+pub use print::*;
+pub use types::*;
 pub fn dump_mem(s: &str) {
     let malloc_probe = format!(
         "{}/malloc_probe.dll",

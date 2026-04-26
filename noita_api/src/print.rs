@@ -3,22 +3,21 @@ use crate::get_this_call;
 use crate::types::game_global::GameGlobal;
 use crate::types::string::StdString;
 use std::ffi::c_void;
-use std::mem;
-pub fn print(value: &str) {
+pub fn log_print(value: &str) {
     let ptr = 0x01155538 as *mut c_void;
     let print = unsafe { get_this_call!(0x00903930, fn(*mut c_void, *const u8)) };
     print(ptr, value.as_ptr())
 }
 #[macro_export]
-macro_rules! print {
+macro_rules! log_print {
     ($($arg:tt)*) => {
-        $crate::print::print(&format!("{}\0", format_args!($($arg)*)))
+        $crate::log_print(&format!("{}\0", format_args!($($arg)*)))
     };
 }
 #[macro_export]
-macro_rules! println {
+macro_rules! log_println {
     ($($arg:tt)*) => {
-        $crate::print::print(&format!("{}\n\0", format_args!($($arg)*)))
+        $crate::log_print(&format!("{}\n\0", format_args!($($arg)*)))
     };
 }
 pub fn game_print(value: &str) {
