@@ -14,8 +14,6 @@ mod lua {
     static ON_INIT: Once = Once::new();
     static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
     fn init_once() {
-        LogFlush::global().flush = true;
-        LogLevel::global().level = -1;
         disable_pause();
         disable_inventory();
         disable_item_pickup();
@@ -26,7 +24,7 @@ mod lua {
         net.update().unwrap();
         net.recv(|_, msg| match msg.data {
             Message::Text(s) => {
-                noita_api::game_print!("{s}");
+                game_print!("{s}");
             }
         });
     }
@@ -69,7 +67,7 @@ mod lua {
             let mut net = NET.lock().unwrap();
             log_println!("{:?}", net.host_ip_runtime(None, None, &RUNTIME));
         } else {
-            noita_api::game_print!("{msg}");
+            game_print!("{msg}");
             let net = NET.lock().unwrap();
             let msg = Message::Text(msg.to_string());
             net.broadcast(&msg, Reliability::Reliable, Compression::Uncompressed)

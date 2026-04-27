@@ -1,9 +1,10 @@
 use crate::alloc::StdBox;
-use crate::get_this_call;
 use crate::types::game_global::GameGlobal;
 use crate::types::string::StdString;
+use crate::{LogFlush, get_this_call};
 use std::ffi::c_void;
 pub fn log_print(value: &str) {
+    LogFlush::global().flush = true;
     let ptr = 0x01155538 as *mut c_void;
     let print = unsafe { get_this_call!(0x00903930, fn(*mut c_void, *const u8)) };
     print(ptr, value.as_ptr())
