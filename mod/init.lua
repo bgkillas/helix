@@ -21,6 +21,7 @@ function OnPausePreUpdate()
     helix.on_pause()
 end
 function OnPlayerSpawned(entity)
+    helix.player_spawn(entity)
     player = entity
 end
 function OnPausedChanged(paused, is_wand_pickup)

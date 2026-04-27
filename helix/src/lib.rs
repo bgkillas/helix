@@ -53,6 +53,12 @@ mod lua {
         new_game_pause_update()
     }
     #[lua_function]
+    fn player_spawn(id: usize) {
+        unsafe {
+            PLAYER_ID = id;
+        }
+    }
+    #[lua_function]
     fn text_msg(msg: &str) {
         if let Some(host) = msg.strip_prefix("/connect") {
             let host = host.trim();

@@ -1,8 +1,6 @@
 #[repr(C)]
 #[derive(Debug)]
-pub struct Textures {
-    //TODO find some data maybe
-}
+pub struct Textures {}
 #[repr(C)]
 #[derive(Debug, Default)]
 pub struct TextureInfo {

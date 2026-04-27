@@ -446,6 +446,12 @@ impl LuaGetValue for u32 {
     }
 }
 
+impl LuaGetValue for usize {
+    fn get(lua: LuaState, index: i32) -> eyre::Result<Self> {
+        Ok(lua.to_integer(index).cast_unsigned())
+    }
+}
+
 impl LuaGetValue for f32 {
     fn get(lua: LuaState, index: i32) -> eyre::Result<Self> {
         Ok(lua.to_number(index) as f32)

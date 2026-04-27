@@ -4,10 +4,12 @@ use crate::types::string::StdString;
 use crate::{LogFlush, get_this_call};
 use std::ffi::c_void;
 pub fn log_print(value: &str) {
+    let orig = LogFlush::global().flush;
     LogFlush::global().flush = true;
     let ptr = 0x01155538 as *mut c_void;
     let print = unsafe { get_this_call!(0x00903930, fn(*mut c_void, *const u8)) };
-    print(ptr, value.as_ptr())
+    print(ptr, value.as_ptr());
+    LogFlush::global().flush = orig;
 }
 #[macro_export]
 macro_rules! log_print {
