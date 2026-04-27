@@ -11,13 +11,14 @@ mod lua {
     use std::net::{IpAddr, Ipv4Addr};
     use std::sync::{LazyLock, Once};
     use tokio::runtime::Runtime;
-    static mut DO_RESTART: u8 = 0;
-    const PAUSE_FRAME: u8 = 8;
     static ON_INIT: Once = Once::new();
     static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
     fn init_once() {
-        LogPrint::global().do_print = true;
-        disable_pause()
+        LogFlush::global().flush = true;
+        LogLevel::global().level = -1;
+        disable_pause();
+        disable_inventory();
+        disable_item_pickup();
     }
     #[lua_function]
     fn update() {
@@ -34,9 +35,15 @@ mod lua {
     #[lua_function]
     fn world_init() {}
     #[lua_function]
+    fn on_paused_change(paused: bool, _: bool) {
+        unsafe {
+            DISABLE_INVENTORY = paused;
+            DISABLE_ITEM_PICKUP = paused;
+        }
+    }
+    #[lua_function]
     fn init() {
         ON_INIT.call_once(init_once);
-        log_println!("test");
         unsafe {
             PAUSE_SIMULATE = false;
         }
@@ -45,22 +52,7 @@ mod lua {
     fn world_seed_init() {}
     #[lua_function]
     fn on_pause() {
-        if unsafe { DO_RESTART == 1 } {
-            let mut game_global = GameGlobal::global();
-            if game_global.is_paused() {
-                unsafe {
-                    DO_RESTART = 0;
-                }
-                new_game();
-            } else {
-                unsafe {
-                    DO_RESTART = PAUSE_FRAME;
-                }
-                game_global.pause();
-            }
-        } else if unsafe { DO_RESTART > 1 } {
-            unsafe { DO_RESTART -= 1 }
-        }
+        new_game_pause_update()
     }
     #[lua_function]
     fn text_msg(msg: &str) {
@@ -72,11 +64,7 @@ mod lua {
             let mut net = NET.lock().unwrap();
             log_println!("{:?}", net.join_ip_runtime(addr, None, None, &RUNTIME));
         } else if msg == "/new" {
-            unsafe {
-                DO_RESTART = PAUSE_FRAME;
-                PAUSE_SIMULATE = true;
-            }
-            GameGlobal::global().pause();
+            delay_new_game();
         } else if msg == "/host" {
             let mut net = NET.lock().unwrap();
             log_println!("{:?}", net.host_ip_runtime(None, None, &RUNTIME));

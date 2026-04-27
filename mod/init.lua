@@ -23,3 +23,6 @@ end
 function OnPlayerSpawned(entity)
     player = entity
 end
+function OnPausedChanged(paused, is_wand_pickup)
+    helix.on_paused_change(paused, is_wand_pickup)
+end

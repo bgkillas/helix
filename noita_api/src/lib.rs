@@ -7,11 +7,13 @@ mod funs;
 mod globals;
 pub mod lua;
 pub mod lua_bindings;
+pub mod new_game;
 pub mod pause;
 pub mod print;
 pub mod types;
 pub use alloc::*;
 pub use libloading;
+pub use new_game::*;
 pub use noita_api_macros::{lua_function, lua_module};
 pub use pause::*;
 pub use print::*;
@@ -34,8 +36,4 @@ pub fn dump_mem(s: &str) {
             func(s.as_ptr(), s.len());
         }
     }
-}
-pub fn new_game() {
-    let fun = unsafe { get_fast_call!(0x009a2d70, fn()) };
-    fun();
 }
