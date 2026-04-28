@@ -9,6 +9,7 @@ mod lua {
     use bevy_tangled::{ClientTrait, Compression, Reliability};
     use noita_api::*;
     use std::net::{IpAddr, Ipv4Addr};
+    use std::sync::atomic::Ordering;
     use std::sync::{LazyLock, Once};
     use tokio::runtime::Runtime;
     static ON_INIT: Once = Once::new();
@@ -34,17 +35,13 @@ mod lua {
     fn world_init() {}
     #[lua_function]
     fn on_paused_change(paused: bool, _: bool) {
-        unsafe {
-            DISABLE_INVENTORY = paused;
-            DISABLE_ITEM_PICKUP = paused;
-        }
+        DISABLE_INVENTORY.store(paused, Ordering::Relaxed);
+        DISABLE_ITEM_PICKUP.store(paused, Ordering::Relaxed);
     }
     #[lua_function]
     fn init() {
         ON_INIT.call_once(init_once);
-        unsafe {
-            PAUSE_SIMULATE = false;
-        }
+        PAUSE_SIMULATE.store(false, Ordering::Relaxed);
     }
     #[lua_function]
     fn world_seed_init() {}
@@ -54,24 +51,25 @@ mod lua {
     }
     #[lua_function]
     fn player_spawn(id: usize) {
-        unsafe {
-            PLAYER_ID = id;
-        }
+        //TODO does not account for poly
+        PLAYER_ID.store(id, Ordering::Relaxed);
     }
     #[lua_function]
     fn text_msg(msg: &str) {
-        if let Some(host) = msg.strip_prefix("/connect") {
-            let host = host.trim();
-            let addr = host
-                .parse()
-                .unwrap_or(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
-            let mut net = NET.lock().unwrap();
-            log_println!("{:?}", net.join_ip_runtime(addr, None, None, &RUNTIME));
-        } else if msg == "/new" {
-            delay_new_game();
-        } else if msg == "/host" {
-            let mut net = NET.lock().unwrap();
-            log_println!("{:?}", net.host_ip_runtime(None, None, &RUNTIME));
+        if let Some(cmd) = msg.strip_prefix("/") {
+            if let Some(host) = cmd.strip_prefix("connect") {
+                let host = host.trim();
+                let addr = host
+                    .parse()
+                    .unwrap_or(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
+                let mut net = NET.lock().unwrap();
+                log_println!("{:?}", net.join_ip_runtime(addr, None, None, &RUNTIME));
+            } else if cmd == "new" {
+                delay_new_game();
+            } else if cmd == "host" {
+                let mut net = NET.lock().unwrap();
+                log_println!("{:?}", net.host_ip_runtime(None, None, &RUNTIME));
+            }
         } else {
             game_print!("{msg}");
             let net = NET.lock().unwrap();

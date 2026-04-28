@@ -4,7 +4,8 @@ use crate::types::game_global::GameGlobal;
 use crate::{Entity, get_this_call};
 use retour::static_detour;
 use std::ffi::c_void;
-pub static mut PAUSE_SIMULATE: bool = false;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+pub static PAUSE_SIMULATE: AtomicBool = AtomicBool::new(false);
 #[cfg(target_os = "windows")]
 static_detour! {
   static PAUSE: extern "thiscall" fn(StdBox<DeathMatch>, f32);
@@ -15,7 +16,7 @@ static_detour! {
 }
 fn pause(this: StdBox<DeathMatch>, dt: f32) {
     PAUSE.call(this, dt);
-    if unsafe { !PAUSE_SIMULATE } {
+    if !PAUSE_SIMULATE.load(Ordering::Relaxed) {
         let mut game_global = GameGlobal::global();
         if game_global.is_paused() {
             let state = *game_global.pause_state;
@@ -32,7 +33,7 @@ pub fn disable_pause() {
         PAUSE.enable().unwrap();
     }
 }
-pub static mut DISABLE_INVENTORY: bool = false;
+pub static DISABLE_INVENTORY: AtomicBool = AtomicBool::new(false);
 #[cfg(target_os = "windows")]
 static_detour! {
   static INVENTORY: extern "thiscall" fn(StdBox<c_void>, StdBox<c_void>, StdBox<c_void>);
@@ -42,7 +43,7 @@ static_detour! {
   static INVENTORY: extern "C" fn(StdBox<c_void>, StdBox<c_void>, StdBox<c_void>);
 }
 fn inventory(this: StdBox<c_void>, entity: StdBox<c_void>, component: StdBox<c_void>) {
-    if unsafe { !DISABLE_INVENTORY } {
+    if !DISABLE_INVENTORY.load(Ordering::Relaxed) {
         INVENTORY.call(this, entity, component);
     }
 }
@@ -56,7 +57,7 @@ pub fn disable_inventory() {
         INVENTORY.enable().unwrap();
     }
 }
-pub static mut DISABLE_ITEM_PICKUP: bool = false;
+pub static DISABLE_ITEM_PICKUP: AtomicBool = AtomicBool::new(false);
 #[cfg(target_os = "windows")]
 static_detour! {
   static ITEM_PICKUP: extern "thiscall" fn(StdBox<c_void>, StdBox<Entity>, StdBox<c_void>);
@@ -65,9 +66,11 @@ static_detour! {
 static_detour! {
   static ITEM_PICKUP: extern "C" fn(StdBox<c_void>, StdBox<Entity>, StdBox<c_void>);
 }
-pub static mut PLAYER_ID: usize = 0;
+pub static PLAYER_ID: AtomicUsize = AtomicUsize::new(0);
 fn item_pickup(this: StdBox<c_void>, entity: StdBox<Entity>, component: StdBox<c_void>) {
-    if unsafe { !DISABLE_ITEM_PICKUP } || entity.id != unsafe { PLAYER_ID } {
+    if !DISABLE_ITEM_PICKUP.load(Ordering::Relaxed)
+        || entity.id != PLAYER_ID.load(Ordering::Relaxed)
+    {
         ITEM_PICKUP.call(this, entity, component);
     }
 }
