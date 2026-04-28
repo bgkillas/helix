@@ -243,6 +243,7 @@ pub fn generate_global(
     let mut is_ptr_ptr = false;
     let mut type_name = Vec::new();
     let mut global_const = None;
+    let mut n = 0;
     for token in tokens.clone().into_iter() {
         match token {
             TokenTree::Ident(ident) if global_const.is_none() && ident != "const" => {
@@ -254,12 +255,23 @@ pub fn generate_global(
                 } else if !is_ptr_ptr {
                     is_ptr_ptr = true;
                 }
+                n = 0;
             }
             TokenTree::Ident(ident) if is_ptr || is_ptr_ptr => {
                 type_name.push(TokenTree::Ident(ident));
             }
             TokenTree::Punct(p) if (is_ptr || is_ptr_ptr) && p.as_char() == ':' => {
                 type_name.push(TokenTree::Punct(p));
+            }
+            TokenTree::Punct(p) if (is_ptr || is_ptr_ptr) && p.as_char() == '<' => {
+                if n != 0 {
+                    type_name.push(TokenTree::Punct(p));
+                }
+                n += 1;
+            }
+            TokenTree::Punct(p) if (is_ptr || is_ptr_ptr) && p.as_char() == '>' && n > 1 => {
+                type_name.push(TokenTree::Punct(p));
+                n -= 1;
             }
             TokenTree::Punct(p) if (is_ptr || is_ptr_ptr) && p.as_char() == '>' => break,
             _ => {}

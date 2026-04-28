@@ -1,7 +1,7 @@
-use crate::StdBox;
+use crate::*;
 #[repr(C)]
 #[derive(Debug)]
-pub struct StdMap<K: 'static, V: 'static> {
+pub struct StdMap<K, V> {
     pub root: StdBox<StdMapNode<K, V>>,
     pub len: usize,
 }

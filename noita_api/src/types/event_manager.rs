@@ -1,4 +1,4 @@
-use crate::{StdBox, StdVec};
+use crate::*;
 #[repr(C)]
 #[derive(Debug)]
 pub struct EventManager {
@@ -7,9 +7,6 @@ pub struct EventManager {
     pub unk2: usize,
     pub functions: StdVec<Event>,
 }
-#[repr(C)]
-#[derive(Debug)]
-pub struct EventManagerVTable {}
 #[repr(C)]
 #[derive(Debug)]
 pub struct Event {

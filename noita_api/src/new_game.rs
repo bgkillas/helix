@@ -1,4 +1,4 @@
-use crate::{GameGlobal, PAUSE_SIMULATE, get_fast_call};
+use crate::*;
 use std::sync::atomic::{AtomicU8, Ordering};
 const PAUSE_FRAME: u8 = 8;
 static DO_RESTART: AtomicU8 = AtomicU8::new(0);

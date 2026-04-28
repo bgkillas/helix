@@ -1,7 +1,4 @@
-use crate::alloc::StdBox;
-use crate::types::game_global::GameGlobal;
-use crate::types::string::StdString;
-use crate::{LogFlush, get_this_call};
+use crate::*;
 use std::ffi::c_void;
 pub fn log_print(value: &str) {
     let orig = LogFlush::global().flush;

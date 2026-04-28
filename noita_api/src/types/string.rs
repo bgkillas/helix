@@ -1,4 +1,4 @@
-use crate::alloc::StdPtr;
+use crate::*;
 use noita_api_macros::assert_size;
 use std::fmt::{Debug, Formatter};
 use std::slice;
@@ -17,7 +17,6 @@ impl Default for Buffer {
 }
 #[repr(C)]
 #[assert_size(0x18)]
-#[derive(Default)]
 pub struct StdString {
     buffer: Buffer,
     size: usize,

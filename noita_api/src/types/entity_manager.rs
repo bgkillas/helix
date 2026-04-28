@@ -1,4 +1,4 @@
-use crate::{ComponentBuffer, Entity, EventManager, StdBox, StdVec};
+use crate::*;
 #[repr(C)]
 #[derive(Debug)]
 pub struct EntityManager {
@@ -10,6 +10,3 @@ pub struct EntityManager {
     pub component_buffers: StdVec<Option<StdBox<ComponentBuffer<()>>>>,
     pub event_manager: StdBox<EventManager>,
 }
-#[repr(C)]
-#[derive(Debug)]
-pub struct EntityManagerVTable {}

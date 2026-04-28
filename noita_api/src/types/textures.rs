@@ -2,7 +2,7 @@
 #[derive(Debug)]
 pub struct Textures {}
 #[repr(C)]
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct TextureInfo {
     width: i32,
     height: i32,

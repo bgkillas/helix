@@ -1,7 +1,4 @@
-use crate::alloc::StdBox;
-use crate::types::aabb::IAABB;
-use crate::types::chunk_map::ChunkMap;
-use crate::types::vec::{StdVec, Vec2i};
+use crate::*;
 #[repr(C)]
 #[derive(Debug)]
 pub struct GridWorld {
@@ -32,12 +29,6 @@ pub struct BiomeModifiers {
 }
 #[repr(C)]
 #[derive(Debug)]
-pub struct BiomeModifiersVFTable {}
-#[repr(C)]
-#[derive(Debug)]
-pub struct GridWorldVTable {}
-#[repr(C)]
-#[derive(Debug)]
 pub struct GridWorldThreadImpl {
     pub chunk_update_count: usize,
     pub updated_grid_worlds: StdVec<StdBox<GridWorldThreaded>>,
@@ -51,9 +42,6 @@ pub struct GridWorldThreaded {
     pub unknown: [isize; 287],
     pub update_region: IAABB,
 }
-#[repr(C)]
-#[derive(Debug)]
-pub struct GridWorldThreadedVTable {}
 #[repr(C)]
 #[derive(Debug)]
 pub struct WorldUpdateParams {

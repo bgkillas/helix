@@ -1,7 +1,4 @@
-use crate::alloc::StdBox;
-use crate::types::death_match::DeathMatch;
-use crate::types::game_global::GameGlobal;
-use crate::{Entity, get_this_call};
+use crate::*;
 use retour::static_detour;
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};

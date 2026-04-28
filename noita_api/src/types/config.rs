@@ -1,11 +1,4 @@
-use crate::alloc::StdBox;
-use crate::types::aabb::AABB;
-use crate::types::chunk_map::Color;
-use crate::types::string::StdString;
-use crate::types::vec::{ValueRange, ValueRangeInt, Vec2};
-#[repr(C)]
-#[derive(Debug, Default)]
-pub struct ConfigExplosionVTable {}
+use crate::*;
 #[repr(C)]
 #[derive(Debug)]
 pub struct ConfigExplosion {
@@ -93,18 +86,6 @@ pub struct ConfigExplosion {
     pub impl_delay_frame: isize,
 }
 #[repr(C)]
-#[derive(Debug, Default)]
-pub struct ConfigDamageCriticalVTable {
-    unk0: *const usize,
-    unk1: *const usize,
-    unk2: *const usize,
-    unk3: *const usize,
-    unk4: *const usize,
-    unk5: *const usize,
-    unk6: *const usize,
-    unk7: *const usize,
-}
-#[repr(C)]
 #[derive(Debug)]
 pub struct ConfigDamageCritical {
     pub vftable: StdBox<ConfigDamageCriticalVTable>,
@@ -135,17 +116,4 @@ pub struct ConfigGridCosmeticParticle {
     pub particle_single_width: bool,
     pub fade_based_on_lifetime: bool,
     padding1: [u8; 2],
-}
-#[allow(dead_code)]
-#[repr(C)]
-#[derive(Debug, Default)]
-pub struct ConfigGridCosmeticParticleVTable {
-    unk0: *const usize,
-    unk1: *const usize,
-    unk2: *const usize,
-    unk3: *const usize,
-    unk4: *const usize,
-    unk5: *const usize,
-    unk6: *const usize,
-    unk7: *const usize,
 }

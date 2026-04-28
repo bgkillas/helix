@@ -1,6 +1,6 @@
 #[repr(C)]
-#[derive(Debug, Default)]
-pub struct StdSet<T: Default + Debug> {
+#[derive(Debug)]
+pub struct StdSet<T> {
     pub a: T,
     pub b: T,
 }

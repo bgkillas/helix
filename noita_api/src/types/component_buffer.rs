@@ -1,4 +1,4 @@
-use crate::{ComponentData, Entity, EntityManager, EventManager, StdBox, StdVec};
+use crate::*;
 #[repr(C)]
 #[derive(Debug)]
 pub struct ComponentBuffer<T> {
@@ -21,6 +21,3 @@ pub struct ComponentBuffer<T> {
     pub event_manager: StdBox<EventManager>,
     unk3: [*const usize; 6],
 }
-#[repr(C)]
-#[derive(Debug)]
-pub struct ComponentBufferVTable {}

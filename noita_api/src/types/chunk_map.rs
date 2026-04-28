@@ -1,8 +1,4 @@
-use crate::alloc::StdBox;
-use crate::types::config::{ConfigExplosion, ConfigGridCosmeticParticle};
-use crate::types::string::StdString;
-use crate::types::textures::TextureInfo;
-use crate::types::vec::{StdVec, Vec2i};
+use crate::*;
 use std::ffi::c_void;
 #[repr(C)]
 #[derive(Debug)]
@@ -32,13 +28,9 @@ pub struct Cell {
     unknown2: [u8; 2],
     pub material: StdBox<CellData>,
 }
-#[repr(C)]
-#[derive(Clone, Debug, Copy)]
-pub struct CellVTable {}
 #[repr(usize)]
-#[derive(Debug, PartialEq, Clone, Copy, Default)]
+#[derive(Debug)]
 pub enum CellType {
-    #[default]
     None = 0,
     Liquid = 1,
     Gas = 2,
@@ -46,7 +38,7 @@ pub enum CellType {
     Fire = 4,
 }
 #[repr(C)]
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug)]
 pub struct Color {
     pub r: u8,
     pub g: u8,
@@ -54,7 +46,7 @@ pub struct Color {
     pub a: u8,
 }
 #[repr(C)]
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct CellGraphics {
     pub texture_file: StdString,
     pub color: Color,

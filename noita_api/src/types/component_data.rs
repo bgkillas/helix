@@ -1,8 +1,8 @@
-use crate::{BitSet, StdBox, StdVec};
+use crate::*;
 use std::ffi::CString;
 #[repr(C)]
 #[derive(Debug)]
-pub struct ComponentData<T: Sized> {
+pub struct ComponentData<T> {
     pub vtable: StdBox<ComponentVFTable>,
     pub local_id: usize,
     pub type_name: CString,
