@@ -1,5 +1,5 @@
 use bevy_tangled::Client;
-use bevy_tangled::bitcode::{Decode, Encode};
+use bitcode::{Decode, Encode};
 use std::sync::{LazyLock, Mutex};
 //const APPID: u32 = 881100;
 pub static NET: LazyLock<Mutex<Client>> = LazyLock::new(|| Mutex::new(Client::new().unwrap()));
@@ -61,12 +61,16 @@ mod lua {
                     .parse()
                     .unwrap_or(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
                 let mut net = NET.lock().unwrap();
-                log_println!("{:?}", net.join_ip_runtime(addr, None, None, &RUNTIME));
+                if let Err(e) = net.join_ip_runtime(addr, None, None, &RUNTIME) {
+                    game_print!("{e:?}");
+                }
             } else if cmd == "new" {
                 delay_new_game();
             } else if cmd == "host" {
                 let mut net = NET.lock().unwrap();
-                log_println!("{:?}", net.host_ip_runtime(None, None, &RUNTIME));
+                if let Err(e) = net.host_ip_runtime(None, None, &RUNTIME) {
+                    game_print!("{e:?}");
+                }
             }
         } else {
             game_print!("{msg}");
