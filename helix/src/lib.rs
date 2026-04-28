@@ -1,3 +1,6 @@
+use bevy_tangled::Client;
+use noita_api::{disable_inventory, disable_item_pickup, disable_pause};
+use tokio::runtime::Runtime;
 #[noita_api::lua_module(true)]
 mod lua {
     use crate::{ConnectionType, Message};
@@ -6,24 +9,11 @@ mod lua {
     use std::net::{IpAddr, Ipv4Addr};
     use std::sync::atomic::Ordering;
     use tokio::runtime::Runtime;
-    struct Context {
-        world_seed: Option<usize>,
-        runtime: Runtime,
-        connection_type: ConnectionType,
-        net: Client,
-    }
-    impl Default for Context {
-        fn default() -> Self {
-            disable_pause();
-            disable_inventory();
-            disable_item_pickup();
-            Self {
-                world_seed: None,
-                runtime: Runtime::new().unwrap(),
-                connection_type: ConnectionType::None,
-                net: Client::new().unwrap(),
-            }
-        }
+    pub struct Context {
+        pub world_seed: Option<usize>,
+        pub runtime: Runtime,
+        pub connection_type: ConnectionType,
+        pub net: Client,
     }
     impl Context {
         #[lua_function]
@@ -96,11 +86,24 @@ mod lua {
     }
     #[lua_function]
     fn init() {
-        PAUSE_SIMULATE.store(false, Ordering::Relaxed);
+        PAUSE_SIMULATE.store(true, Ordering::Relaxed);
     }
     #[lua_function]
     fn on_pause() {
         new_game_pause_update()
+    }
+}
+impl Default for lua::Context {
+    fn default() -> Self {
+        disable_pause();
+        disable_inventory();
+        disable_item_pickup();
+        Self {
+            world_seed: None,
+            runtime: Runtime::new().unwrap(),
+            connection_type: ConnectionType::None,
+            net: Client::new().unwrap(),
+        }
     }
 }
 #[derive(bitcode::Encode, bitcode::Decode)]

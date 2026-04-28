@@ -2,7 +2,7 @@ use crate::*;
 use retour::static_detour;
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-pub static PAUSE_SIMULATE: AtomicBool = AtomicBool::new(false);
+pub static PAUSE_SIMULATE: AtomicBool = AtomicBool::new(true);
 #[cfg(target_os = "windows")]
 static_detour! {
   static PAUSE: extern "thiscall" fn(StdBox<DeathMatch>, f32);
@@ -13,7 +13,7 @@ static_detour! {
 }
 fn pause(this: StdBox<DeathMatch>, dt: f32) {
     PAUSE.call(this, dt);
-    if !PAUSE_SIMULATE.load(Ordering::Relaxed) {
+    if PAUSE_SIMULATE.load(Ordering::Relaxed) {
         let mut game_global = GameGlobal::global();
         if game_global.is_paused() {
             let state = *game_global.pause_state;

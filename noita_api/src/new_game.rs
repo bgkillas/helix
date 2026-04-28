@@ -8,7 +8,7 @@ pub fn new_game() {
 }
 pub fn delay_new_game() {
     DO_RESTART.store(PAUSE_FRAME, Ordering::Relaxed);
-    PAUSE_SIMULATE.store(true, Ordering::Relaxed);
+    PAUSE_SIMULATE.store(false, Ordering::Relaxed);
     GameGlobal::global().pause();
 }
 pub fn new_game_pause_update() {

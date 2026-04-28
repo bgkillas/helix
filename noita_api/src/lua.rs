@@ -81,7 +81,7 @@ impl LuaState {
             .wrap_err("Attempting to get lua string, expecting it to be utf-8")
     }
 
-    pub fn to_str(&self, index: i32) -> eyre::Result<&'static str> {
+    pub fn to_str<'a>(&self, index: i32) -> eyre::Result<&'a str> {
         let mut size = 0;
         let buf = unsafe { LUA.lua_tolstring(self.lua, index, &mut size) };
         if buf.is_null() {
@@ -504,13 +504,13 @@ impl LuaGetValue for Option<ComponentID> {
     }
 }*/
 
-impl LuaGetValue for Cow<'static, str> {
+impl<'a> LuaGetValue for Cow<'a, str> {
     fn get(lua: LuaState, index: i32) -> eyre::Result<Self> {
         Ok(lua.to_str(index)?.into())
     }
 }
 
-impl LuaGetValue for &'static str {
+impl LuaGetValue for &str {
     fn get(lua: LuaState, index: i32) -> eyre::Result<Self> {
         lua.to_str(index)
     }

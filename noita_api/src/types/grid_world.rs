@@ -47,5 +47,5 @@ pub struct GridWorldThreaded {
 pub struct WorldUpdateParams {
     pub update_region: IAABB,
     unknown: isize,
-    grid_world_threaded: &'static GridWorldThreaded,
+    grid_world_threaded: StdBox<GridWorldThreaded>,
 }
