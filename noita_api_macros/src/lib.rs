@@ -9,24 +9,21 @@ struct Function {
     args: Vec<TokenStream>,
     ret: Option<TokenStream>,
 }
-fn parse_attribute(mut tokens: TokenStream, dont_unload: bool) -> TokenStream {
-    let mut ret_tokens = Vec::new();
-    let mut span = None;
-    for token in tokens.clone() {
-        if let TokenTree::Group(group) = token {
-            span = Some(group.span());
-            tokens = group.stream();
-            break;
-        }
-        ret_tokens.push(token);
-    }
+#[derive(Debug)]
+struct FunGroup {
+    ident: Ident,
+    funs: Vec<Function>,
+}
+fn parse_group(tokens: TokenStream) -> (Vec<Function>, Vec<FunGroup>) {
     let mut function = Function::default();
     let mut ret: Vec<TokenTree> = Vec::new();
-    let mut inner_tokens = Vec::new();
     let mut funs: Vec<Function> = Vec::new();
     let mut punct = false;
     let mut is_fun = false;
+    let mut impl_name = None;
+    let mut is_impl = false;
     let mut is_ret = 0;
+    let mut groups = Vec::new();
     for token in tokens {
         match token.clone() {
             TokenTree::Group(_) if is_ret != 0 => {
@@ -36,6 +33,10 @@ fn parse_attribute(mut tokens: TokenStream, dont_unload: bool) -> TokenStream {
                 }
                 funs.push(mem::take(&mut function));
             }
+            TokenTree::Group(g) if is_impl && let Some(name) = impl_name.take() => {
+                let (funs, _) = parse_group(g.stream());
+                groups.push(FunGroup { ident: name, funs })
+            }
             TokenTree::Group(g) if is_fun && g.delimiter() == Delimiter::Parenthesis => {
                 let mut arg = Vec::new();
                 let mut start = false;
@@ -44,6 +45,9 @@ fn parse_attribute(mut tokens: TokenStream, dont_unload: bool) -> TokenStream {
                         arg.push(token.clone());
                     }
                     match token {
+                        TokenTree::Ident(i) if i == "self" => {
+                            arg.push(TokenTree::Ident(i));
+                        }
                         TokenTree::Punct(p) if p.as_char() == ':' => {
                             start = true;
                         }
@@ -87,18 +91,43 @@ fn parse_attribute(mut tokens: TokenStream, dont_unload: bool) -> TokenStream {
                 punct = false;
                 is_ret = 0;
             }
+            TokenTree::Ident(i) if i == "impl" => {
+                is_impl = true;
+            }
+            TokenTree::Ident(i) if i == "for" || i == "fn" => {
+                is_impl = false;
+            }
+            TokenTree::Ident(i) => {
+                impl_name = Some(i);
+            }
             _ if is_ret == 3 => {
+                is_impl = false;
                 punct = false;
                 ret.push(token.clone());
             }
             _ => {
+                is_impl = false;
                 punct = false;
                 is_ret = 0;
             }
         }
-        inner_tokens.push(token);
     }
-    let luaopen = luaopen(funs, dont_unload);
+    (funs, groups)
+}
+fn parse_attribute(mut tokens: TokenStream, dont_unload: bool) -> TokenStream {
+    let mut ret_tokens = Vec::new();
+    let mut span = None;
+    for token in tokens.clone() {
+        if let TokenTree::Group(group) = token {
+            span = Some(group.span());
+            tokens = group.stream();
+            break;
+        }
+        ret_tokens.push(token);
+    }
+    let mut inner_tokens = tokens.clone();
+    let (funs, groups) = parse_group(tokens);
+    let luaopen = luaopen(funs, groups, dont_unload);
     inner_tokens.extend(quote! {use noita_api::lua_function;});
     inner_tokens.extend(luaopen);
     let mut group = Group::new(Delimiter::Brace, TokenStream::from_iter(inner_tokens));
@@ -106,7 +135,7 @@ fn parse_attribute(mut tokens: TokenStream, dont_unload: bool) -> TokenStream {
     ret_tokens.push(TokenTree::Group(group));
     TokenStream::from_iter(ret_tokens)
 }
-fn luaopen(funs: Vec<Function>, dont_unload: bool) -> TokenStream {
+fn luaopen(funs: Vec<Function>, groups: Vec<FunGroup>, dont_unload: bool) -> TokenStream {
     let inner_funs = make_inner_funs(funs);
     let keep_loaded = if dont_unload {
         quote! {

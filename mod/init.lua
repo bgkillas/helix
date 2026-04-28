@@ -8,12 +8,6 @@ end
 function OnModPreInit()
     helix.init()
 end
-function OnWorldPostUpdate()
-    helix.post_update()
-end
-function OnWorldInitialized()
-    helix.world_init()
-end
 function OnMagicNumbersAndWorldSeedInitialized()
     helix.world_seed_init()
 end
@@ -21,7 +15,6 @@ function OnPausePreUpdate()
     helix.on_pause()
 end
 function OnPlayerSpawned(entity)
-    helix.player_spawn(entity)
     player = entity
 end
 function OnPausedChanged(paused, is_wand_pickup)

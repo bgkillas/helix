@@ -17,7 +17,19 @@ mod lua {
     static ON_INIT: Once = Once::new();
     static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
     static WORLD_SEED: AtomicUsize = AtomicUsize::new(0);
+    static mut CTX: LazyLock<Context> = LazyLock::new(|| Context::default());
+    #[derive(Default)]
+    struct Context {
+        pub seed: usize,
+    }
+    impl Context {
+        #[lua_function]
+        fn test_run(self) {}
+    }
     fn init_once() {
+        unsafe {
+            CTX.seed = 2;
+        }
         disable_pause();
         disable_inventory();
         disable_item_pickup();
@@ -36,10 +48,6 @@ mod lua {
             }
         });
     }
-    #[lua_function]
-    fn post_update() {}
-    #[lua_function]
-    fn world_init() {}
     #[lua_function]
     fn on_paused_change(paused: bool, _: bool) {
         DISABLE_INVENTORY.store(paused, Ordering::Relaxed);
@@ -61,8 +69,6 @@ mod lua {
     fn on_pause() {
         new_game_pause_update()
     }
-    #[lua_function]
-    fn player_spawn(_: usize) {}
     #[lua_function]
     fn text_msg(msg: &str) {
         if let Some(cmd) = msg.strip_prefix("/") {
