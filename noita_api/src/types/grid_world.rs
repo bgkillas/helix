@@ -30,8 +30,10 @@ pub struct BiomeModifiers {
     pub vftable: StdBox<BiomeModifiersVFTable>,
     pub unk: [usize; 6],
 }
+#[repr(C)]
 #[derive(Debug)]
 pub struct BiomeModifiersVFTable {}
+#[repr(C)]
 #[derive(Debug)]
 pub struct GridWorldVTable {}
 #[repr(C)]
@@ -49,6 +51,7 @@ pub struct GridWorldThreaded {
     pub unknown: [isize; 287],
     pub update_region: IAABB,
 }
+#[repr(C)]
 #[derive(Debug)]
 pub struct GridWorldThreadedVTable {}
 #[repr(C)]

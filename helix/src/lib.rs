@@ -37,6 +37,7 @@ mod lua {
     fn on_paused_change(paused: bool, _: bool) {
         DISABLE_INVENTORY.store(paused, Ordering::Relaxed);
         DISABLE_ITEM_PICKUP.store(paused, Ordering::Relaxed);
+        //TODO PLAYER_ID.store(id, Ordering::Relaxed);
     }
     #[lua_function]
     fn init() {
@@ -50,10 +51,7 @@ mod lua {
         new_game_pause_update()
     }
     #[lua_function]
-    fn player_spawn(id: usize) {
-        //TODO does not account for poly
-        PLAYER_ID.store(id, Ordering::Relaxed);
-    }
+    fn player_spawn(_: usize) {}
     #[lua_function]
     fn text_msg(msg: &str) {
         if let Some(cmd) = msg.strip_prefix("/") {

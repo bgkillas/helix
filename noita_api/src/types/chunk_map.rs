@@ -32,6 +32,7 @@ pub struct Cell {
     unknown2: [u8; 2],
     pub material: StdBox<CellData>,
 }
+#[repr(C)]
 #[derive(Clone, Debug, Copy)]
 pub struct CellVTable {}
 #[repr(usize)]
