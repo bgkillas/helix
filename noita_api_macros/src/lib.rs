@@ -34,7 +34,10 @@ fn parse_group(tokens: TokenStream) -> (Vec<Function>, Vec<FunGroup>) {
                 funs.push(mem::take(&mut function));
             }
             TokenTree::Group(g) if is_impl && let Some(name) = impl_name.take() => {
-                let (funs, _) = parse_group(g.stream());
+                let (mut funs, _) = parse_group(g.stream());
+                for f in &mut funs {
+                    f.args.remove(0);
+                }
                 groups.push(FunGroup { ident: name, funs })
             }
             TokenTree::Group(g) if is_fun && g.delimiter() == Delimiter::Parenthesis => {
@@ -135,8 +138,17 @@ fn parse_attribute(mut tokens: TokenStream, dont_unload: bool) -> TokenStream {
     ret_tokens.push(TokenTree::Group(group));
     TokenStream::from_iter(ret_tokens)
 }
+fn make_group(group: FunGroup) -> TokenStream {
+    let ident = group.ident;
+    let name = format_ident!("GLOBAL_{}", ident.to_string().to_ascii_uppercase());
+    let funs = make_inner_funs(group.funs, Some(ident.clone()));
+    quote! {
+        static mut #name: std::sync::LazyLock<#ident> = std::sync::LazyLock::new(#ident::default);
+        #(#funs)*
+    }
+}
 fn luaopen(funs: Vec<Function>, groups: Vec<FunGroup>, dont_unload: bool) -> TokenStream {
-    let inner_funs = make_inner_funs(funs);
+    let inner_funs = make_inner_funs(funs, None);
     let keep_loaded = if dont_unload {
         quote! {
             static KEEP_SELF_LOADED: std::sync::OnceLock<noita_api::libloading::Library>
@@ -146,6 +158,7 @@ fn luaopen(funs: Vec<Function>, groups: Vec<FunGroup>, dont_unload: bool) -> Tok
     } else {
         quote! {}
     };
+    let groups = groups.into_iter().map(make_group);
     quote! {
         #[unsafe(no_mangle)]
         unsafe extern "C" fn luaopen(lua: *mut noita_api::lua_bindings::lua_State) -> std::ffi::c_int {
@@ -153,6 +166,7 @@ fn luaopen(funs: Vec<Function>, groups: Vec<FunGroup>, dont_unload: bool) -> Tok
             unsafe {
                 noita_api::lua::LUA.lua_createtable(lua, 0, 0);
                 #(#inner_funs)*
+                #(#groups)*
             }
             1
         }
@@ -328,7 +342,7 @@ fn get_global_type(global_const: Ident, type_name: TokenStream, is_ptr_ptr: bool
         }
     }
 }
-fn add_lua_fn(fun: Function) -> TokenStream {
+fn add_lua_fn(fun: Function, struct_ident: Option<Ident>) -> TokenStream {
     let ident = fun.name.unwrap();
     let bridge_fn_name = format_ident!("{ident}_lua_bridge");
     let fn_name_c = name_to_c_literal(&ident.to_string());
@@ -370,13 +384,24 @@ fn add_lua_fn(fun: Function) -> TokenStream {
             }
         })
         .collect();
+    let ret = if let Some(struct_ident) = struct_ident {
+        let name = format_ident!("GLOBAL_{}", struct_ident.to_string().to_ascii_uppercase());
+        quote! {
+            let ret = unsafe{#struct_ident::#ident(&mut #name, #(#args,)*)};
+        }
+    } else {
+        quote! {
+            let ret = #ident(#(#args,)*);
+        }
+    };
     quote! {
         unsafe extern "C" fn #bridge_fn_name(lua: *mut noita_api::lua_bindings::lua_State) -> std::ffi::c_int {
             let lua_state = noita_api::lua::LuaState::new(lua);
             lua_state.make_current();
             #index
             #(#vars)*
-            let ret = noita_api::lua::LuaFnRet::do_return(#ident(#(#args,)*), lua_state);
+            #ret
+            let ret = noita_api::lua::LuaFnRet::do_return(ret, lua_state);
             ret
         }
         noita_api::lua::LUA.lua_pushcclosure(lua, Some(#bridge_fn_name), 0);
@@ -386,10 +411,10 @@ fn add_lua_fn(fun: Function) -> TokenStream {
 fn name_to_c_literal(name: &str) -> Literal {
     Literal::c_string(CString::new(name).unwrap().as_c_str())
 }
-fn make_inner_funs(idents: Vec<Function>) -> Vec<TokenStream> {
+fn make_inner_funs(idents: Vec<Function>, ident: Option<Ident>) -> Vec<TokenStream> {
     let mut inner_funs = Vec::new();
     for fun in idents {
-        inner_funs.push(add_lua_fn(fun));
+        inner_funs.push(add_lua_fn(fun, ident.clone()));
     }
     inner_funs
 }

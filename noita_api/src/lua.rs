@@ -234,6 +234,18 @@ impl LuaFnRet for bool {
         1
     }
 }
+impl LuaFnRet for isize {
+    fn do_return(self, lua: LuaState) -> c_int {
+        lua.push_integer(self);
+        1
+    }
+}
+impl LuaFnRet for usize {
+    fn do_return(self, lua: LuaState) -> c_int {
+        lua.push_integer(self.cast_signed());
+        1
+    }
+}
 
 /*impl LuaFnRet for EntityID {
     fn do_return(self, lua: LuaState) -> c_int {

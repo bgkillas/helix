@@ -17,19 +17,7 @@ mod lua {
     static ON_INIT: Once = Once::new();
     static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
     static WORLD_SEED: AtomicUsize = AtomicUsize::new(0);
-    static mut CTX: LazyLock<Context> = LazyLock::new(|| Context::default());
-    #[derive(Default)]
-    struct Context {
-        pub seed: usize,
-    }
-    impl Context {
-        #[lua_function]
-        fn test_run(self) {}
-    }
     fn init_once() {
-        unsafe {
-            CTX.seed = 2;
-        }
         disable_pause();
         disable_inventory();
         disable_item_pickup();
