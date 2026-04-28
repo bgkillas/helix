@@ -1,40 +1,92 @@
-use bevy_tangled::Client;
-use bitcode::{Decode, Encode};
-use std::sync::atomic::AtomicU8;
-use std::sync::{LazyLock, Mutex};
-//const APPID: u32 = 881100;
-pub static NET: LazyLock<Mutex<Client>> = LazyLock::new(|| Mutex::new(Client::new().unwrap()));
-pub static CONNECTION_TYPE: AtomicU8 = AtomicU8::new(0);
 #[noita_api::lua_module(true)]
 mod lua {
-    use crate::{CONNECTION_TYPE, Message, NET};
-    use bevy_tangled::{ClientTrait, Compression, Reliability};
+    use crate::{ConnectionType, Message};
+    use bevy_tangled::{Client, ClientTrait, Compression, Reliability};
     use noita_api::*;
     use std::net::{IpAddr, Ipv4Addr};
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::{LazyLock, Once};
+    use std::sync::atomic::Ordering;
     use tokio::runtime::Runtime;
-    static ON_INIT: Once = Once::new();
-    static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
-    static WORLD_SEED: AtomicUsize = AtomicUsize::new(0);
-    fn init_once() {
-        disable_pause();
-        disable_inventory();
-        disable_item_pickup();
+    struct Context {
+        world_seed: Option<usize>,
+        runtime: Runtime,
+        connection_type: ConnectionType,
+        net: Client,
     }
-    #[lua_function]
-    fn update() {
-        let mut net = NET.lock().unwrap();
-        net.update().unwrap();
-        net.recv(|_, msg| match msg.data {
-            Message::Text(s) => {
-                game_print!("{s}");
+    impl Default for Context {
+        fn default() -> Self {
+            disable_pause();
+            disable_inventory();
+            disable_item_pickup();
+            Self {
+                world_seed: None,
+                runtime: Runtime::new().unwrap(),
+                connection_type: ConnectionType::None,
+                net: Client::new().unwrap(),
             }
-            Message::World(world) => {
-                WORLD_SEED.store(world, Ordering::Relaxed);
-                delay_new_game();
+        }
+    }
+    impl Context {
+        #[lua_function]
+        fn update(&mut self) {
+            self.net.update().unwrap();
+            self.net.recv(|_, msg| match msg.data {
+                Message::Text(s) => {
+                    game_print!("{s}");
+                }
+                Message::World(world) => {
+                    self.world_seed = Some(world);
+                    delay_new_game();
+                }
+            });
+        }
+        #[lua_function]
+        fn text_msg(&mut self, msg: &str) {
+            if let Some(cmd) = msg.strip_prefix("/") {
+                if let Some(host) = cmd.strip_prefix("connect") {
+                    let host = host.trim();
+                    let addr = host
+                        .parse()
+                        .unwrap_or(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
+                    if let Err(e) = self.net.join_ip_runtime(addr, None, None, &self.runtime) {
+                        game_print!("{e:?}");
+                    }
+                    self.connection_type = ConnectionType::Host;
+                } else if cmd == "new" {
+                    delay_new_game();
+                } else if cmd == "host" {
+                    if let Err(e) = self.net.host_ip_runtime(
+                        Some(Box::new(|client, peer| {
+                            let world = WorldSeed::global();
+                            client
+                                .send(
+                                    peer,
+                                    &Message::World(world.seed),
+                                    Reliability::Reliable,
+                                    Compression::Uncompressed,
+                                )
+                                .unwrap();
+                        })),
+                        None,
+                        &self.runtime,
+                    ) {
+                        game_print!("{e:?}");
+                    }
+                    self.connection_type = ConnectionType::Client;
+                }
+            } else {
+                game_print!("{msg}");
+                let msg = Message::Text(msg.to_string());
+                self.net
+                    .broadcast(&msg, Reliability::Reliable, Compression::Uncompressed)
+                    .unwrap()
             }
-        });
+        }
+        #[lua_function]
+        fn world_seed_init(&self) {
+            if let Some(seed) = self.world_seed {
+                WorldSeed::global().seed = seed;
+            }
+        }
     }
     #[lua_function]
     fn on_paused_change(paused: bool, _: bool) {
@@ -44,65 +96,14 @@ mod lua {
     }
     #[lua_function]
     fn init() {
-        ON_INIT.call_once(init_once);
         PAUSE_SIMULATE.store(false, Ordering::Relaxed);
-    }
-    #[lua_function]
-    fn world_seed_init() {
-        if CONNECTION_TYPE.load(Ordering::Relaxed) == 2 {
-            WorldSeed::global().seed = WORLD_SEED.load(Ordering::Relaxed);
-        }
     }
     #[lua_function]
     fn on_pause() {
         new_game_pause_update()
     }
-    #[lua_function]
-    fn text_msg(msg: &str) {
-        if let Some(cmd) = msg.strip_prefix("/") {
-            if let Some(host) = cmd.strip_prefix("connect") {
-                let host = host.trim();
-                let addr = host
-                    .parse()
-                    .unwrap_or(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
-                let mut net = NET.lock().unwrap();
-                if let Err(e) = net.join_ip_runtime(addr, None, None, &RUNTIME) {
-                    game_print!("{e:?}");
-                }
-                CONNECTION_TYPE.store(2, Ordering::Relaxed);
-            } else if cmd == "new" {
-                delay_new_game();
-            } else if cmd == "host" {
-                let mut net = NET.lock().unwrap();
-                if let Err(e) = net.host_ip_runtime(
-                    Some(Box::new(|client, peer| {
-                        let world = WorldSeed::global();
-                        client
-                            .send(
-                                peer,
-                                &Message::World(world.seed),
-                                Reliability::Reliable,
-                                Compression::Uncompressed,
-                            )
-                            .unwrap();
-                    })),
-                    None,
-                    &RUNTIME,
-                ) {
-                    game_print!("{e:?}");
-                }
-                CONNECTION_TYPE.store(1, Ordering::Relaxed);
-            }
-        } else {
-            game_print!("{msg}");
-            let net = NET.lock().unwrap();
-            let msg = Message::Text(msg.to_string());
-            net.broadcast(&msg, Reliability::Reliable, Compression::Uncompressed)
-                .unwrap()
-        }
-    }
 }
-#[derive(Encode, Decode)]
+#[derive(bitcode::Encode, bitcode::Decode)]
 pub enum Message {
     Text(String),
     World(usize),
