@@ -18,14 +18,14 @@ pub struct StdMapNode<K, V> {
     pub key: K,
     pub value: V,
 }
-impl<K: Ord, V: Copy> StdMap<K, V> {
-    pub fn get(&self, key: &K) -> Option<V> {
+impl<K: Ord, V> StdMap<K, V> {
+    pub fn get(&self, key: &K) -> Option<&V> {
         let mut node = self.root.parent;
         loop {
             let next = match key.cmp(&node.key) {
                 Ordering::Less => node.left,
                 Ordering::Greater => node.right,
-                Ordering::Equal => return Some(node.value),
+                Ordering::Equal => return Some(&node.as_ref().value),
             };
             if next.ptr == self.root.ptr {
                 return None;

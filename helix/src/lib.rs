@@ -83,7 +83,7 @@ mod lua {
         DISABLE_INVENTORY.store(paused, Ordering::Relaxed);
         DISABLE_ITEM_PICKUP.store(paused, Ordering::Relaxed);
         if let Some(player) = EntityManager::global()
-            .get_entities_with_tag(&StdString::from("player_unit"))
+            .iter_with_tag(&StdString::from("player_unit"))
             .next()
         {
             PLAYER_ID.store(player.id, Ordering::Relaxed);

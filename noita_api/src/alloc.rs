@@ -99,6 +99,13 @@ impl<T: Sized> StdBox<T> {
         }
         Self { ptr }
     }
+    #[allow(clippy::should_implement_trait)]
+    pub fn as_ref<'a>(self) -> &'a T {
+        unsafe { self.ptr.as_ref() }
+    }
+    pub fn as_mut<'a>(mut self) -> &'a mut T {
+        unsafe { self.ptr.as_mut() }
+    }
 }
 impl<T> PartialEq for StdPtr<T> {
     fn eq(&self, other: &Self) -> bool {
@@ -140,12 +147,12 @@ impl<T: Sized> Clone for StdBox<T> {
 impl<T: Sized> Deref for StdBox<T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
-        unsafe { self.ptr.as_ref() }
+        self.as_ref()
     }
 }
 impl<T: Sized> DerefMut for StdBox<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { self.ptr.as_mut() }
+        self.as_mut()
     }
 }
 impl<T: Sized> Deref for StdPtr<T> {
