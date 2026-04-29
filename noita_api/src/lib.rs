@@ -14,6 +14,7 @@ pub mod types;
 pub use alloc::*;
 pub use libloading;
 pub use new_game::*;
+pub(crate) use noita_api_macros::{assert_size, assert_size_with};
 pub use noita_api_macros::{lua_function, lua_module};
 pub use pause::*;
 pub use print::*;
