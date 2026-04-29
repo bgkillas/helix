@@ -162,6 +162,7 @@ fn luaopen(funs: Vec<Function>, groups: Vec<FunGroup>, dont_unload: bool) -> Tok
     quote! {
         #[unsafe(no_mangle)]
         unsafe extern "C" fn luaopen(lua: *mut noita_api::lua_bindings::lua_State) -> std::ffi::c_int {
+            std::panic::set_hook(Box::new(|panic| noita_api::log_println!("{panic}")));
             #keep_loaded
             unsafe {
                 noita_api::lua::LUA.lua_createtable(lua, 0, 0);
