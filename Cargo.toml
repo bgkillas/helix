@@ -1,4 +1,3 @@
-cargo-features = ["panic-immediate-abort"]
 [workspace.package]
 edition = "2024"
 license = "GPL-3.0-only"
@@ -7,7 +6,7 @@ repository = "https://github.com/bgkillas/helix"
 [profile.release]
 lto = true
 strip = true
-panic = "immediate-abort"
+panic = "abort"
 split-debuginfo = "packed"
 incremental=true
 codegen-units=1

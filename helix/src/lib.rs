@@ -1,5 +1,6 @@
 use bevy_tangled::Client;
-use noita_api::{disable_inventory, disable_item_pickup, disable_pause};
+use noita_api::{disable_inventory, disable_item_pickup, disable_pause, log_println};
+use std::panic;
 use tokio::runtime::Runtime;
 #[noita_api::lua_module(true)]
 mod lua {
@@ -95,6 +96,7 @@ mod lua {
 }
 impl Default for lua::Context {
     fn default() -> Self {
+        panic::set_hook(Box::new(|panic| log_println!("{panic}")));
         disable_pause();
         disable_inventory();
         disable_item_pickup();
