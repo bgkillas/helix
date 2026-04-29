@@ -82,7 +82,14 @@ mod lua {
     fn on_paused_change(paused: bool, _: bool) {
         DISABLE_INVENTORY.store(paused, Ordering::Relaxed);
         DISABLE_ITEM_PICKUP.store(paused, Ordering::Relaxed);
-        //TODO PLAYER_ID.store(id, Ordering::Relaxed);
+        if let Some(player) = EntityManager::global()
+            .get_entities_with_tag(&StdString::from("player_unit"))
+            .next()
+        {
+            PLAYER_ID.store(player.id, Ordering::Relaxed);
+        } else {
+            PLAYER_ID.store(0, Ordering::Relaxed);
+        }
     }
     #[lua_function]
     fn init() {

@@ -10,3 +10,18 @@ pub struct EntityManager {
     pub component_buffers: StdVec<Option<StdBox<ComponentBuffer<()>>>>,
     pub event_manager: StdBox<EventManager>,
 }
+impl EntityManager {
+    pub fn get_entities_with_tag(
+        &self,
+        tag: &StdString,
+    ) -> impl DoubleEndedIterator<Item = StdBox<Entity>> {
+        let n = TagManager::<u16>::global().tag_indices.get(tag).unwrap();
+        self.entity_buckets
+            .get(n as usize)
+            .unwrap()
+            .as_ref()
+            .iter()
+            .copied()
+            .flatten()
+    }
+}

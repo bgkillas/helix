@@ -27,7 +27,6 @@ static MSVCR: std::sync::LazyLock<Msvcr> = std::sync::LazyLock::new(|| unsafe {
 const ALLOC: Global = Global;
 #[repr(transparent)]
 #[assert_size_with(0x4, ())]
-#[derive(Debug)]
 pub struct StdPtr<T: Sized> {
     pub ptr: NonNull<T>,
 }
@@ -99,6 +98,16 @@ impl<T: Sized> StdBox<T> {
             ptr.write(value);
         }
         Self { ptr }
+    }
+}
+impl<T> PartialEq for StdPtr<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.ptr == other.ptr
+    }
+}
+impl<T> Debug for StdPtr<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self.ptr)
     }
 }
 impl<T: Sized> From<StdPtr<T>> for StdBox<T> {
