@@ -5,9 +5,8 @@ mod lua {
     use crate::Message;
     use bevy_tangled::{Client, ClientTrait, Compression, Reliability};
     use noita_api::{
-        DISABLE_INVENTORY, DISABLE_ITEM_PICKUP, EntityManager, PAUSE_SIMULATE, PLAYER_ID,
-        WorldSeed, disable_inventory, disable_item_pickup, disable_pause, game_print,
-        new_game_pause_update,
+        PAUSE_SIMULATE, WorldSeed, disable_inventory, disable_item_pickup, disable_pause,
+        game_print, new_game_pause_update, set_pause_no_inventory,
     };
     use rand::Rng;
     use std::net::{IpAddr, Ipv6Addr};
@@ -35,7 +34,7 @@ mod lua {
         #[lua_function]
         fn text_msg(&mut self, msg: &str) {
             if let Some(cmd) = msg.strip_prefix("/") {
-                if let Some(host) = cmd.strip_prefix("connect") {
+                if let Some(host) = cmd.strip_prefix("join") {
                     let host = host.trim();
                     let addr = host.parse().unwrap_or(IpAddr::V6(Ipv6Addr::LOCALHOST));
                     if let Err(e) = self.net.join_ip_runtime(addr, None, None, &self.runtime) {
@@ -111,18 +110,12 @@ mod lua {
         }
     }
     #[lua_function]
-    fn on_paused_change(paused: bool, _: bool) {
-        DISABLE_INVENTORY.store(paused, Ordering::Relaxed);
-        DISABLE_ITEM_PICKUP.store(paused, Ordering::Relaxed);
-        let player = EntityManager::global()
-            .iter_with_tag("player_unit")
-            .next()
-            .map(|p| p.id)
-            .unwrap_or_default();
-        PLAYER_ID.store(player, Ordering::Relaxed);
+    fn on_paused_change(paused: bool, _is_wand_pickup: bool) {
+        set_pause_no_inventory(paused);
     }
     #[lua_function]
     fn init() {
+        set_pause_no_inventory(false);
         PAUSE_SIMULATE.store(true, Ordering::Relaxed);
     }
     #[lua_function]

@@ -1,4 +1,4 @@
-use crate::{DeathMatch, Entity, GameGlobal, StdBox, get_this_call};
+use crate::{DeathMatch, Entity, EntityManager, GameGlobal, StdBox, get_this_call};
 use retour::static_detour;
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -80,4 +80,14 @@ pub fn disable_item_pickup() {
         ITEM_PICKUP.initialize(old_item, item_pickup).unwrap();
         ITEM_PICKUP.enable().unwrap();
     }
+}
+pub fn set_pause_no_inventory(paused: bool) {
+    DISABLE_INVENTORY.store(paused, Ordering::Relaxed);
+    DISABLE_ITEM_PICKUP.store(paused, Ordering::Relaxed);
+    let player = EntityManager::global()
+        .iter_with_tag("player_unit")
+        .next()
+        .map(|p| p.id)
+        .unwrap_or_default();
+    PLAYER_ID.store(player, Ordering::Relaxed);
 }
