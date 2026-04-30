@@ -143,7 +143,7 @@ fn make_group(group: FunGroup) -> TokenStream {
     let name = format_ident!("GLOBAL_{}", ident.to_string().to_ascii_uppercase());
     let funs = make_inner_funs(group.funs, Some(ident.clone()));
     quote! {
-        static mut #name: std::sync::LazyLock<#ident> = std::sync::LazyLock::new(#ident::default);
+        static #name: std::cell::SyncUnsafeCell<std::sync::LazyLock<#ident>> = std::cell::SyncUnsafeCell::new(std::sync::LazyLock::new(#ident::default));
         #(#funs)*
     }
 }
@@ -388,7 +388,7 @@ fn add_lua_fn(fun: Function, struct_ident: Option<Ident>) -> TokenStream {
     let ret = if let Some(struct_ident) = struct_ident {
         let name = format_ident!("GLOBAL_{}", struct_ident.to_string().to_ascii_uppercase());
         quote! {
-            let ret = unsafe{#struct_ident::#ident(&mut #name, #(#args,)*)};
+            let ret = unsafe{#struct_ident::#ident(#name.get().as_mut().unwrap(), #(#args,)*)};
         }
     } else {
         quote! {

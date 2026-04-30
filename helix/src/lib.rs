@@ -1,14 +1,21 @@
+#![feature(sync_unsafe_cell)]
 use bevy_tangled::Client;
 use noita_api::*;
 use rand::rngs::ThreadRng;
+use std::cell::UnsafeCell;
 use tokio::runtime::Runtime;
+thread_local! {
+    pub static RNG: UnsafeCell<ThreadRng> = UnsafeCell::new(ThreadRng::default());
+}
+pub fn rng<T>(f: impl FnOnce(&mut ThreadRng) -> T) -> T {
+    unsafe { RNG.try_with(|rng| f(rng.get().as_mut().unwrap())).unwrap() }
+}
 #[lua_module(true)]
 mod lua {
-    use crate::{ConnectionType, Message};
+    use crate::{ConnectionType, Message, rng};
     use bevy_tangled::{Client, ClientTrait, Compression, Reliability};
     use noita_api::*;
     use rand::Rng;
-    use rand::rngs::ThreadRng;
     use std::net::{IpAddr, Ipv4Addr};
     use std::sync::atomic::Ordering;
     use tokio::runtime::Runtime;
@@ -17,7 +24,6 @@ mod lua {
         pub runtime: Runtime,
         pub connection_type: ConnectionType,
         pub net: Client,
-        pub rng: ThreadRng,
     }
     impl Context {
         #[lua_function]
@@ -47,7 +53,7 @@ mod lua {
                     let seed = seed.trim();
                     self.world_seed = seed
                         .parse()
-                        .unwrap_or_else(|_| self.rng.next_u32() as usize);
+                        .unwrap_or_else(|_| rng(|rand| rand.next_u32() as usize));
                     self.net
                         .broadcast(
                             &Message::World(self.world_seed),
@@ -122,7 +128,6 @@ impl Default for lua::Context {
             runtime: Runtime::new().unwrap(),
             connection_type: ConnectionType::None,
             net: Client::new().unwrap(),
-            rng: ThreadRng::default(),
         }
     }
 }
