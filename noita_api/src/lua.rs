@@ -1,4 +1,5 @@
-use crate::lua_bindings::{LUA_GLOBALSINDEX, Lua51, lua_CFunction, lua_State};
+pub use crate::lua_bindings::lua_State;
+use crate::lua_bindings::{LUA_GLOBALSINDEX, Lua51, lua_CFunction};
 use eyre::{Context, OptionExt, bail, eyre};
 use std::{
     array,
@@ -15,10 +16,8 @@ thread_local! {
     static CURRENT_LUA_STATE: Cell<Option<LuaState>> = Cell::default();
 }
 
-pub static LUA: LazyLock<Lua51> = LazyLock::new(|| unsafe {
-    let lib = libloading::Library::new("./lua51.dll").expect("library to exist");
-    Lua51::from_library(lib).expect("library to be lua")
-});
+pub static LUA: LazyLock<Lua51> =
+    LazyLock::new(|| unsafe { Lua51::new("lua51.dll").expect("library to be lua") });
 
 #[derive(Clone, Copy)]
 pub struct LuaState {
@@ -41,41 +40,46 @@ impl LuaState {
         CURRENT_LUA_STATE.set(Some(self));
     }
 
+    #[must_use]
     pub fn raw(&self) -> *mut lua_State {
         self.lua
     }
 
+    #[must_use]
     pub fn to_integer(&self, index: i32) -> isize {
-        unsafe { LUA.lua_tointeger(self.lua, index) }
+        unsafe { (LUA.lua_tointeger)(self.lua, index) }
     }
 
+    #[must_use]
     pub fn to_integer_array(
         &self,
         index: i32,
         len: usize,
     ) -> impl DoubleEndedIterator<Item = isize> {
         (1..=len).map(move |i| unsafe {
-            LUA.lua_pushinteger(self.lua, i as crate::lua_bindings::lua_Integer);
-            LUA.lua_gettable(self.lua, index);
-            LUA.lua_tointeger(self.lua, -1)
+            (LUA.lua_pushinteger)(self.lua, i.cast_signed());
+            (LUA.lua_gettable)(self.lua, index);
+            (LUA.lua_tointeger)(self.lua, -1)
         })
     }
 
+    #[must_use]
     pub fn to_number(&self, index: i32) -> f64 {
-        unsafe { LUA.lua_tonumber(self.lua, index) }
+        unsafe { (LUA.lua_tonumber)(self.lua, index) }
     }
 
+    #[must_use]
     pub fn to_bool(&self, index: i32) -> bool {
-        unsafe { LUA.lua_toboolean(self.lua, index) > 0 }
+        unsafe { (LUA.lua_toboolean)(self.lua, index) > 0 }
     }
 
     pub fn to_string(&self, index: i32) -> eyre::Result<String> {
         let mut size = 0;
-        let buf = unsafe { LUA.lua_tolstring(self.lua, index, &mut size) };
+        let buf = unsafe { (LUA.lua_tolstring)(self.lua, index, &raw mut size) };
         if buf.is_null() {
             bail!("Expected a string, but got a null pointer");
         }
-        let slice = unsafe { slice::from_raw_parts(buf as *const u8, size) };
+        let slice = unsafe { slice::from_raw_parts(buf.cast::<u8>(), size) };
 
         String::from_utf8(slice.to_owned())
             .wrap_err("Attempting to get lua string, expecting it to be utf-8")
@@ -83,60 +87,61 @@ impl LuaState {
 
     pub fn to_str<'a>(&self, index: i32) -> eyre::Result<&'a str> {
         let mut size = 0;
-        let buf = unsafe { LUA.lua_tolstring(self.lua, index, &mut size) };
+        let buf = unsafe { (LUA.lua_tolstring)(self.lua, index, &raw mut size) };
         if buf.is_null() {
             bail!("Expected a string, but got a null pointer");
         }
-        let slice = unsafe { slice::from_raw_parts(buf as *const u8, size) };
+        let slice = unsafe { slice::from_raw_parts(buf.cast::<u8>(), size) };
 
         str::from_utf8(slice).wrap_err("Attempting to get lua string, expecting it to be utf-8")
     }
 
     pub fn to_raw_string(&self, index: i32) -> eyre::Result<Vec<u8>> {
         let mut size = 0;
-        let buf = unsafe { LUA.lua_tolstring(self.lua, index, &mut size) };
+        let buf = unsafe { (LUA.lua_tolstring)(self.lua, index, &raw mut size) };
         if buf.is_null() {
             bail!("Expected a string, but got a null pointer");
         }
-        let slice = unsafe { slice::from_raw_parts(buf as *const u8, size) };
+        let slice = unsafe { slice::from_raw_parts(buf.cast::<u8>(), size) };
 
         Ok(slice.to_owned())
     }
 
+    #[must_use]
     pub fn to_cfunction(&self, index: i32) -> lua_CFunction {
-        unsafe { LUA.lua_tocfunction(self.lua, index) }
+        unsafe { (LUA.lua_tocfunction)(self.lua, index) }
     }
 
     pub fn push_number(&self, val: f64) {
-        unsafe { LUA.lua_pushnumber(self.lua, val) };
+        unsafe { (LUA.lua_pushnumber)(self.lua, val) };
     }
 
     pub fn push_integer(&self, val: isize) {
-        unsafe { LUA.lua_pushinteger(self.lua, val) };
+        unsafe { (LUA.lua_pushinteger)(self.lua, val) };
     }
 
     pub fn push_bool(&self, val: bool) {
-        unsafe { LUA.lua_pushboolean(self.lua, val as i32) };
+        unsafe { (LUA.lua_pushboolean)(self.lua, i32::from(val)) };
     }
 
     pub fn push_string(&self, s: &str) {
         unsafe {
-            LUA.lua_pushlstring(self.lua, s.as_bytes().as_ptr() as *const c_char, s.len());
+            (LUA.lua_pushlstring)(self.lua, s.as_bytes().as_ptr().cast::<c_char>(), s.len());
         }
     }
 
     pub fn push_raw_string(&self, s: &[u8]) {
         unsafe {
-            LUA.lua_pushlstring(self.lua, s.as_ptr() as *const c_char, s.len());
+            (LUA.lua_pushlstring)(self.lua, s.as_ptr().cast::<c_char>(), s.len());
         }
     }
 
     pub fn push_nil(&self) {
-        unsafe { LUA.lua_pushnil(self.lua) }
+        unsafe { (LUA.lua_pushnil)(self.lua) }
     }
 
     pub fn call(&self, nargs: i32, nresults: i32) -> eyre::Result<()> {
-        let ret = unsafe { LUA.lua_pcall(self.lua, nargs, nresults, 0) };
+        let ret = unsafe { (LUA.lua_pcall)(self.lua, nargs, nresults, 0) };
         if ret == 0 {
             Ok(())
         } else {
@@ -148,27 +153,28 @@ impl LuaState {
     }
 
     pub fn get_global(&self, name: &CStr) {
-        unsafe { LUA.lua_getfield(self.lua, LUA_GLOBALSINDEX, name.as_ptr()) };
+        unsafe { (LUA.lua_getfield)(self.lua, LUA_GLOBALSINDEX, name.as_ptr()) };
     }
 
+    #[must_use]
     pub fn objlen(&self, index: i32) -> usize {
-        unsafe { LUA.lua_objlen(self.lua, index) }
+        unsafe { (LUA.lua_objlen)(self.lua, index) }
     }
 
     pub fn index_table(&self, table_index: i32, index_in_table: usize) {
-        self.push_integer(index_in_table as isize);
+        self.push_integer(index_in_table.cast_signed());
         if table_index < 0 {
-            unsafe { LUA.lua_gettable(self.lua, table_index - 1) };
+            unsafe { (LUA.lua_gettable)(self.lua, table_index - 1) };
         } else {
-            unsafe { LUA.lua_gettable(self.lua, table_index) };
+            unsafe { (LUA.lua_gettable)(self.lua, table_index) };
         }
     }
 
     pub fn pop_last(&self) {
-        unsafe { LUA.lua_settop(self.lua, -2) };
+        unsafe { (LUA.lua_settop)(self.lua, -2) };
     }
     pub fn pop_last_n(&self, n: i32) {
-        unsafe { LUA.lua_settop(self.lua, -1 - (n)) };
+        unsafe { (LUA.lua_settop)(self.lua, -1 - (n)) };
     }
 
     /// Raise an error with message `s`
@@ -178,25 +184,27 @@ impl LuaState {
     pub unsafe fn raise_error(&self, s: String) -> ! {
         self.push_string(&s);
         drop(s);
-        unsafe { LUA.lua_error(self.lua) };
+        unsafe { (LUA.lua_error)(self.lua) };
         // lua_error does not return.
         unreachable!()
     }
 
+    #[must_use]
     pub fn is_nil_or_none(&self, index: i32) -> bool {
-        (unsafe { LUA.lua_type(self.lua, index) }) <= 0
+        (unsafe { (LUA.lua_type)(self.lua, index) }) <= 0
     }
 
     pub fn create_table(&self, narr: c_int, nrec: c_int) {
-        unsafe { LUA.lua_createtable(self.lua, narr, nrec) };
+        unsafe { (LUA.lua_createtable)(self.lua, narr, nrec) };
     }
 
     pub fn rawset_table(&self, table_index: i32, index_in_table: i32) {
-        unsafe { LUA.lua_rawseti(self.lua, table_index, index_in_table) };
+        unsafe { (LUA.lua_rawseti)(self.lua, table_index, index_in_table) };
     }
 
+    #[must_use]
     pub fn checkstack(&self, sz: i32) -> bool {
-        unsafe { LUA.lua_checkstack(self.lua, sz) > 0 }
+        unsafe { (LUA.lua_checkstack)(self.lua, sz) > 0 }
     }
 }
 
@@ -267,23 +275,22 @@ impl<R: LuaFnRet> LuaFnRet for eyre::Result<R> {
 
 impl<T: LuaFnRet> LuaFnRet for Option<T> {
     fn do_return(self, lua: LuaState) -> c_int {
-        match self {
-            Some(val) => val.do_return(lua),
-            None => {
-                lua.push_nil();
-                1
-            }
+        if let Some(val) = self {
+            val.do_return(lua)
+        } else {
+            lua.push_nil();
+            1
         }
     }
 }
 
 impl<T: LuaFnRet> LuaFnRet for Vec<T> {
     fn do_return(self, lua: LuaState) -> c_int {
-        lua.create_table(self.len() as c_int, 0);
+        lua.create_table(c_int::try_from(self.len()).unwrap(), 0);
         for (i, el) in self.into_iter().enumerate() {
             let elements = el.do_return(lua);
             assert_eq!(elements, 1, "Vec<T>'s T should only put one value on stack");
-            lua.rawset_table(-2, (i + 1) as i32);
+            lua.rawset_table(-2, i32::try_from(i + 1).unwrap());
         }
         1
     }
@@ -311,12 +318,6 @@ impl LuaPutValue for i32 {
     }
 }
 
-impl LuaPutValue for i64 {
-    fn put(&self, lua: LuaState) {
-        lua.push_number(*self as f64);
-    }
-}
-
 impl LuaPutValue for isize {
     fn put(&self, lua: LuaState) {
         lua.push_integer(*self);
@@ -331,7 +332,7 @@ impl LuaPutValue for u32 {
 
 impl LuaPutValue for f32 {
     fn put(&self, lua: LuaState) {
-        lua.push_number(*self as f64);
+        lua.push_number(f64::from(*self));
     }
 }
 
@@ -410,8 +411,8 @@ impl<T: LuaPutValue> LuaPutValue for Option<T> {
 impl LuaPutValue for (f32, f32) {
     const SIZE_ON_STACK: u32 = 2;
     fn put(&self, lua: LuaState) {
-        lua.push_number(self.0 as f64);
-        lua.push_number(self.1 as f64);
+        lua.push_number(f64::from(self.0));
+        lua.push_number(f64::from(self.1));
     }
 }
 
@@ -426,23 +427,9 @@ pub trait LuaGetValue {
     fn get(lua: LuaState, index: i32) -> eyre::Result<Self>
     where
         Self: Sized;
+    #[must_use]
     fn size_on_stack() -> i32 {
         1
-    }
-}
-
-impl LuaGetValue for i32 {
-    fn get(lua: LuaState, index: i32) -> eyre::Result<Self> {
-        Ok(lua.to_integer(index) as Self)
-    }
-}
-
-impl LuaGetValue for i64 {
-    fn get(lua: LuaState, index: i32) -> eyre::Result<Self>
-    where
-        Self: Sized,
-    {
-        Ok(lua.to_number(index) as Self)
     }
 }
 
@@ -452,21 +439,9 @@ impl LuaGetValue for isize {
     }
 }
 
-impl LuaGetValue for u32 {
-    fn get(lua: LuaState, index: i32) -> eyre::Result<Self> {
-        Ok((lua.to_integer(index) as i32).cast_unsigned())
-    }
-}
-
 impl LuaGetValue for usize {
     fn get(lua: LuaState, index: i32) -> eyre::Result<Self> {
         Ok(lua.to_integer(index).cast_unsigned())
-    }
-}
-
-impl LuaGetValue for f32 {
-    fn get(lua: LuaState, index: i32) -> eyre::Result<Self> {
-        Ok(lua.to_number(index) as f32)
     }
 }
 
@@ -504,7 +479,7 @@ impl LuaGetValue for Option<ComponentID> {
     }
 }*/
 
-impl<'a> LuaGetValue for Cow<'a, str> {
+impl LuaGetValue for Cow<'_, str> {
     fn get(lua: LuaState, index: i32) -> eyre::Result<Self> {
         Ok(lua.to_str(index)?.into())
     }
@@ -592,7 +567,7 @@ impl<T: LuaGetValue, const N: usize> LuaGetValue for [T; N] {
             lua.index_table(index, i);
             let get = T::get(lua, -1);
             lua.pop_last();
-            *res = Some(get?)
+            *res = Some(get?);
         }
         let mut res = res.into_iter();
         let res: [T; N] = array::from_fn(|_| res.next().unwrap().unwrap());

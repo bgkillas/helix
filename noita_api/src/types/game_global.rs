@@ -1,4 +1,4 @@
-use crate::*;
+use crate::{CellFactory, GameWorld, GridWorld, StdBox, Textures};
 use noita_api_macros::assert_size;
 use std::ffi::c_void;
 #[repr(C)]
@@ -28,6 +28,7 @@ impl GameGlobal {
     pub fn pause(&mut self) {
         *self.pause_state = 4;
     }
+    #[must_use]
     pub fn is_paused(&self) -> bool {
         *self.pause_state != 0
     }

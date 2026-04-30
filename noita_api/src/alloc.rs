@@ -15,7 +15,7 @@ struct Msvcr {
 }
 #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 static MSVCR: std::sync::LazyLock<Msvcr> = std::sync::LazyLock::new(|| unsafe {
-    let lib = libloading::Library::new("./msvcr120.dll").expect("library to exist");
+    let lib = libloading::Library::new("msvcr120.dll").expect("library to exist");
     let operator_new = *lib.get(b"??2@YAPAXI@Z\0").expect("symbol to exist");
     let operator_delete = *lib.get(b"??3@YAXPAX@Z\0").expect("symbol to exist");
     Msvcr {
@@ -51,12 +51,14 @@ impl<T: Sized> StdPtr<T> {
         Self { ptr }
     }
     #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+    #[must_use]
     pub fn malloc() -> Self {
         let layout = Layout::new::<T>();
         let ptr = ALLOC.allocate(layout).unwrap().cast();
         Self { ptr }
     }
     #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+    #[must_use]
     pub fn malloc_array(n: usize) -> Self {
         let layout = Layout::array::<T>(n).unwrap();
         let ptr = ALLOC.allocate(layout).unwrap().cast();
@@ -80,6 +82,7 @@ impl<T: Sized> StdPtr<T> {
         let layout = Layout::array::<T>(n).unwrap();
         unsafe { ALLOC.deallocate(self.ptr.cast(), layout) };
     }
+    #[must_use]
     pub const fn new(value: usize) -> Self {
         let ptr = unsafe { NonNull::new_unchecked(value as *mut T) };
         Self { ptr }
@@ -91,8 +94,9 @@ impl<T: Sized> StdPtr<T> {
 }
 impl<T: Sized> StdBox<T> {
     pub fn free(mut self) {
-        self.ptr.free()
+        self.ptr.free();
     }
+    #[must_use]
     pub fn read(self) -> T {
         unsafe { self.ptr.read() }
     }
@@ -104,9 +108,11 @@ impl<T: Sized> StdBox<T> {
         Self { ptr }
     }
     #[allow(clippy::should_implement_trait)]
+    #[must_use]
     pub fn as_ref<'a>(self) -> &'a T {
         unsafe { self.ptr.as_ref() }
     }
+    #[must_use]
     pub fn as_mut<'a>(mut self) -> &'a mut T {
         unsafe { self.ptr.as_mut() }
     }
@@ -172,6 +178,6 @@ impl<T: Sized> DerefMut for StdPtr<T> {
 }
 impl<T: Sized + Debug> Debug for StdBox<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.deref())
+        write!(f, "{:?}", &**self)
     }
 }

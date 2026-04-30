@@ -6,7 +6,7 @@ pub mod alloc;
 mod funs;
 mod globals;
 pub mod lua;
-pub mod lua_bindings;
+pub(crate) mod lua_bindings;
 pub mod new_game;
 pub mod pause;
 pub mod print;

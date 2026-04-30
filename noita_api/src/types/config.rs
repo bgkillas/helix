@@ -1,4 +1,7 @@
-use crate::*;
+use crate::{
+    AABB, Color, ConfigDamageCriticalVTable, ConfigExplosionVTable,
+    ConfigGridCosmeticParticleVTable, StdBox, StdString, ValueRange, ValueRangeInt, Vec2,
+};
 #[repr(C)]
 #[derive(Debug)]
 pub struct ConfigExplosion {

@@ -1,4 +1,4 @@
-use crate::*;
+use crate::{DeathMatch, Entity, GameGlobal, StdBox, get_this_call};
 use retour::static_detour;
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -25,7 +25,7 @@ fn pause(this: StdBox<DeathMatch>, dt: f32) {
 }
 pub fn disable_pause() {
     unsafe {
-        let old_pause = get_this_call!(0x006b26f0, fn(StdBox<DeathMatch>, f32));
+        let old_pause = get_this_call!(0x006b_26f0, fn(StdBox<DeathMatch>, f32));
         PAUSE.initialize(old_pause, pause).unwrap();
         PAUSE.enable().unwrap();
     }
@@ -47,7 +47,7 @@ fn inventory(this: StdBox<c_void>, entity: StdBox<c_void>, component: StdBox<c_v
 pub fn disable_inventory() {
     unsafe {
         let old_inv = get_this_call!(
-            0x00b7d8d0,
+            0x00b7_d8d0,
             fn(StdBox<c_void>, StdBox<c_void>, StdBox<c_void>)
         );
         INVENTORY.initialize(old_inv, inventory).unwrap();
@@ -74,7 +74,7 @@ fn item_pickup(this: StdBox<c_void>, entity: StdBox<Entity>, component: StdBox<c
 pub fn disable_item_pickup() {
     unsafe {
         let old_item = get_this_call!(
-            0x00b90480,
+            0x00b9_0480,
             fn(StdBox<c_void>, StdBox<Entity>, StdBox<c_void>)
         );
         ITEM_PICKUP.initialize(old_item, item_pickup).unwrap();

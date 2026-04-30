@@ -1,4 +1,4 @@
-use crate::*;
+use crate::Vec2;
 #[repr(C)]
 #[derive(Debug)]
 pub struct Transform {

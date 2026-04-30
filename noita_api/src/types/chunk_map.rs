@@ -1,4 +1,7 @@
-use crate::*;
+use crate::{
+    CellVTable, ConfigExplosion, ConfigGridCosmeticParticle, StdBox, StdString, StdVec,
+    TextureInfo, Vec2i,
+};
 use std::ffi::c_void;
 #[repr(C)]
 #[derive(Debug)]

@@ -1,5 +1,6 @@
-use crate::*;
-use std::ops::Deref;
+use crate::{
+    ComponentBuffer, Entity, EntityManagerVTable, EventManager, StdBox, StdVec, TagManager,
+};
 #[repr(C)]
 #[derive(Debug)]
 pub struct EntityManager {
@@ -12,16 +13,14 @@ pub struct EntityManager {
     pub event_manager: StdBox<EventManager>,
 }
 impl EntityManager {
+    #[must_use]
     pub fn iter_with_tag(&self, tag: &str) -> impl DoubleEndedIterator<Item = StdBox<Entity>> {
         if let Some(n) = TagManager::<u16>::global().tag_indices.get(tag).copied()
             && let Some(vec) = self.entity_buckets.get(n as usize)
         {
-            vec.deref()
+            vec.iter().copied().flatten()
         } else {
-            &[]
+            [].iter().copied().flatten()
         }
-        .iter()
-        .copied()
-        .flatten()
     }
 }

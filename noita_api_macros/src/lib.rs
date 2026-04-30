@@ -38,7 +38,7 @@ fn parse_group(tokens: TokenStream) -> (Vec<Function>, Vec<FunGroup>) {
                 for f in &mut funs {
                     f.args.remove(0);
                 }
-                groups.push(FunGroup { ident: name, funs })
+                groups.push(FunGroup { ident: name, funs });
             }
             TokenTree::Group(g) if is_fun && g.delimiter() == Delimiter::Parenthesis => {
                 let mut arg = Vec::new();
@@ -141,7 +141,7 @@ fn parse_attribute(mut tokens: TokenStream, dont_unload: bool) -> TokenStream {
 fn make_group(group: FunGroup) -> TokenStream {
     let ident = group.ident;
     let name = format_ident!("GLOBAL_{}", ident.to_string().to_ascii_uppercase());
-    let funs = make_inner_funs(group.funs, Some(ident.clone()));
+    let funs = make_inner_funs(group.funs, Some(&ident));
     quote! {
         static #name: std::cell::SyncUnsafeCell<std::sync::LazyLock<#ident>> = std::cell::SyncUnsafeCell::new(std::sync::LazyLock::new(#ident::default));
         #(#funs)*
@@ -161,11 +161,11 @@ fn luaopen(funs: Vec<Function>, groups: Vec<FunGroup>, dont_unload: bool) -> Tok
     let groups = groups.into_iter().map(make_group);
     quote! {
         #[unsafe(no_mangle)]
-        unsafe extern "C" fn luaopen(lua: *mut noita_api::lua_bindings::lua_State) -> std::ffi::c_int {
+        unsafe extern "C" fn luaopen(lua: *mut noita_api::lua::lua_State) -> std::ffi::c_int {
             std::panic::set_hook(Box::new(|panic| noita_api::log_println!("{panic}")));
             #keep_loaded
             unsafe {
-                noita_api::lua::LUA.lua_createtable(lua, 0, 0);
+                (noita_api::lua::LUA.lua_createtable)(lua, 0, 0);
                 #(#inner_funs)*
                 #(#groups)*
             }
@@ -202,12 +202,12 @@ pub fn assert_size(
     let tokens: TokenStream = tokens.into();
     let mut struct_name = None;
     let mut expect_name = false;
-    for token in tokens.clone().into_iter() {
+    for token in tokens.clone() {
         match token {
             TokenTree::Ident(ident)
                 if matches!(ident.to_string().as_str(), "struct" | "enum" | "union") =>
             {
-                expect_name = true
+                expect_name = true;
             }
             TokenTree::Ident(ident) if expect_name => {
                 struct_name = Some(ident);
@@ -245,17 +245,17 @@ pub fn assert_size_with(
             }
         })
         .unwrap();
-    let t = TokenStream::from_iter(t.iter().cloned());
-    let arg = TokenStream::from_iter(arg.iter().cloned());
+    let t: TokenStream = t.iter().cloned().collect();
+    let arg: TokenStream = arg.iter().cloned().collect();
     let tokens: TokenStream = tokens.into();
     let mut struct_name = None;
     let mut expect_name = false;
-    for token in tokens.clone().into_iter() {
+    for token in tokens.clone() {
         match token {
             TokenTree::Ident(ident)
                 if matches!(ident.to_string().as_str(), "struct" | "enum" | "union") =>
             {
-                expect_name = true
+                expect_name = true;
             }
             TokenTree::Ident(ident) if expect_name => {
                 struct_name = Some(ident);
@@ -288,7 +288,7 @@ pub fn generate_global(
     let mut type_name = Vec::new();
     let mut global_const = None;
     let mut n = 0;
-    for token in tokens.clone().into_iter() {
+    for token in tokens.clone() {
         match token {
             TokenTree::Ident(ident) if global_const.is_none() && ident != "const" => {
                 global_const = Some(ident.clone());
@@ -322,14 +322,14 @@ pub fn generate_global(
         }
     }
     let type_name = TokenStream::from_iter(type_name);
-    let global_type = get_global_type(global_const.unwrap(), type_name, is_ptr_ptr);
+    let global_type = get_global_type(&global_const.unwrap(), &type_name, is_ptr_ptr);
     quote! {
         #tokens
         #global_type
     }
     .into()
 }
-fn get_global_type(global_const: Ident, type_name: TokenStream, is_ptr_ptr: bool) -> TokenStream {
+fn get_global_type(global_const: &Ident, type_name: &TokenStream, is_ptr_ptr: bool) -> TokenStream {
     let ptr_read = if is_ptr_ptr {
         quote! {unsafe{#global_const.read()}}
     } else {
@@ -343,7 +343,7 @@ fn get_global_type(global_const: Ident, type_name: TokenStream, is_ptr_ptr: bool
         }
     }
 }
-fn add_lua_fn(fun: Function, struct_ident: Option<Ident>) -> TokenStream {
+fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> TokenStream {
     let ident = fun.name.unwrap();
     let bridge_fn_name = format_ident!("{ident}_lua_bridge");
     let fn_name_c = name_to_c_literal(&ident.to_string());
@@ -396,7 +396,7 @@ fn add_lua_fn(fun: Function, struct_ident: Option<Ident>) -> TokenStream {
         }
     };
     quote! {
-        unsafe extern "C" fn #bridge_fn_name(lua: *mut noita_api::lua_bindings::lua_State) -> std::ffi::c_int {
+        unsafe extern "C" fn #bridge_fn_name(lua: *mut noita_api::lua::lua_State) -> std::ffi::c_int {
             let lua_state = noita_api::lua::LuaState::new(lua);
             lua_state.make_current();
             #index
@@ -405,17 +405,17 @@ fn add_lua_fn(fun: Function, struct_ident: Option<Ident>) -> TokenStream {
             let ret = noita_api::lua::LuaFnRet::do_return(ret, lua_state);
             ret
         }
-        noita_api::lua::LUA.lua_pushcclosure(lua, Some(#bridge_fn_name), 0);
-        noita_api::lua::LUA.lua_setfield(lua, -2, #fn_name_c.as_ptr());
+        (noita_api::lua::LUA.lua_pushcclosure)(lua, Some(#bridge_fn_name), 0);
+        (noita_api::lua::LUA.lua_setfield)(lua, -2, #fn_name_c.as_ptr());
     }
 }
 fn name_to_c_literal(name: &str) -> Literal {
     Literal::c_string(CString::new(name).unwrap().as_c_str())
 }
-fn make_inner_funs(idents: Vec<Function>, ident: Option<Ident>) -> Vec<TokenStream> {
+fn make_inner_funs(idents: Vec<Function>, ident: Option<&Ident>) -> Vec<TokenStream> {
     let mut inner_funs = Vec::new();
     for fun in idents {
-        inner_funs.push(add_lua_fn(fun, ident.clone()));
+        inner_funs.push(add_lua_fn(fun, ident));
     }
     inner_funs
 }

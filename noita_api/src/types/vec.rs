@@ -8,12 +8,15 @@ pub struct StdVec<T> {
     pub cap: *mut T,
 }
 impl<T> StdVec<T> {
+    #[must_use]
     pub fn capacity(&self) -> usize {
         unsafe { self.cap.offset_from_unsigned(self.start) }
     }
+    #[must_use]
     pub fn len(&self) -> usize {
         unsafe { self.end.offset_from_unsigned(self.start) }
     }
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.start == self.end
     }

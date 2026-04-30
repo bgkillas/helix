@@ -1,9 +1,9 @@
-use crate::*;
+use crate::{GameGlobal, PAUSE_SIMULATE, get_fast_call};
 use std::sync::atomic::{AtomicU8, Ordering};
 const PAUSE_FRAME: u8 = 8;
 static DO_RESTART: AtomicU8 = AtomicU8::new(0);
 pub fn new_game() {
-    let fun = unsafe { get_fast_call!(0x009a2d70, fn()) };
+    let fun = unsafe { get_fast_call!(0x009a_2d70, fn()) };
     fun();
 }
 pub fn delay_new_game() {

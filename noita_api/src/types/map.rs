@@ -1,4 +1,4 @@
-use crate::*;
+use crate::StdBox;
 use std::cmp::Ordering;
 use std::ops::Deref;
 #[repr(C)]
@@ -23,7 +23,7 @@ impl<L: ?Sized + Ord, K: Deref<Target = L>, V> StdMap<K, V> {
     pub fn get(&self, key: &L) -> Option<&V> {
         let mut node = self.root.parent;
         loop {
-            let next = match key.cmp(node.key.deref()) {
+            let next = match key.cmp(&*node.key) {
                 Ordering::Less => node.left,
                 Ordering::Greater => node.right,
                 Ordering::Equal => return Some(&node.as_ref().value),

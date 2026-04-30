@@ -1,4 +1,7 @@
-use crate::*;
+use crate::{
+    BiomeModifiersVFTable, ChunkMap, GridWorldThreadedVTable, GridWorldVTable, IAABB, StdBox,
+    StdVec, Vec2i,
+};
 #[repr(C)]
 #[derive(Debug)]
 pub struct GridWorld {

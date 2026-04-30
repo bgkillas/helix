@@ -1,4 +1,4 @@
-use crate::*;
+use crate::StdPtr;
 use noita_api_macros::assert_size;
 use std::fmt::{Debug, Formatter};
 use std::ops::Deref;
@@ -28,7 +28,7 @@ impl Debug for StdString {
 impl StdString {
     pub fn free(self) {
         if self.capacity > 16 {
-            unsafe { self.buffer.buffer }.free_array(self.capacity)
+            unsafe { self.buffer.buffer }.free_array(self.capacity);
         }
     }
 }
@@ -52,6 +52,7 @@ impl From<&str> for StdString {
     }
 }
 impl StdString {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         let ptr = if self.capacity > 16 {
             unsafe { self.buffer.buffer.as_ptr() }
@@ -60,6 +61,7 @@ impl StdString {
         };
         unsafe { str::from_utf8_unchecked(slice::from_raw_parts(ptr, self.size)) }
     }
+    #[must_use]
     pub fn no_alloc(value: &str) -> Self {
         let buffer = unsafe { StdPtr::new_ptr(value.as_ptr().cast_mut()) };
         let buffer = Buffer { buffer };

@@ -1,20 +1,15 @@
 #![feature(sync_unsafe_cell)]
 use bevy_tangled::Client;
-use noita_api::*;
-use rand::rngs::ThreadRng;
-use std::cell::UnsafeCell;
+use noita_api::{disable_inventory, disable_item_pickup, disable_pause, lua_module};
 use tokio::runtime::Runtime;
-thread_local! {
-    pub static RNG: UnsafeCell<ThreadRng> = UnsafeCell::new(ThreadRng::default());
-}
-pub fn rng<T>(f: impl FnOnce(&mut ThreadRng) -> T) -> T {
-    unsafe { RNG.try_with(|rng| f(rng.get().as_mut().unwrap())).unwrap() }
-}
 #[lua_module(true)]
 mod lua {
-    use crate::{ConnectionType, Message, rng};
+    use crate::{ConnectionType, Message};
     use bevy_tangled::{Client, ClientTrait, Compression, Reliability};
-    use noita_api::*;
+    use noita_api::{
+        DISABLE_INVENTORY, DISABLE_ITEM_PICKUP, EntityManager, PAUSE_SIMULATE, PLAYER_ID,
+        WorldSeed, game_print, new_game_pause_update,
+    };
     use rand::Rng;
     use std::net::{IpAddr, Ipv6Addr};
     use std::sync::atomic::Ordering;
@@ -51,7 +46,7 @@ mod lua {
                     let seed = seed.trim();
                     self.world_seed = seed
                         .parse()
-                        .unwrap_or_else(|_| rng(|rand| rand.next_u32() as usize));
+                        .unwrap_or_else(|_| rand::rng().next_u32() as usize);
                     self.net
                         .broadcast(
                             &Message::World(self.world_seed),
@@ -86,7 +81,7 @@ mod lua {
                 let msg = Message::Text(msg.to_string());
                 self.net
                     .broadcast(&msg, Reliability::Reliable, Compression::Uncompressed)
-                    .unwrap()
+                    .unwrap();
             }
         }
         #[lua_function]
@@ -113,7 +108,7 @@ mod lua {
     }
     #[lua_function]
     fn on_pause() {
-        new_game_pause_update()
+        new_game_pause_update();
     }
 }
 impl Default for lua::Context {
@@ -141,12 +136,15 @@ pub enum ConnectionType {
     Client,
 }
 impl ConnectionType {
+    #[must_use]
     pub fn is_host(self) -> bool {
         matches!(self, Self::Host)
     }
+    #[must_use]
     pub fn is_client(self) -> bool {
         matches!(self, Self::Client)
     }
+    #[must_use]
     pub fn is_connected(self) -> bool {
         !matches!(self, Self::None)
     }

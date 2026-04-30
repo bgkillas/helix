@@ -1,4 +1,4 @@
-use crate::*;
+use crate::assert_size;
 #[repr(C)]
 #[assert_size(0x10)]
 #[allow(clippy::upper_case_acronyms)]

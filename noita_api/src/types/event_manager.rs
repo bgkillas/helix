@@ -1,4 +1,4 @@
-use crate::*;
+use crate::{EventManagerVTable, StdBox, StdVec};
 #[repr(C)]
 #[derive(Debug)]
 pub struct EventManager {
