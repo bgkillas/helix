@@ -1,19 +1,23 @@
 use bevy_tangled::Client;
 use noita_api::*;
+use rand::rngs::ThreadRng;
 use tokio::runtime::Runtime;
 #[lua_module(true)]
 mod lua {
     use crate::{ConnectionType, Message};
     use bevy_tangled::{Client, ClientTrait, Compression, Reliability};
     use noita_api::*;
+    use rand::Rng;
+    use rand::rngs::ThreadRng;
     use std::net::{IpAddr, Ipv4Addr};
     use std::sync::atomic::Ordering;
     use tokio::runtime::Runtime;
     pub struct Context {
-        pub world_seed: Option<usize>,
+        pub world_seed: usize,
         pub runtime: Runtime,
         pub connection_type: ConnectionType,
         pub net: Client,
+        pub rng: ThreadRng,
     }
     impl Context {
         #[lua_function]
@@ -21,10 +25,7 @@ mod lua {
             self.net.update().unwrap();
             self.net.recv(|_, msg| match msg.data {
                 Message::Text(s) => game_print!("{s}"),
-                Message::World(world) => {
-                    self.world_seed = Some(world);
-                    delay_new_game();
-                }
+                Message::World(world) => self.world_seed = world,
             });
         }
         #[lua_function]
@@ -38,11 +39,22 @@ mod lua {
                     if let Err(e) = self.net.join_ip_runtime(addr, None, None, &self.runtime) {
                         game_print!("{e:?}");
                     } else {
-                        self.connection_type = ConnectionType::Host;
-                        self.world_seed = Some(WorldSeed::global().seed);
+                        self.connection_type = ConnectionType::Client;
                     }
-                } else if cmd == "new" {
-                    delay_new_game();
+                } else if let Some(seed) = cmd.strip_prefix("new")
+                    && self.connection_type.is_host()
+                {
+                    let seed = seed.trim();
+                    self.world_seed = seed
+                        .parse()
+                        .unwrap_or_else(|_| self.rng.next_u32() as usize);
+                    self.net
+                        .broadcast(
+                            &Message::World(self.world_seed),
+                            Reliability::Reliable,
+                            Compression::Uncompressed,
+                        )
+                        .unwrap();
                 } else if cmd == "host" {
                     if let Err(e) = self.net.host_ip_runtime(
                         Some(Box::new(|client, peer| {
@@ -61,7 +73,8 @@ mod lua {
                     ) {
                         game_print!("{e:?}");
                     } else {
-                        self.connection_type = ConnectionType::Client;
+                        self.connection_type = ConnectionType::Host;
+                        self.world_seed = WorldSeed::global().seed;
                     }
                 }
             } else {
@@ -74,8 +87,8 @@ mod lua {
         }
         #[lua_function]
         fn world_seed_init(&self) {
-            if let Some(seed) = self.world_seed {
-                WorldSeed::global().seed = seed;
+            if self.connection_type.is_connected() {
+                WorldSeed::global().seed = self.world_seed;
             }
         }
     }
@@ -105,10 +118,11 @@ impl Default for lua::Context {
         disable_inventory();
         disable_item_pickup();
         Self {
-            world_seed: None,
+            world_seed: 0,
             runtime: Runtime::new().unwrap(),
             connection_type: ConnectionType::None,
             net: Client::new().unwrap(),
+            rng: ThreadRng::default(),
         }
     }
 }
@@ -117,9 +131,20 @@ pub enum Message {
     Text(String),
     World(usize),
 }
-#[repr(u8)]
+#[derive(Clone, Copy)]
 pub enum ConnectionType {
-    None = 0,
-    Host = 1,
-    Client = 2,
+    None,
+    Host,
+    Client,
+}
+impl ConnectionType {
+    pub fn is_host(self) -> bool {
+        matches!(self, Self::Host)
+    }
+    pub fn is_client(self) -> bool {
+        matches!(self, Self::Client)
+    }
+    pub fn is_connected(self) -> bool {
+        !matches!(self, Self::None)
+    }
 }
