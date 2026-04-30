@@ -1,15 +1,16 @@
 #![feature(sync_unsafe_cell)]
 use noita_api::lua_module;
+const DEFAULT_PORT: u16 = 5463;
 #[lua_module(true)]
 mod lua {
-    use crate::Message;
+    use crate::{DEFAULT_PORT, Message};
     use bevy_tangled::{Client, ClientTrait, Compression, Reliability};
     use noita_api::{
         PAUSE_SIMULATE, WorldSeed, disable_inventory, disable_item_pickup, disable_pause,
         game_print, new_game_pause_update, set_pause_no_inventory,
     };
     use rand::Rng;
-    use std::net::{IpAddr, Ipv6Addr};
+    use std::net::{IpAddr, Ipv6Addr, SocketAddr};
     use std::sync::atomic::Ordering;
     use tokio::runtime::Runtime;
     pub struct Context {
@@ -36,7 +37,15 @@ mod lua {
             if let Some(cmd) = msg.strip_prefix("/") {
                 if let Some(host) = cmd.strip_prefix("join") {
                     let host = host.trim();
-                    let addr = host.parse().unwrap_or(IpAddr::V6(Ipv6Addr::LOCALHOST));
+                    let addr = host.parse().map_or_else(
+                        |_| {
+                            host.parse().unwrap_or(SocketAddr::new(
+                                IpAddr::V6(Ipv6Addr::LOCALHOST),
+                                DEFAULT_PORT,
+                            ))
+                        },
+                        |ip| SocketAddr::new(ip, DEFAULT_PORT),
+                    );
                     if let Err(e) = self.net.join_ip_runtime(addr, None, None, &self.runtime) {
                         game_print!("{e:?}");
                     } else {
@@ -57,8 +66,10 @@ mod lua {
                         game_print!("{e:?}");
                     }
                     game_print!("new seed: {}", self.world_seed);
-                } else if cmd == "host" {
+                } else if let Some(port) = cmd.strip_prefix("host") {
+                    let port = port.trim();
                     if let Err(e) = self.net.host_ip_runtime(
+                        port.parse().unwrap_or(DEFAULT_PORT),
                         Some(Box::new(|client, peer| {
                             let world = WorldSeed::global();
                             if let Err(e) = client.send(

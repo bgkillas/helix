@@ -68,7 +68,7 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 [[package]]
 name = "bevy_tangled"
 version = "0.2.0"
-source = "git+https://github.com/bgkillas/bevy_tangled#108c500b344d2232f73238712f7e0efd25c7510c"
+source = "git+https://github.com/bgkillas/bevy_tangled#a162b2f545cee92f373f2e267b8bc674b8975425"
 dependencies = [
  "bitcode 0.6.7",
  "tangled",
