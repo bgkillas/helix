@@ -20,9 +20,7 @@ mod lua {
         fn update(&mut self) {
             self.net.update().unwrap();
             self.net.recv(|_, msg| match msg.data {
-                Message::Text(s) => {
-                    game_print!("{s}");
-                }
+                Message::Text(s) => game_print!("{s}"),
                 Message::World(world) => {
                     self.world_seed = Some(world);
                     delay_new_game();
@@ -39,8 +37,10 @@ mod lua {
                         .unwrap_or(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
                     if let Err(e) = self.net.join_ip_runtime(addr, None, None, &self.runtime) {
                         game_print!("{e:?}");
+                    } else {
+                        self.connection_type = ConnectionType::Host;
+                        self.world_seed = Some(WorldSeed::global().seed);
                     }
-                    self.connection_type = ConnectionType::Host;
                 } else if cmd == "new" {
                     delay_new_game();
                 } else if cmd == "host" {
@@ -60,8 +60,9 @@ mod lua {
                         &self.runtime,
                     ) {
                         game_print!("{e:?}");
+                    } else {
+                        self.connection_type = ConnectionType::Client;
                     }
-                    self.connection_type = ConnectionType::Client;
                 }
             } else {
                 game_print!("{msg}");
@@ -82,11 +83,12 @@ mod lua {
     fn on_paused_change(paused: bool, _: bool) {
         DISABLE_INVENTORY.store(paused, Ordering::Relaxed);
         DISABLE_ITEM_PICKUP.store(paused, Ordering::Relaxed);
-        if let Some(player) = EntityManager::global().iter_with_tag("player_unit").next() {
-            PLAYER_ID.store(player.id, Ordering::Relaxed);
-        } else {
-            PLAYER_ID.store(0, Ordering::Relaxed);
-        }
+        let player = EntityManager::global()
+            .iter_with_tag("player_unit")
+            .next()
+            .map(|p| p.id)
+            .unwrap_or_default();
+        PLAYER_ID.store(player, Ordering::Relaxed);
     }
     #[lua_function]
     fn init() {

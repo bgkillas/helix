@@ -80,8 +80,12 @@ impl<T: Sized> StdPtr<T> {
         let layout = Layout::array::<T>(n).unwrap();
         unsafe { ALLOC.deallocate(self.ptr.cast(), layout) };
     }
-    pub const fn new(ptr: usize) -> Self {
-        let ptr = unsafe { NonNull::new_unchecked(ptr as *mut _) };
+    pub const fn new(value: usize) -> Self {
+        let ptr = unsafe { NonNull::new_unchecked(value as *mut T) };
+        Self { ptr }
+    }
+    pub(crate) const unsafe fn new_ptr(value: *mut T) -> Self {
+        let ptr = unsafe { NonNull::new_unchecked(value) };
         Self { ptr }
     }
 }

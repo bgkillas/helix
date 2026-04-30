@@ -1,5 +1,6 @@
 use crate::*;
 use std::cmp::Ordering;
+use std::ops::Deref;
 #[repr(C)]
 #[derive(Debug)]
 pub struct StdMap<K, V> {
@@ -18,11 +19,11 @@ pub struct StdMapNode<K, V> {
     pub key: K,
     pub value: V,
 }
-impl<K: Ord, V> StdMap<K, V> {
-    pub fn get(&self, key: &K) -> Option<&V> {
+impl<L: ?Sized + Ord, K: Deref<Target = L>, V> StdMap<K, V> {
+    pub fn get(&self, key: &L) -> Option<&V> {
         let mut node = self.root.parent;
         loop {
-            let next = match key.cmp(&node.key) {
+            let next = match key.cmp(node.key.deref()) {
                 Ordering::Less => node.left,
                 Ordering::Greater => node.right,
                 Ordering::Equal => return Some(&node.as_ref().value),

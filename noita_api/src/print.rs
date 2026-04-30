@@ -25,7 +25,7 @@ pub fn game_print(value: &str) {
     if let Some(ptr) = game_global.game_print {
         let game_print =
             unsafe { get_this_call!(0x006c4ad0, fn(StdBox<c_void>, &StdString, usize)) };
-        let string = StdString::from(value);
+        let string = StdString::no_alloc(value);
         game_print(ptr, &string, 1);
         string.free();
     }

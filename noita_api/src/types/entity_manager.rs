@@ -12,14 +12,8 @@ pub struct EntityManager {
     pub event_manager: StdBox<EventManager>,
 }
 impl EntityManager {
-    pub fn iter_with_tag(
-        &self,
-        tag: impl Into<StdString>,
-    ) -> impl DoubleEndedIterator<Item = StdBox<Entity>> {
-        if let Some(n) = TagManager::<u16>::global()
-            .tag_indices
-            .get(&tag.into())
-            .copied()
+    pub fn iter_with_tag(&self, tag: &str) -> impl DoubleEndedIterator<Item = StdBox<Entity>> {
+        if let Some(n) = TagManager::<u16>::global().tag_indices.get(tag).copied()
             && let Some(vec) = self.entity_buckets.get(n as usize)
         {
             vec.deref()

@@ -1,7 +1,7 @@
 use crate::*;
 use noita_api_macros::assert_size;
-use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
+use std::ops::Deref;
 use std::slice;
 #[repr(C)]
 #[assert_size(0x10)]
@@ -67,41 +67,22 @@ impl StdString {
         };
         unsafe { str::from_utf8_unchecked(slice::from_raw_parts(ptr, self.size)) }
     }
-    pub fn get(&self, index: usize) -> u8 {
+    pub fn no_alloc(value: &str) -> Self {
+        let mut res = StdString {
+            buffer: Default::default(),
+            capacity: value.len().max(32),
+            size: value.len(),
+        };
         unsafe {
-            if self.capacity <= 16 {
-                self.buffer.sso_buffer[index]
-            } else {
-                self.buffer.buffer.add(index).read()
-            }
+            res.buffer.buffer = StdPtr::new_ptr(value.as_ptr().cast_mut());
         }
+        res
     }
 }
-impl Ord for StdString {
-    fn cmp(&self, other: &Self) -> Ordering {
-        let smallest = self.size.min(other.size);
-        for i in 0..smallest {
-            match self.get(i).cmp(&other.get(i)) {
-                Ordering::Equal => continue,
-                non_eq => return non_eq,
-            }
-        }
-        self.size.cmp(&other.size)
-    }
-}
-impl Eq for StdString {}
-impl PartialEq for StdString {
-    fn eq(&self, other: &Self) -> bool {
-        if self.size == other.size {
-            self.as_str() == other.as_str()
-        } else {
-            false
-        }
-    }
-}
-impl PartialOrd for StdString {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+impl Deref for StdString {
+    type Target = str;
+    fn deref(&self) -> &Self::Target {
+        self.as_str()
     }
 }
 #[test]
