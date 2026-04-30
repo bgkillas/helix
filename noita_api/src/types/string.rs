@@ -7,14 +7,7 @@ use std::slice;
 #[assert_size(0x10)]
 union Buffer {
     buffer: StdPtr<u8>,
-    sso_buffer: [u8; 16],
-}
-impl Default for Buffer {
-    fn default() -> Self {
-        Buffer {
-            sso_buffer: [0; 16],
-        }
-    }
+    sso_array: [u8; 16],
 }
 #[repr(C)]
 #[assert_size(0x18)]
@@ -41,21 +34,21 @@ impl StdString {
 }
 impl From<&str> for StdString {
     fn from(value: &str) -> Self {
-        let mut res = StdString {
-            buffer: Default::default(),
-            capacity: value.len(),
-            size: value.len(),
-        };
-        if res.capacity > 16 {
+        let buffer = if value.len() > 16 {
             let buffer = StdPtr::malloc_array(value.len());
             let slice = unsafe { slice::from_raw_parts_mut(buffer.as_ptr(), value.len()) };
             slice.copy_from_slice(value.as_bytes());
-            res.buffer.buffer = buffer;
+            Buffer { buffer }
         } else {
             let mut iter = value.as_bytes().iter().copied();
-            res.buffer.sso_buffer = std::array::from_fn(|_| iter.next().unwrap_or(0))
+            let sso_array = std::array::from_fn(|_| iter.next().unwrap_or(0));
+            Buffer { sso_array }
+        };
+        Self {
+            buffer,
+            capacity: value.len(),
+            size: value.len(),
         }
-        res
     }
 }
 impl StdString {
@@ -63,20 +56,18 @@ impl StdString {
         let ptr = if self.capacity > 16 {
             unsafe { self.buffer.buffer.as_ptr() }
         } else {
-            unsafe { self.buffer.sso_buffer.as_ptr() }
+            unsafe { self.buffer.sso_array.as_ptr() }
         };
         unsafe { str::from_utf8_unchecked(slice::from_raw_parts(ptr, self.size)) }
     }
     pub fn no_alloc(value: &str) -> Self {
-        let mut res = StdString {
-            buffer: Default::default(),
+        let buffer = unsafe { StdPtr::new_ptr(value.as_ptr().cast_mut()) };
+        let buffer = Buffer { buffer };
+        Self {
+            buffer,
             capacity: value.len().max(32),
             size: value.len(),
-        };
-        unsafe {
-            res.buffer.buffer = StdPtr::new_ptr(value.as_ptr().cast_mut());
         }
-        res
     }
 }
 impl Deref for StdString {

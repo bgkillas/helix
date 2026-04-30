@@ -16,7 +16,7 @@ mod lua {
     use bevy_tangled::{Client, ClientTrait, Compression, Reliability};
     use noita_api::*;
     use rand::Rng;
-    use std::net::{IpAddr, Ipv4Addr};
+    use std::net::{IpAddr, Ipv6Addr};
     use std::sync::atomic::Ordering;
     use tokio::runtime::Runtime;
     pub struct Context {
@@ -39,9 +39,7 @@ mod lua {
             if let Some(cmd) = msg.strip_prefix("/") {
                 if let Some(host) = cmd.strip_prefix("connect") {
                     let host = host.trim();
-                    let addr = host
-                        .parse()
-                        .unwrap_or(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)));
+                    let addr = host.parse().unwrap_or(IpAddr::V6(Ipv6Addr::LOCALHOST));
                     if let Err(e) = self.net.join_ip_runtime(addr, None, None, &self.runtime) {
                         game_print!("{e:?}");
                     } else {
