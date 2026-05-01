@@ -1,18 +1,36 @@
 use crate::lua::LUA;
-use crate::lua_bindings::{lua_Alloc, lua_State};
+use crate::lua_bindings::{LUA_GLOBALSINDEX, lua_State};
 use retour::static_detour;
-use std::os::raw::c_void;
+use std::mem;
+use std::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
+
 static_detour! {
-    static NEW_STATE: unsafe extern "C" fn(lua_Alloc, *mut c_void) -> *mut lua_State;
+    static NEW_STATE: unsafe extern "C" fn() -> *mut lua_State;
 }
+static LUA_FUN: AtomicUsize = AtomicUsize::new(0);
+static LUA_NAME: AtomicPtr<u8> = AtomicPtr::null();
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-fn newstate(f: lua_Alloc, ud: *mut c_void) -> *mut lua_State {
-    unsafe { NEW_STATE.call(f, ud) }
-}
-#[inline]
-pub fn install_global() {
+fn newstate() -> *mut lua_State {
+    let lua = unsafe { NEW_STATE.call() };
+    let fun_addr = LUA_FUN.load(Ordering::Relaxed);
+    let fun = unsafe { mem::transmute::<usize, fn(*mut lua_State)>(fun_addr) };
+    fun(lua);
     unsafe {
-        NEW_STATE.initialize(LUA.lua_newstate, newstate).unwrap();
+        (LUA.lua_setfield)(
+            lua,
+            LUA_GLOBALSINDEX,
+            LUA_NAME.load(Ordering::Relaxed).cast_const().cast(),
+        );
+    }
+    lua
+}
+#[allow(clippy::as_conversions)]
+#[inline]
+pub fn install_global(f: fn(*mut lua_State), name: &'static str) {
+    unsafe {
+        LUA_FUN.store(f as usize, Ordering::Relaxed);
+        LUA_NAME.store(name.as_ptr().cast_mut(), Ordering::Relaxed);
+        NEW_STATE.initialize(LUA.luaL_newstate, newstate).unwrap();
         NEW_STATE.enable().unwrap();
     }
 }

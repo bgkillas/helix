@@ -451,6 +451,7 @@ pub struct Lua51 {
         unsafe extern "C" fn(L: *mut lua_State, ud: *mut *mut std::os::raw::c_void) -> lua_Alloc,
     pub lua_setallocf:
         unsafe extern "C" fn(L: *mut lua_State, f: lua_Alloc, ud: *mut std::os::raw::c_void),
+    pub luaL_newstate: unsafe extern "C" fn() -> *mut lua_State,
     //pub lua_setlevel: unsafe extern "C" fn(from: *mut lua_State, to: *mut lua_State),
     pub lua_getstack: unsafe extern "C" fn(
         L: *mut lua_State,
@@ -599,7 +600,8 @@ impl Lua51 {
             let lua_concat = __library.get(b"lua_concat\0").map(|sym| *sym)?;
             let lua_getallocf = __library.get(b"lua_getallocf\0").map(|sym| *sym)?;
             let lua_setallocf = __library.get(b"lua_setallocf\0").map(|sym| *sym)?;
-            //let lua_setlevel = __library.get(b"lua_setlevel\0").map(|sym| *sym);
+            let luaL_newstate = __library.get(b"luaL_newstate\0").map(|sym| *sym)?;
+            //let lua_setlevel = __library.get(b"lua_setlevel\0").map(|sym| *sym)?;
             let lua_getstack = __library.get(b"lua_getstack\0").map(|sym| *sym)?;
             let lua_getinfo = __library.get(b"lua_getinfo\0").map(|sym| *sym)?;
             let lua_getlocal = __library.get(b"lua_getlocal\0").map(|sym| *sym)?;
@@ -684,6 +686,7 @@ impl Lua51 {
                 lua_concat,
                 lua_getallocf,
                 lua_setallocf,
+                luaL_newstate,
                 //lua_setlevel,
                 lua_getstack,
                 lua_getinfo,

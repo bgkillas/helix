@@ -139,17 +139,26 @@ fn parse_attribute(mut tokens: TokenStream, dont_unload: bool) -> TokenStream {
     ret_tokens.push(TokenTree::Group(group));
     TokenStream::from_iter(ret_tokens)
 }
-fn make_group(group: FunGroup) -> TokenStream {
+fn make_group(group: FunGroup) -> (TokenStream, TokenStream) {
     let ident = group.ident;
     let name = format_ident!("GLOBAL_{}", ident.to_string().to_ascii_uppercase());
-    let funs = make_inner_funs(group.funs, Some(&ident));
-    quote! {
-        static #name: std::cell::SyncUnsafeCell<std::sync::LazyLock<#ident>> = std::cell::SyncUnsafeCell::new(std::sync::LazyLock::new(#ident::default));
-        #(#funs)*
-    }
+    let funs_defs = make_inner_funs(group.funs, Some(&ident));
+    let funs = funs_defs.iter().map(|a| a.0.clone());
+    let defs = funs_defs.iter().map(|a| a.1.clone());
+    (
+        quote! {
+            static #name: std::cell::SyncUnsafeCell<std::sync::LazyLock<#ident>> = std::cell::SyncUnsafeCell::new(std::sync::LazyLock::new(#ident::default));
+            #(#funs)*
+        },
+        quote! {
+            #(#defs)*
+        },
+    )
 }
 fn luaopen(funs: Vec<Function>, groups: Vec<FunGroup>, dont_unload: bool) -> TokenStream {
-    let inner_funs = make_inner_funs(funs, None);
+    let inner_funs_defs = make_inner_funs(funs, None);
+    let inner_funs = inner_funs_defs.iter().map(|a| a.0.clone());
+    let inner_defs = inner_funs_defs.iter().map(|a| a.1.clone());
     let keep_loaded = if dont_unload {
         quote! {
             static KEEP_SELF_LOADED: std::sync::OnceLock<noita_api::libloading::Library>
@@ -159,17 +168,26 @@ fn luaopen(funs: Vec<Function>, groups: Vec<FunGroup>, dont_unload: bool) -> Tok
     } else {
         quote! {}
     };
-    let groups_funs = groups.into_iter().map(make_group);
+    let groups = groups.into_iter().map(make_group).collect::<Vec<_>>();
+    let groups_funs = groups.iter().map(|a| a.0.clone());
+    let groups_defs = groups.iter().map(|a| a.1.clone());
+    let name = quote! {concat!(env!("CARGO_PKG_NAME"), "\0")};
     quote! {
         #[unsafe(no_mangle)]
         unsafe extern "C" fn luaopen(lua: *mut noita_api::lua::lua_State) -> std::ffi::c_int {
             std::panic::set_hook(Box::new(|panic| noita_api::log_println!("{panic}")));
             #keep_loaded
-            unsafe {
-                (noita_api::lua::LUA.lua_createtable)(lua, 0, 0);
-                #(#inner_funs)*
-                #(#groups_funs)*
+            #(#groups_funs)*
+            #(#inner_funs)*
+            fn register_functions(lua: *mut noita_api::lua::lua_State) {
+                unsafe {
+                    (noita_api::lua::LUA.lua_createtable)(lua, 0, 0);
+                    #(#inner_defs)*
+                    #(#groups_defs)*
+                }
             }
+            noita_api::install_global(register_functions, #name);
+            register_functions(lua);
             1
         }
     }
@@ -344,7 +362,7 @@ fn get_global_type(global_const: &Ident, type_name: &TokenStream, is_ptr_ptr: bo
         }
     }
 }
-fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> TokenStream {
+fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, TokenStream) {
     let ident = fun.name.unwrap();
     let bridge_fn_name = format_ident!("{ident}_lua_bridge");
     let fn_name_c = name_to_c_literal(&ident.to_string());
@@ -396,24 +414,31 @@ fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> TokenStream {
             let ret = #ident(#(#args,)*);
         }
     };
-    quote! {
-        unsafe extern "C" fn #bridge_fn_name(lua: *mut noita_api::lua::lua_State) -> std::ffi::c_int {
-            let lua_state = noita_api::lua::LuaState::new(lua);
-            lua_state.make_current();
-            #index
-            #(#vars)*
-            #ret
-            let ret = noita_api::lua::LuaFnRet::do_return(ret, lua_state);
-            ret
-        }
-        (noita_api::lua::LUA.lua_pushcclosure)(lua, Some(#bridge_fn_name), 0);
-        (noita_api::lua::LUA.lua_setfield)(lua, -2, #fn_name_c.as_ptr());
-    }
+    (
+        quote! {
+            unsafe extern "C" fn #bridge_fn_name(lua: *mut noita_api::lua::lua_State) -> std::ffi::c_int {
+                let lua_state = noita_api::lua::LuaState::new(lua);
+                lua_state.make_current();
+                #index
+                #(#vars)*
+                #ret
+                let ret = noita_api::lua::LuaFnRet::do_return(ret, lua_state);
+                ret
+            }
+        },
+        quote! {
+            (noita_api::lua::LUA.lua_pushcclosure)(lua, Some(#bridge_fn_name), 0);
+            (noita_api::lua::LUA.lua_setfield)(lua, -2, #fn_name_c.as_ptr());
+        },
+    )
 }
 fn name_to_c_literal(name: &str) -> Literal {
     Literal::c_string(CString::new(name).unwrap().as_c_str())
 }
-fn make_inner_funs(idents: Vec<Function>, ident: Option<&Ident>) -> Vec<TokenStream> {
+fn make_inner_funs(
+    idents: Vec<Function>,
+    ident: Option<&Ident>,
+) -> Vec<(TokenStream, TokenStream)> {
     let mut inner_funs = Vec::new();
     for fun in idents {
         inner_funs.push(add_lua_fn(fun, ident));
