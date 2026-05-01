@@ -1,5 +1,5 @@
-pub use crate::lua_bindings::lua_State;
-use crate::lua_bindings::{LUA_GLOBALSINDEX, Lua51, lua_CFunction};
+pub use crate::lua_bindings::{LUA_GLOBALSINDEX, lua_State};
+use crate::lua_bindings::{Lua51, lua_CFunction};
 use eyre::{Context as _, OptionExt as _, bail, eyre};
 use std::{
     array,

@@ -184,11 +184,21 @@ fn luaopen(funs: Vec<Function>, groups: Vec<FunGroup>, dont_unload: bool) -> Tok
                     (noita_api::lua::LUA.lua_createtable)(lua, 0, 0);
                     #(#inner_defs)*
                     #(#groups_defs)*
+                    (noita_api::lua::LUA.lua_setfield)(
+                        lua,
+                        noita_api::lua::LUA_GLOBALSINDEX,
+                        #name.as_ptr().cast(),
+                    );
                 }
             }
-            noita_api::install_global(register_functions, #name);
+            fn newstate() -> *mut noita_api::lua::lua_State {
+                let lua = unsafe { noita_api::NEW_STATE.call() };
+                register_functions(lua);
+                lua
+            }
+            noita_api::install_global(newstate);
             register_functions(lua);
-            1
+            0
         }
     }
 }

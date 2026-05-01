@@ -1,8 +1,8 @@
-local helix = package.loadlib("mods/helix/helix.dll", "luaopen")()
+package.loadlib("mods/helix/helix.dll", "luaopen")()
 local text = dofile_once("mods/helix/text.lua")
 local player = 0
 function OnWorldPreUpdate()
-    text.update(helix, player)
+    text.update(player)
     helix.update()
 end
 function OnModPreInit()

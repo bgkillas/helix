@@ -23,7 +23,7 @@ local function set_controls(player)
         ComponentSetValue2(controls, "enabled", true)
     end
 end
-function mod.update(helix, player)
+function mod.update(player)
     if InputIsKeyJustDown(40) then
         if text ~= "" then
             helix.text_msg(text)
