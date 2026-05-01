@@ -5,11 +5,13 @@ pub struct WorldSeed {
 }
 impl Deref for WorldSeed {
     type Target = usize;
+    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.seed
     }
 }
 impl DerefMut for WorldSeed {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.seed
     }

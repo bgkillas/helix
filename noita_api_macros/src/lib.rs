@@ -1,4 +1,5 @@
 #![feature(slice_split_once)]
+#![allow(clippy::shadow_reuse)]
 use proc_macro2::{Delimiter, Group, Ident, Literal, TokenStream, TokenTree};
 use quote::{format_ident, quote};
 use std::ffi::CString;
@@ -158,7 +159,7 @@ fn luaopen(funs: Vec<Function>, groups: Vec<FunGroup>, dont_unload: bool) -> Tok
     } else {
         quote! {}
     };
-    let groups = groups.into_iter().map(make_group);
+    let groups_funs = groups.into_iter().map(make_group);
     quote! {
         #[unsafe(no_mangle)]
         unsafe extern "C" fn luaopen(lua: *mut noita_api::lua::lua_State) -> std::ffi::c_int {
@@ -167,7 +168,7 @@ fn luaopen(funs: Vec<Function>, groups: Vec<FunGroup>, dont_unload: bool) -> Tok
             unsafe {
                 (noita_api::lua::LUA.lua_createtable)(lua, 0, 0);
                 #(#inner_funs)*
-                #(#groups)*
+                #(#groups_funs)*
             }
             1
         }

@@ -9,20 +9,24 @@ pub struct StdVec<T> {
 }
 impl<T> StdVec<T> {
     #[must_use]
+    #[inline]
     pub fn capacity(&self) -> usize {
         unsafe { self.cap.offset_from_unsigned(self.start) }
     }
     #[must_use]
+    #[inline]
     pub fn len(&self) -> usize {
         unsafe { self.end.offset_from_unsigned(self.start) }
     }
     #[must_use]
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.start == self.end
     }
 }
 impl<T> Deref for StdVec<T> {
     type Target = [T];
+    #[inline]
     fn deref(&self) -> &Self::Target {
         if self.start.is_null() {
             &[]
@@ -32,6 +36,7 @@ impl<T> Deref for StdVec<T> {
     }
 }
 impl<T> DerefMut for StdVec<T> {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         if self.start.is_null() {
             &mut []

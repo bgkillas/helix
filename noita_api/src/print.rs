@@ -1,9 +1,11 @@
 use crate::{GameGlobal, LogFlush, StdBox, StdString, get_this_call};
 use std::ffi::c_void;
+use std::ptr;
+#[inline]
 pub fn log_print(value: &str) {
     let orig = LogFlush::global().flush;
     LogFlush::global().flush = true;
-    let ptr = 0x0115_5538 as *mut c_void;
+    let ptr = ptr::with_exposed_provenance_mut(0x0115_5538);
     let print = unsafe { get_this_call!(0x0090_3930, fn(*mut c_void, *const u8)) };
     print(ptr, value.as_ptr());
     LogFlush::global().flush = orig;
@@ -20,6 +22,7 @@ macro_rules! log_println {
         $crate::log_print(&format!("{}\n\0", format_args!($($arg)*)))
     };
 }
+#[inline]
 pub fn game_print(value: &str) {
     let game_global = GameGlobal::global();
     if let Some(ptr) = game_global.game_print {

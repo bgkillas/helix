@@ -17,6 +17,7 @@ pub struct StdString {
     capacity: usize,
 }
 impl Debug for StdString {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("StdString")
             .field("value", &self.as_str())
@@ -26,6 +27,7 @@ impl Debug for StdString {
     }
 }
 impl StdString {
+    #[inline]
     pub fn free(self) {
         if self.capacity > 16 {
             unsafe { self.buffer.buffer }.free_array(self.capacity);
@@ -33,6 +35,7 @@ impl StdString {
     }
 }
 impl From<&str> for StdString {
+    #[inline]
     fn from(value: &str) -> Self {
         let buffer = if value.len() > 16 {
             let buffer = StdPtr::malloc_array(value.len());
@@ -53,6 +56,7 @@ impl From<&str> for StdString {
 }
 impl StdString {
     #[must_use]
+    #[inline]
     pub fn as_str(&self) -> &str {
         let ptr = if self.capacity > 16 {
             unsafe { self.buffer.buffer.as_ptr() }
@@ -62,9 +66,13 @@ impl StdString {
         unsafe { str::from_utf8_unchecked(slice::from_raw_parts(ptr, self.size)) }
     }
     #[must_use]
+    #[inline]
     pub fn no_alloc(value: &str) -> Self {
-        let buffer = unsafe { StdPtr::new_ptr(value.as_ptr().cast_mut()) };
-        let buffer = Buffer { buffer };
+        let buffer = unsafe {
+            Buffer {
+                buffer: StdPtr::new_ptr(value.as_ptr().cast_mut()),
+            }
+        };
         Self {
             buffer,
             capacity: value.len().max(32),
@@ -74,6 +82,7 @@ impl StdString {
 }
 impl Deref for StdString {
     type Target = str;
+    #[inline]
     fn deref(&self) -> &Self::Target {
         self.as_str()
     }

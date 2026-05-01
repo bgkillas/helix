@@ -22,13 +22,16 @@ pub struct GameGlobal {
     unk4: [isize; 79],
 }
 impl GameGlobal {
+    #[inline]
     pub fn unpause(&mut self) {
         *self.pause_state = 0;
     }
+    #[inline]
     pub fn pause(&mut self) {
         *self.pause_state = 4;
     }
     #[must_use]
+    #[inline]
     pub fn is_paused(&self) -> bool {
         *self.pause_state != 0
     }

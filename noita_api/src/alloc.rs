@@ -2,11 +2,12 @@ use noita_api_macros::assert_size_with;
 #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
 use std::alloc::Global;
 #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
-use std::alloc::{Allocator, Layout};
+use std::alloc::{Allocator as _, Layout};
 #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 use std::ffi::{c_uint, c_void};
 use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, DerefMut};
+use std::ptr;
 use std::ptr::NonNull;
 #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 struct Msvcr {
@@ -52,6 +53,7 @@ impl<T: Sized> StdPtr<T> {
     }
     #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
     #[must_use]
+    #[inline]
     pub fn malloc() -> Self {
         let layout = Layout::new::<T>();
         let ptr = ALLOC.allocate(layout).unwrap().cast();
@@ -59,6 +61,7 @@ impl<T: Sized> StdPtr<T> {
     }
     #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
     #[must_use]
+    #[inline]
     pub fn malloc_array(n: usize) -> Self {
         let layout = Layout::array::<T>(n).unwrap();
         let ptr = ALLOC.allocate(layout).unwrap().cast();
@@ -73,33 +76,40 @@ impl<T: Sized> StdPtr<T> {
         unsafe { (MSVCR.operator_delete)(self.ptr.as_ptr().cast()) }
     }
     #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+    #[inline]
     pub fn free(&mut self) {
         let layout = Layout::new::<T>();
         unsafe { ALLOC.deallocate(self.ptr.cast(), layout) };
     }
     #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+    #[inline]
     pub fn free_array(&mut self, n: usize) {
         let layout = Layout::array::<T>(n).unwrap();
         unsafe { ALLOC.deallocate(self.ptr.cast(), layout) };
     }
     #[must_use]
+    #[inline]
     pub const fn new(value: usize) -> Self {
-        let ptr = unsafe { NonNull::new_unchecked(value as *mut T) };
+        let ptr = unsafe { NonNull::new_unchecked(ptr::with_exposed_provenance_mut(value)) };
         Self { ptr }
     }
+    #[inline]
     pub(crate) const unsafe fn new_ptr(value: *mut T) -> Self {
         let ptr = unsafe { NonNull::new_unchecked(value) };
         Self { ptr }
     }
 }
 impl<T: Sized> StdBox<T> {
+    #[inline]
     pub fn free(mut self) {
         self.ptr.free();
     }
+    #[inline]
     #[must_use]
     pub fn read(self) -> T {
         unsafe { self.ptr.read() }
     }
+    #[inline]
     pub fn new(value: T) -> Self {
         let ptr = StdPtr::malloc();
         unsafe {
@@ -109,35 +119,42 @@ impl<T: Sized> StdBox<T> {
     }
     #[allow(clippy::should_implement_trait)]
     #[must_use]
+    #[inline]
     pub fn as_ref<'a>(self) -> &'a T {
         unsafe { self.ptr.as_ref() }
     }
     #[must_use]
+    #[inline]
     pub fn as_mut<'a>(mut self) -> &'a mut T {
         unsafe { self.ptr.as_mut() }
     }
 }
 impl<T> PartialEq for StdPtr<T> {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.ptr == other.ptr
     }
 }
 impl<T> Debug for StdPtr<T> {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.ptr)
     }
 }
 impl<T: Sized> From<StdPtr<T>> for StdBox<T> {
+    #[inline]
     fn from(ptr: StdPtr<T>) -> Self {
         Self { ptr }
     }
 }
 impl<T: Sized> From<StdBox<T>> for StdPtr<T> {
+    #[inline]
     fn from(ptr: StdBox<T>) -> Self {
         Self { ptr: ptr.ptr.ptr }
     }
 }
 impl<T: Sized> From<NonNull<T>> for StdPtr<T> {
+    #[inline]
     fn from(ptr: NonNull<T>) -> Self {
         Self { ptr }
     }
@@ -145,38 +162,45 @@ impl<T: Sized> From<NonNull<T>> for StdPtr<T> {
 impl<T: Sized> Copy for StdPtr<T> {}
 impl<T: Sized> Copy for StdBox<T> {}
 impl<T: Sized> Clone for StdPtr<T> {
+    #[inline]
     fn clone(&self) -> Self {
         *self
     }
 }
 impl<T: Sized> Clone for StdBox<T> {
+    #[inline]
     fn clone(&self) -> Self {
         *self
     }
 }
 impl<T: Sized> Deref for StdBox<T> {
     type Target = T;
+    #[inline]
     fn deref(&self) -> &Self::Target {
         self.as_ref()
     }
 }
 impl<T: Sized> DerefMut for StdBox<T> {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.as_mut()
     }
 }
 impl<T: Sized> Deref for StdPtr<T> {
     type Target = NonNull<T>;
+    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.ptr
     }
 }
 impl<T: Sized> DerefMut for StdPtr<T> {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.ptr
     }
 }
 impl<T: Sized + Debug> Debug for StdBox<T> {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", &**self)
     }

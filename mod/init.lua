@@ -6,7 +6,7 @@ function OnWorldPreUpdate()
     helix.update()
 end
 function OnModPreInit()
-    helix.init()
+    helix.mod_init()
 end
 function OnMagicNumbersAndWorldSeedInitialized()
     helix.world_seed_init()

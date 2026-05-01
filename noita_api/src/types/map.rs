@@ -20,6 +20,7 @@ pub struct StdMapNode<K, V> {
     pub value: V,
 }
 impl<L: ?Sized + Ord, K: Deref<Target = L>, V> StdMap<K, V> {
+    #[inline]
     pub fn get(&self, key: &L) -> Option<&V> {
         let mut node = self.root.parent;
         loop {

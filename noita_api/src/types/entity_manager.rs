@@ -14,9 +14,10 @@ pub struct EntityManager {
 }
 impl EntityManager {
     #[must_use]
+    #[inline]
     pub fn iter_with_tag(&self, tag: &str) -> impl DoubleEndedIterator<Item = StdBox<Entity>> {
         if let Some(n) = TagManager::<u16>::global().tag_indices.get(tag).copied()
-            && let Some(vec) = self.entity_buckets.get(n as usize)
+            && let Some(vec) = self.entity_buckets.get(usize::from(n))
         {
             vec.iter().copied().flatten()
         } else {

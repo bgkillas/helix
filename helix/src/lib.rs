@@ -1,23 +1,23 @@
 #![feature(sync_unsafe_cell)]
-use noita_api::lua_module;
+use bevy_tangled::Client;
+use noita_api::{disable_inventory, disable_item_pickup, disable_pause, lua_module};
+use tokio::runtime::Runtime;
 const DEFAULT_PORT: u16 = 5463;
+pub struct Context {
+    pub world_seed: usize,
+    pub runtime: Runtime,
+    pub net: Client,
+}
 #[lua_module(true)]
 mod lua {
-    use crate::{DEFAULT_PORT, Message};
-    use bevy_tangled::{Client, ClientTrait, Compression, Reliability};
+    use crate::{Context, DEFAULT_PORT, Message};
+    use bevy_tangled::{ClientTrait as _, Compression, Reliability};
     use noita_api::{
-        PAUSE_SIMULATE, WorldSeed, disable_inventory, disable_item_pickup, disable_pause,
-        game_print, new_game_pause_update, set_pause_no_inventory,
+        PAUSE_SIMULATE, WorldSeed, game_print, new_game_pause_update, set_pause_no_inventory,
     };
-    use rand::Rng;
+    use rand::Rng as _;
     use std::net::{IpAddr, Ipv6Addr, SocketAddr};
     use std::sync::atomic::Ordering;
-    use tokio::runtime::Runtime;
-    pub struct Context {
-        pub world_seed: usize,
-        pub runtime: Runtime,
-        pub net: Client,
-    }
     impl Context {
         #[lua_function]
         fn update(&mut self) {
@@ -36,8 +36,8 @@ mod lua {
         fn text_msg(&mut self, msg: &str) {
             if let Some(cmd) = msg.strip_prefix("/") {
                 if let Some(host) = cmd.strip_prefix("join") {
-                    let host = host.trim();
-                    let addr = host.parse().map_or_else(
+                    let addr_str = host.trim();
+                    let addr = addr_str.parse().map_or_else(
                         |_| {
                             host.parse().unwrap_or(SocketAddr::new(
                                 IpAddr::V6(Ipv6Addr::LOCALHOST),
@@ -54,10 +54,10 @@ mod lua {
                 } else if let Some(seed) = cmd.strip_prefix("new")
                     && self.net.is_host()
                 {
-                    let seed = seed.trim();
-                    self.world_seed = seed
+                    let seed_str = seed.trim();
+                    self.world_seed = seed_str
                         .parse()
-                        .unwrap_or_else(|_| rand::rng().next_u32() as usize);
+                        .unwrap_or_else(|_| usize::try_from(rand::rng().next_u32()).unwrap());
                     if let Err(e) = self.net.broadcast(
                         &Message::World(self.world_seed),
                         Reliability::Reliable,
@@ -67,9 +67,9 @@ mod lua {
                     }
                     game_print!("new seed: {}", self.world_seed);
                 } else if let Some(port) = cmd.strip_prefix("host") {
-                    let port = port.trim();
+                    let port_str = port.trim();
                     if let Err(e) = self.net.host_ip_runtime(
-                        port.parse().unwrap_or(DEFAULT_PORT),
+                        port_str.parse().unwrap_or(DEFAULT_PORT),
                         Some(Box::new(|client, peer| {
                             let world = WorldSeed::global();
                             if let Err(e) = client.send(
@@ -92,11 +92,11 @@ mod lua {
                 }
             } else {
                 game_print!("{msg}");
-                let msg = Message::Text(msg.to_string());
-                if let Err(e) =
-                    self.net
-                        .broadcast(&msg, Reliability::Reliable, Compression::Uncompressed)
-                {
+                if let Err(e) = self.net.broadcast(
+                    &Message::Text(msg.to_owned()),
+                    Reliability::Reliable,
+                    Compression::Uncompressed,
+                ) {
                     game_print!("{e:?}");
                 }
             }
@@ -108,24 +108,12 @@ mod lua {
             }
         }
     }
-    impl Default for Context {
-        fn default() -> Self {
-            disable_pause();
-            disable_inventory();
-            disable_item_pickup();
-            Self {
-                world_seed: 0,
-                runtime: Runtime::new().unwrap(),
-                net: Client::new().unwrap(),
-            }
-        }
-    }
     #[lua_function]
     fn on_paused_change(paused: bool, _is_wand_pickup: bool) {
         set_pause_no_inventory(paused);
     }
     #[lua_function]
-    fn init() {
+    fn mod_init() {
         set_pause_no_inventory(false);
         PAUSE_SIMULATE.store(true, Ordering::Relaxed);
     }
@@ -138,4 +126,17 @@ mod lua {
 pub enum Message {
     Text(String),
     World(usize),
+}
+impl Default for Context {
+    #[inline]
+    fn default() -> Self {
+        disable_pause();
+        disable_inventory();
+        disable_item_pickup();
+        Self {
+            world_seed: 0,
+            runtime: Runtime::new().unwrap(),
+            net: Client::new().unwrap(),
+        }
+    }
 }

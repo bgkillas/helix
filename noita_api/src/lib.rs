@@ -7,30 +7,24 @@ mod funs;
 mod globals;
 pub mod lua;
 pub(crate) mod lua_bindings;
+pub mod lua_global;
 pub mod new_game;
 pub mod pause;
 pub mod print;
 pub mod types;
 pub use alloc::*;
 pub use libloading;
+pub use lua_global::*;
 pub use new_game::*;
 pub(crate) use noita_api_macros::{assert_size, assert_size_with};
 pub use noita_api_macros::{lua_function, lua_module};
 pub use pause::*;
 pub use print::*;
 pub use types::*;
+#[inline]
 pub fn dump_mem(s: &str) {
-    let malloc_probe = format!(
-        "{}/malloc_probe.dll",
-        std::env::current_exe()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .to_str()
-            .unwrap()
-    );
     unsafe {
-        if let Ok(lib) = libloading::Library::new(malloc_probe)
+        if let Ok(lib) = libloading::Library::new("malloc_probe.dll")
             && let Ok(func) =
                 lib.get::<libloading::Symbol<unsafe extern "C" fn(*const u8, usize)>>("put_data")
         {
