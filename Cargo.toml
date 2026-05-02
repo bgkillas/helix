@@ -19,7 +19,6 @@ members = ["helix", "noita_api", "noita_api_macros"]
 [workspace.dependencies]
 noita_api = {path = "noita_api"}
 noita_api_macros = {path = "noita_api_macros"}
-eyre = "0.6.12"
 
 [workspace.lints.clippy]
 pedantic = {level = "warn", priority = -1}

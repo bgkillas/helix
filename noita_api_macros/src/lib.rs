@@ -22,7 +22,16 @@ enum Type {
     Str,
     Parent,
     NilOr(Box<Type>),
+    Tuple(Vec<Type>),
+    Vec(Box<Type>),
+    Slice(Box<Type>),
+    Array(Box<Type>, usize),
     Empty,
+}
+impl Type {
+    fn make_ref(self) -> bool {
+        matches!(self, Self::Slice(_))
+    }
 }
 impl Display for Type {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -32,6 +41,17 @@ impl Display for Type {
             Type::F64 => write!(f, "number"),
             Type::Str => write!(f, "string"),
             Type::NilOr(ty) => write!(f, "{ty}?"),
+            Type::Tuple(tys) => write!(
+                f,
+                "({})",
+                tys.iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join(",")
+            ),
+            Type::Vec(ty) => write!(f, "Vec<{ty}>"),
+            Type::Slice(ty) => write!(f, "[{ty}]"),
+            Type::Array(ty, n) => write!(f, "[{ty}; {n}]"),
             Type::Parent | Type::Empty => unreachable!(),
         }
     }
@@ -52,6 +72,27 @@ impl ToTokens for Type {
                 ty.to_tokens(tokens);
                 tokens.append(TokenTree::Punct(Punct::new('>', Spacing::Alone)));
             }
+            Type::Tuple(tys) => {
+                let mut t = TokenStream::new();
+                for ty in tys {
+                    ty.to_tokens(&mut t);
+                    t.append(TokenTree::Punct(Punct::new(',', Spacing::Alone)));
+                }
+                tokens.append(Group::new(Delimiter::Parenthesis, t));
+            }
+            Type::Vec(ty) | Type::Slice(ty) => {
+                tokens.append(TokenTree::Ident(Ident::new("Vec", Span::call_site())));
+                tokens.append(TokenTree::Punct(Punct::new('<', Spacing::Alone)));
+                ty.to_tokens(tokens);
+                tokens.append(TokenTree::Punct(Punct::new('>', Spacing::Alone)));
+            }
+            Type::Array(ty, n) => {
+                let mut t = TokenStream::new();
+                ty.to_tokens(&mut t);
+                t.append(TokenTree::Punct(Punct::new(';', Spacing::Alone)));
+                n.to_tokens(&mut t);
+                tokens.append(Group::new(Delimiter::Bracket, t));
+            }
             Type::Parent | Type::Empty => unreachable!(),
         }
     }
@@ -65,10 +106,36 @@ impl From<&str> for Type {
             "f64" => Self::F64,
             "self" => Self::Parent,
             "" => Self::Empty,
-            s if let Some(s) = s.strip_prefix("Option<")
-                && let Some(s) = s.strip_suffix(">") =>
+            s if let Some(s) = s.strip_prefix("Option < ")
+                && let Some(s) = s.strip_suffix(" >") =>
             {
                 Self::NilOr(Box::new(Type::from(s)))
+            }
+            s if let Some(s) = s.strip_prefix("Vec < ")
+                && let Some(s) = s.strip_suffix(" >") =>
+            {
+                Self::Vec(Box::new(Type::from(s)))
+            }
+            s if let Some(s) = s.strip_prefix("& mut [")
+                && let Some(s) = s.strip_suffix("]") =>
+            {
+                Self::Slice(Box::new(Type::from(s)))
+            }
+            s if let Some(s) = s.strip_prefix("& [")
+                && let Some(s) = s.strip_suffix("]") =>
+            {
+                Self::Slice(Box::new(Type::from(s)))
+            }
+            s if let Some(s) = s.strip_prefix("[")
+                && let Some(s) = s.strip_suffix("]")
+                && let Some((t, n)) = s.rsplit_once("; ") =>
+            {
+                Self::Array(Box::new(Type::from(t)), n.parse().unwrap())
+            }
+            s if let Some(s) = s.strip_prefix("(")
+                && let Some(s) = s.strip_suffix(")") =>
+            {
+                Self::Tuple(s.split(", ").map(Type::from).collect())
             }
             _ => panic!("unsupported type {value:?}"),
         }
@@ -516,18 +583,12 @@ fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, Toke
         .enumerate()
         .map(|(i, ts)| {
             let ident = format_ident!("a{}", i);
-            let index = if i == fun.args.len() - 1 {
-                quote! {}
-            } else {
-                quote! {index += <#ts as noita_api::lua::LuaGetValue>::size_on_stack();}
-            };
             quote! {
-                let val: eyre::Result<#ts> = noita_api::lua::LuaGetValue::get(lua_state, index);
-                let #ident = match val {
+                let val: Result<(i32, #ts), noita_api::lua::LuaError> = noita_api::lua::LuaGetValue::get(lua_state, index);
+                let (index, mut #ident) = match val {
                     Ok(v) => v,
                     Err(err) => lua_state.raise_error(format!("Error in rust call: {err:?}")),
                 };
-                #index
             }
         })
         .collect();
@@ -540,10 +601,16 @@ fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, Toke
         .args
         .into_iter()
         .enumerate()
-        .map(|(i, _)| {
+        .map(|(i, t)| {
             let ident = format_ident!("a{}", i);
-            quote! {
-                #ident
+            if t.make_ref() {
+                quote! {
+                    &mut #ident
+                }
+            } else {
+                quote! {
+                    #ident
+                }
             }
         })
         .collect();
@@ -561,7 +628,6 @@ fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, Toke
         quote! {
             unsafe extern "C" fn #bridge_fn_name(lua: *mut noita_api::lua::lua_State) -> std::ffi::c_int {
                 let lua_state = noita_api::lua::LuaState::new(lua);
-                lua_state.make_current();
                 #index
                 #(#vars)*
                 #ret
@@ -587,4 +653,37 @@ fn make_inner_funs(
         inner_funs.push(add_lua_fn(fun, ident));
     }
     inner_funs
+}
+fn make_lua_get_tuple(n: usize) -> TokenStream {
+    let generics = (0..n)
+        .map(|i| format_ident!("T{i}"))
+        .map(|i| quote! {#i: LuaGetValue});
+    let tuple = (0..n).map(|i| format_ident!("T{i}")).map(|i| quote! {#i});
+    let res = (0..n)
+        .map(|i| (format_ident!("T{i}"), format_ident!("t{i}")))
+        .map(|(ty, n)| quote! {let (index, #n) = #ty::get(lua, index)?;});
+    let ret = (0..n).map(|i| format_ident!("t{i}")).map(|n| quote! {#n});
+    quote! {
+        impl<#(#generics,)*> LuaGetValue for (#(#tuple,)*) {
+            #[inline]
+            fn get(lua: LuaState, index: i32) -> Result<(i32, Self), LuaError>
+            {
+                #(#res)*
+                Ok((index, (#(#ret,)*)))
+            }
+        }
+    }
+}
+#[proc_macro]
+pub fn make_lua_get_tuples(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let tokens: TokenStream = tokens.into();
+    let TokenTree::Literal(n) = tokens.into_iter().next().unwrap() else {
+        unreachable!()
+    };
+    let n: usize = n.to_string().parse().unwrap();
+    let tuple = (2..=n).map(make_lua_get_tuple);
+    quote! {
+        #(#tuple)*
+    }
+    .into()
 }

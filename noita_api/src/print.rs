@@ -1,25 +1,25 @@
 use crate::{GameGlobal, LogFlush, StdBox, StdString, get_this_call};
-use std::ffi::c_void;
+use std::ffi::{CStr, c_char, c_void};
 use std::ptr;
 #[inline]
-pub fn log_print(value: &str) {
+pub fn log_print(value: &CStr) {
     let orig = LogFlush::global().flush;
     LogFlush::global().flush = true;
     let ptr = ptr::with_exposed_provenance_mut(0x0115_5538);
-    let print = unsafe { get_this_call!(0x0090_3930, fn(*mut c_void, *const u8)) };
+    let print = unsafe { get_this_call!(0x0090_3930, fn(*mut c_void, *const c_char)) };
     print(ptr, value.as_ptr());
     LogFlush::global().flush = orig;
 }
 #[macro_export]
 macro_rules! log_print {
     ($($arg:tt)*) => {
-        $crate::log_print(&format!("{}\0", format_args!($($arg)*)))
+        unsafe{$crate::log_print(std::ffi::CStr::from_bytes_with_nul_unchecked(format!("{}\0", format_args!($($arg)*)).as_bytes()))}
     };
 }
 #[macro_export]
 macro_rules! log_println {
     ($($arg:tt)*) => {
-        $crate::log_print(&format!("{}\n\0", format_args!($($arg)*)))
+        unsafe{$crate::log_print(std::ffi::CStr::from_bytes_with_nul_unchecked(format!("{}\n\0", format_args!($($arg)*)).as_bytes()))}
     };
 }
 #[inline]
