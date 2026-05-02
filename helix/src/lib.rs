@@ -8,6 +8,7 @@ pub struct Context {
     pub runtime: Runtime,
     pub net: Client,
 }
+//#[lua_module(true, "./mod/helix.lua")]
 #[lua_module(true)]
 mod lua {
     use crate::{Context, DEFAULT_PORT, Message};

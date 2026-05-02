@@ -1,3 +1,4 @@
 /.idea
 /target
 /mod/helix.dll
+/mod/helix.lua

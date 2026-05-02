@@ -1,14 +1,83 @@
 #![feature(slice_split_once)]
 #![allow(clippy::shadow_reuse)]
-use proc_macro2::{Delimiter, Group, Ident, Literal, TokenStream, TokenTree};
-use quote::{format_ident, quote};
+use proc_macro2::{Delimiter, Group, Ident, Literal, Punct, Spacing, Span, TokenStream, TokenTree};
+use quote::{ToTokens, TokenStreamExt as _, format_ident, quote};
 use std::ffi::CString;
+use std::fmt::{Display, Formatter, Write as _};
+use std::fs::OpenOptions;
+use std::io::Write as _;
 use std::mem;
 #[derive(Default, Debug)]
 struct Function {
     name: Option<Ident>,
-    args: Vec<TokenStream>,
-    ret: Option<TokenStream>,
+    args: Vec<Type>,
+    arg_names: Vec<String>,
+    ret: Option<Type>,
+}
+#[derive(Debug, Clone)]
+enum Type {
+    Bool,
+    Isize,
+    F64,
+    Str,
+    Parent,
+    NilOr(Box<Type>),
+    Empty,
+}
+impl Display for Type {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::Bool => write!(f, "boolean"),
+            Type::Isize => write!(f, "integer"),
+            Type::F64 => write!(f, "number"),
+            Type::Str => write!(f, "string"),
+            Type::NilOr(ty) => write!(f, "{ty}?"),
+            Type::Parent | Type::Empty => unreachable!(),
+        }
+    }
+}
+impl ToTokens for Type {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            Type::Bool => tokens.append(TokenTree::Ident(Ident::new("bool", Span::call_site()))),
+            Type::Isize => tokens.append(TokenTree::Ident(Ident::new("isize", Span::call_site()))),
+            Type::F64 => tokens.append(TokenTree::Ident(Ident::new("f64", Span::call_site()))),
+            Type::Str => {
+                tokens.append(TokenTree::Punct(Punct::new('&', Spacing::Alone)));
+                tokens.append(TokenTree::Ident(Ident::new("str", Span::call_site())));
+            }
+            Type::NilOr(ty) => {
+                tokens.append(TokenTree::Ident(Ident::new("Option", Span::call_site())));
+                tokens.append(TokenTree::Punct(Punct::new('<', Spacing::Alone)));
+                ty.to_tokens(tokens);
+                tokens.append(TokenTree::Punct(Punct::new('>', Spacing::Alone)));
+            }
+            Type::Parent | Type::Empty => unreachable!(),
+        }
+    }
+}
+impl From<&str> for Type {
+    fn from(value: &str) -> Self {
+        match value {
+            "& str" => Self::Str,
+            "bool" => Self::Bool,
+            "isize" => Self::Isize,
+            "f64" => Self::F64,
+            "self" => Self::Parent,
+            "" => Self::Empty,
+            s if let Some(s) = s.strip_prefix("Option<")
+                && let Some(s) = s.strip_suffix(">") =>
+            {
+                Self::NilOr(Box::new(Type::from(s)))
+            }
+            _ => panic!("unsupported type {value:?}"),
+        }
+    }
+}
+impl From<TokenStream> for Type {
+    fn from(value: TokenStream) -> Self {
+        Type::from(value.to_string().as_str())
+    }
 }
 #[derive(Debug)]
 struct FunGroup {
@@ -30,7 +99,7 @@ fn parse_group(tokens: TokenStream) -> (Vec<Function>, Vec<FunGroup>) {
             TokenTree::Group(_) if is_ret != 0 => {
                 is_ret = 0;
                 if !ret.is_empty() {
-                    function.ret = Some(TokenStream::from_iter(mem::take(&mut ret)));
+                    function.ret = Some(TokenStream::from_iter(mem::take(&mut ret)).into());
                 }
                 funs.push(mem::take(&mut function));
             }
@@ -60,13 +129,16 @@ fn parse_group(tokens: TokenStream) -> (Vec<Function>, Vec<FunGroup>) {
                             start = false;
                             function
                                 .args
-                                .push(TokenStream::from_iter(mem::take(&mut arg)));
+                                .push(TokenStream::from_iter(mem::take(&mut arg)).into());
+                        }
+                        TokenTree::Ident(i) if !start && i != "mut" => {
+                            function.arg_names.push(i.to_string());
                         }
                         _ => {}
                     }
                 }
                 if !arg.is_empty() {
-                    function.args.push(TokenStream::from_iter(arg));
+                    function.args.push(TokenStream::from_iter(arg).into());
                 }
                 is_fun = false;
                 is_ret = 1;
@@ -101,13 +173,13 @@ fn parse_group(tokens: TokenStream) -> (Vec<Function>, Vec<FunGroup>) {
             TokenTree::Ident(i) if i == "for" || i == "fn" => {
                 is_impl = false;
             }
-            TokenTree::Ident(i) => {
+            TokenTree::Ident(i) if is_ret != 3 => {
                 impl_name = Some(i);
             }
-            _ if is_ret == 3 => {
+            t if is_ret == 3 => {
                 is_impl = false;
                 punct = false;
-                ret.push(token.clone());
+                ret.push(t);
             }
             _ => {
                 is_impl = false;
@@ -118,7 +190,11 @@ fn parse_group(tokens: TokenStream) -> (Vec<Function>, Vec<FunGroup>) {
     }
     (funs, groups)
 }
-fn parse_attribute(mut tokens: TokenStream, dont_unload: bool) -> TokenStream {
+fn parse_attribute(
+    mut tokens: TokenStream,
+    dont_unload: bool,
+    file_path: Option<&str>,
+) -> TokenStream {
     let mut ret_tokens = Vec::new();
     let mut span = None;
     for token in tokens.clone() {
@@ -131,7 +207,7 @@ fn parse_attribute(mut tokens: TokenStream, dont_unload: bool) -> TokenStream {
     }
     let mut inner_tokens = tokens.clone();
     let (funs, groups) = parse_group(tokens);
-    let luaopen = luaopen(funs, groups, dont_unload);
+    let luaopen = luaopen(funs, groups, dont_unload, file_path);
     inner_tokens.extend(quote! {use noita_api::lua_function;});
     inner_tokens.extend(luaopen);
     let mut group = Group::new(Delimiter::Brace, TokenStream::from_iter(inner_tokens));
@@ -155,7 +231,54 @@ fn make_group(group: FunGroup) -> (TokenStream, TokenStream) {
         },
     )
 }
-fn luaopen(funs: Vec<Function>, groups: Vec<FunGroup>, dont_unload: bool) -> TokenStream {
+fn get_str(fun: &Function, name: &str) -> String {
+    let mut str = String::new();
+    for (ty, name) in fun.args.iter().zip(&fun.arg_names) {
+        writeln!(str, "---@param {name} {ty}").unwrap();
+    }
+    if let Some(ret) = &fun.ret {
+        writeln!(str, "---@return {ret}").unwrap();
+    }
+    writeln!(
+        str,
+        "function {name}.{}({}) end",
+        fun.name.as_ref().unwrap(),
+        fun.arg_names.join(", ")
+    )
+    .unwrap();
+    str
+}
+fn create_file<'a>(funs: impl Iterator<Item = &'a Function>, file: &str) {
+    let name = file.strip_suffix(".lua").unwrap();
+    let (_, name) = name.rsplit_once('/').unwrap();
+    let Ok(mut file) = OpenOptions::new()
+        .append(false)
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .read(false)
+        .open(file)
+    else {
+        return;
+    };
+    file.write_all(b"helix = {}\n").unwrap();
+    for fun in funs {
+        let fun = get_str(fun, name);
+        file.write_all(fun.as_bytes()).unwrap();
+    }
+}
+fn luaopen(
+    funs: Vec<Function>,
+    groups: Vec<FunGroup>,
+    dont_unload: bool,
+    file_path: Option<&str>,
+) -> TokenStream {
+    if let Some(file) = file_path {
+        create_file(
+            funs.iter().chain(groups.iter().flat_map(|a| a.funs.iter())),
+            file,
+        );
+    }
     let inner_funs_defs = make_inner_funs(funs, None);
     let inner_funs = inner_funs_defs.iter().map(|a| a.0.clone());
     let inner_defs = inner_funs_defs.iter().map(|a| a.1.clone());
@@ -215,12 +338,22 @@ pub fn lua_module(
     tokens: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     let arg: TokenStream = arg.into();
-    let dont_unload = if let Some(TokenTree::Ident(ident)) = arg.into_iter().next() {
+    let mut arg_iter = arg.into_iter();
+    let dont_unload = if let Some(TokenTree::Ident(ident)) = arg_iter.next() {
         ident == "true"
     } else {
         false
     };
-    parse_attribute(tokens.into(), dont_unload).into()
+    arg_iter.next();
+    let file_path = if let Some(TokenTree::Literal(l)) = arg_iter.next()
+        && let Some(s) = l.to_string().strip_prefix("\"")
+        && let Some(s) = s.strip_suffix("\"")
+    {
+        Some(s.to_owned())
+    } else {
+        None
+    };
+    parse_attribute(tokens.into(), dont_unload, file_path.as_deref()).into()
 }
 #[proc_macro_attribute]
 pub fn assert_size(
