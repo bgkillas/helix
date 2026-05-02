@@ -1,10 +1,11 @@
 pub use crate::lua_bindings::{LUA_GLOBALSINDEX, lua_State};
 use crate::lua_bindings::{Lua51, lua_CFunction};
-use noita_api_macros::make_lua_get_tuples;
+use noita_api_macros::{make_lua_get_tuples, make_lua_ret_tuples};
+use std::convert::Infallible;
 use std::error::Error;
 use std::fmt::Debug;
 use std::mem::MaybeUninit;
-use std::ops::{Deref, DerefMut};
+use std::ops::{ControlFlow, Deref, DerefMut, Try};
 use std::{
     ffi::{CStr, c_char, c_int},
     ptr, slice,
@@ -192,7 +193,22 @@ impl LuaFnRet for isize {
         1
     }
 }
-
+#[repr(transparent)]
+pub struct TryRet<T>(T);
+impl<R: LuaFnRet, E: Error, T: Try<Output = R, Residual = Result<Infallible, E>>> LuaFnRet
+    for TryRet<T>
+{
+    #[inline]
+    fn do_return(self, lua: LuaState) -> c_int {
+        match self.0.branch() {
+            ControlFlow::Continue(ok) => ok.do_return(lua),
+            ControlFlow::Break(Err(err)) => unsafe {
+                lua.raise_error(format!("Error in rust call: {err}"));
+            },
+            ControlFlow::Break(Ok(_)) => unreachable!(),
+        }
+    }
+}
 impl<R: LuaFnRet, E: Error> LuaFnRet for Result<R, E> {
     #[inline]
     fn do_return(self, lua: LuaState) -> c_int {
@@ -250,6 +266,13 @@ impl LuaFnRet for &RawStr {
         1
     }
 }
+impl LuaFnRet for &str {
+    #[inline]
+    fn do_return(self, lua: LuaState) -> c_int {
+        lua.push_str(self);
+        1
+    }
+}
 
 /// Trait for arguments that can be retrieved from the lua stack.
 pub trait LuaGetValue: Sized {
@@ -281,6 +304,12 @@ impl LuaGetValue for &str {
     #[inline]
     fn get(lua: LuaState, index: i32) -> Result<(i32, Self), LuaError> {
         Ok((index + 1, lua.to_str(index)?))
+    }
+}
+impl LuaGetValue for &RawStr {
+    #[inline]
+    fn get(lua: LuaState, index: i32) -> Result<(i32, Self), LuaError> {
+        Ok((index + 1, lua.to_raw_str(index)?))
     }
 }
 
@@ -336,3 +365,4 @@ impl<T: LuaGetValue, const N: usize> LuaGetValue for [T; N] {
     }
 }
 make_lua_get_tuples!(16);
+make_lua_ret_tuples!(16);

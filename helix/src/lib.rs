@@ -110,10 +110,6 @@ mod lua {
         }
     }
     #[lua_function]
-    fn test2(a: &mut [isize]) {
-        noita_api::log_println!("vec: {a:?}");
-    }
-    #[lua_function]
     fn on_paused_change(paused: bool, _is_wand_pickup: bool) {
         set_pause_no_inventory(paused);
     }

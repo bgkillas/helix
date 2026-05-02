@@ -566,6 +566,7 @@ fn get_global_type(global_const: &Ident, type_name: &TokenStream, is_ptr_ptr: bo
     };
     quote! {
         impl #type_name {
+            #[inline]
             pub fn global() -> StdBox<Self> {
                 StdBox::from(#ptr_read)
             }
@@ -682,6 +683,37 @@ pub fn make_lua_get_tuples(tokens: proc_macro::TokenStream) -> proc_macro::Token
     };
     let n: usize = n.to_string().parse().unwrap();
     let tuple = (2..=n).map(make_lua_get_tuple);
+    quote! {
+        #(#tuple)*
+    }
+    .into()
+}
+fn make_lua_ret_tuple(n: usize) -> TokenStream {
+    let generics = (0..n)
+        .map(|i| format_ident!("T{i}"))
+        .map(|i| quote! {#i: LuaFnRet});
+    let tuple = (0..n).map(|i| format_ident!("T{i}")).map(|i| quote! {#i});
+    let res = (0..n).map(|i| (format_ident!("T{i}"), i)).map(|(ty, n)| {
+        let i = Literal::usize_unsuffixed(n);
+        quote! {#ty::do_return(self.#i, lua)}
+    });
+    quote! {
+        impl<#(#generics,)*> LuaFnRet for (#(#tuple,)*) {
+            #[inline]
+            fn do_return(self, lua: LuaState) -> c_int {
+                #(#res+)*0
+            }
+        }
+    }
+}
+#[proc_macro]
+pub fn make_lua_ret_tuples(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let tokens: TokenStream = tokens.into();
+    let TokenTree::Literal(n) = tokens.into_iter().next().unwrap() else {
+        unreachable!()
+    };
+    let n: usize = n.to_string().parse().unwrap();
+    let tuple = (2..=n).map(make_lua_ret_tuple);
     quote! {
         #(#tuple)*
     }
