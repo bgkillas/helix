@@ -20,17 +20,22 @@ enum Type {
     Isize,
     F64,
     Str,
+    RawStr,
     Parent,
     NilOr(Box<Type>),
     Tuple(Vec<Type>),
     Vec(Box<Type>),
     Slice(Box<Type>),
     Array(Box<Type>, usize),
+    LuaState,
     Empty,
 }
 impl Type {
-    fn make_ref(self) -> bool {
+    fn make_ref(&self) -> bool {
         matches!(self, Self::Slice(_))
+    }
+    fn put_in_lua(&self) -> bool {
+        !matches!(self, Self::Parent | Self::Empty | Self::LuaState)
     }
 }
 impl Display for Type {
@@ -39,7 +44,7 @@ impl Display for Type {
             Type::Bool => write!(f, "boolean"),
             Type::Isize => write!(f, "integer"),
             Type::F64 => write!(f, "number"),
-            Type::Str => write!(f, "string"),
+            Type::Str | Type::RawStr => write!(f, "string"),
             Type::NilOr(ty) => write!(f, "{ty}?"),
             Type::Tuple(tys) => write!(
                 f,
@@ -52,7 +57,7 @@ impl Display for Type {
             Type::Vec(ty) => write!(f, "Vec<{ty}>"),
             Type::Slice(ty) => write!(f, "[{ty}]"),
             Type::Array(ty, n) => write!(f, "[{ty}; {n}]"),
-            Type::Parent | Type::Empty => unreachable!(),
+            Type::Parent | Type::Empty | Type::LuaState => unreachable!(),
         }
     }
 }
@@ -65,6 +70,10 @@ impl ToTokens for Type {
             Type::Str => {
                 tokens.append(TokenTree::Punct(Punct::new('&', Spacing::Alone)));
                 tokens.append(TokenTree::Ident(Ident::new("str", Span::call_site())));
+            }
+            Type::RawStr => {
+                tokens.append(TokenTree::Punct(Punct::new('&', Spacing::Alone)));
+                tokens.append(TokenTree::Ident(Ident::new("RawStr", Span::call_site())));
             }
             Type::NilOr(ty) => {
                 tokens.append(TokenTree::Ident(Ident::new("Option", Span::call_site())));
@@ -93,7 +102,7 @@ impl ToTokens for Type {
                 n.to_tokens(&mut t);
                 tokens.append(Group::new(Delimiter::Bracket, t));
             }
-            Type::Parent | Type::Empty => unreachable!(),
+            Type::Parent | Type::Empty | Type::LuaState => unreachable!(),
         }
     }
 }
@@ -101,6 +110,8 @@ impl From<&str> for Type {
     fn from(value: &str) -> Self {
         match value {
             "& str" => Self::Str,
+            "& RawStr" => Self::RawStr,
+            "LuaState" => Self::LuaState,
             "bool" => Self::Bool,
             "isize" => Self::Isize,
             "f64" => Self::F64,
@@ -301,7 +312,9 @@ fn make_group(group: FunGroup) -> (TokenStream, TokenStream) {
 fn get_str(fun: &Function, name: &str) -> String {
     let mut str = String::new();
     for (ty, name) in fun.args.iter().zip(&fun.arg_names) {
-        writeln!(str, "---@param {name} {ty}").unwrap();
+        if ty.put_in_lua() {
+            writeln!(str, "---@param {name} {ty}").unwrap();
+        }
     }
     if let Some(ret) = &fun.ret {
         writeln!(str, "---@return {ret}").unwrap();
@@ -582,14 +595,20 @@ fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, Toke
         .clone()
         .into_iter()
         .enumerate()
-        .map(|(i, ts)| {
+        .filter_map(|(i, ts)| {
             let ident = format_ident!("a{}", i);
-            quote! {
-                let val: Result<(i32, #ts), noita_api::lua::LuaError> = noita_api::lua::LuaGetValue::get(lua_state, index);
-                let (index, mut #ident) = match val {
-                    Ok(v) => v,
-                    Err(err) => lua_state.raise_error(format!("Error in rust call: {err:?}")),
-                };
+            if ts.put_in_lua() {
+                Some(quote! {
+                    let val: Result<(i32, #ts), noita_api::lua::LuaError> = noita_api::lua::LuaGetValue::get(lua_state, index);
+                    let (index, mut #ident) = match val {
+                        Ok(v) => v,
+                        Err(err) => lua_state.raise_error(format!("Error in rust call: {err:?}")),
+                    };
+                })
+            } else if matches!(ts, Type::LuaState){
+                Some(quote! {let #ident = noita_api::lua::LuaState::new(lua);})
+            } else {
+                None
             }
         })
         .collect();
@@ -602,16 +621,20 @@ fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, Toke
         .args
         .into_iter()
         .enumerate()
-        .map(|(i, t)| {
-            let ident = format_ident!("a{}", i);
-            if t.make_ref() {
-                quote! {
-                    &mut #ident
-                }
+        .filter_map(|(i, t)| {
+            if t.put_in_lua() || matches!(t, Type::LuaState) {
+                let ident = format_ident!("a{}", i);
+                Some(if t.make_ref() {
+                    quote! {
+                        &mut #ident
+                    }
+                } else {
+                    quote! {
+                        #ident
+                    }
+                })
             } else {
-                quote! {
-                    #ident
-                }
+                None
             }
         })
         .collect();
