@@ -1,6 +1,7 @@
 use crate::StdPtr;
 use noita_api_macros::assert_size;
 use std::fmt::{Debug, Formatter};
+use std::marker::PhantomData;
 use std::ops::Deref;
 use std::slice;
 #[repr(C)]
@@ -11,12 +12,14 @@ union Buffer {
 }
 #[repr(C)]
 #[assert_size(0x18)]
-pub struct StdString {
+pub struct StdStringRef<'a> {
     buffer: Buffer,
     size: usize,
     capacity: usize,
+    lifetime: PhantomData<&'a u8>,
 }
-impl Debug for StdString {
+pub type StdString = StdStringRef<'static>;
+impl Debug for StdStringRef<'_> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("StdString")
@@ -26,7 +29,7 @@ impl Debug for StdString {
             .finish()
     }
 }
-impl StdString {
+impl StdStringRef<'static> {
     #[inline]
     pub fn free(self) {
         if self.capacity > 16 {
@@ -34,7 +37,7 @@ impl StdString {
         }
     }
 }
-impl From<&str> for StdString {
+impl From<&str> for StdStringRef<'static> {
     #[inline]
     fn from(value: &str) -> Self {
         let buffer = if value.len() > 16 {
@@ -51,13 +54,14 @@ impl From<&str> for StdString {
             buffer,
             capacity: value.len(),
             size: value.len(),
+            lifetime: PhantomData,
         }
     }
 }
-impl StdString {
+impl<'a> StdStringRef<'a> {
     #[must_use]
     #[inline]
-    pub fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &'a str {
         let ptr = if self.capacity > 16 {
             unsafe { self.buffer.buffer.as_ptr() }
         } else {
@@ -67,7 +71,7 @@ impl StdString {
     }
     #[must_use]
     #[inline]
-    pub fn no_alloc(value: &str) -> Self {
+    pub fn no_alloc(value: &'a str) -> Self {
         let buffer = unsafe {
             Buffer {
                 buffer: StdPtr::new_ptr(value.as_ptr().cast_mut()),
@@ -77,10 +81,11 @@ impl StdString {
             buffer,
             capacity: value.len().max(32),
             size: value.len(),
+            lifetime: PhantomData,
         }
     }
 }
-impl Deref for StdString {
+impl Deref for StdStringRef<'_> {
     type Target = str;
     #[inline]
     fn deref(&self) -> &Self::Target {
@@ -97,4 +102,10 @@ fn test_stdstring() {
     let std = StdString::from(str);
     assert_eq!(str, std.as_str());
     std.free();
+    let str = "abcdefghijklmnopqrstuvwxyz";
+    let std = StdStringRef::no_alloc(str);
+    assert_eq!(str, std.as_str());
+    let str = "abcdef";
+    let std = StdStringRef::no_alloc(str);
+    assert_eq!(str, std.as_str());
 }

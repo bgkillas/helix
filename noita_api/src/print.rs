@@ -1,4 +1,4 @@
-use crate::{GameGlobal, LogFlush, StdBox, StdString, get_this_call};
+use crate::{GameGlobal, LogFlush, StdBox, StdStringRef, get_this_call};
 use std::ffi::{CStr, c_char, c_void};
 use std::ptr;
 #[inline]
@@ -27,10 +27,9 @@ pub fn game_print(value: &str) {
     let game_global = GameGlobal::global();
     if let Some(ptr) = game_global.game_print {
         let game_print =
-            unsafe { get_this_call!(0x006c_4ad0, fn(StdBox<c_void>, &StdString, usize)) };
-        let string = StdString::no_alloc(value);
+            unsafe { get_this_call!(0x006c_4ad0, fn(StdBox<c_void>, &StdStringRef, usize)) };
+        let string = StdStringRef::no_alloc(value);
         game_print(ptr, &string, 1);
-        string.free();
     }
 }
 #[macro_export]
