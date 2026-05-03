@@ -1,7 +1,7 @@
-use crate::{DeathMatch, Entity, EntityManager, GameGlobal, StdBox, get_this_call};
+use crate::{DeathMatch, Entity, GameGlobal, StdBox, get_this_call};
 use retour::static_detour;
 use std::ffi::c_void;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 pub static PAUSE_SIMULATE: AtomicBool = AtomicBool::new(true);
 #[cfg(target_os = "windows")]
 static_detour! {
@@ -65,10 +65,9 @@ static_detour! {
 static_detour! {
     static ITEM_PICKUP: extern "C" fn(StdBox<c_void>, StdBox<Entity>, StdBox<c_void>);
 }
-pub static PLAYER_ID: AtomicUsize = AtomicUsize::new(0);
 fn item_pickup(this: StdBox<c_void>, entity: StdBox<Entity>, component: StdBox<c_void>) {
     if !DISABLE_ITEM_PICKUP.load(Ordering::Relaxed)
-        || entity.id != PLAYER_ID.load(Ordering::Relaxed)
+        || !DeathMatch::global().entities.contains(&entity)
     {
         ITEM_PICKUP.call(this, entity, component);
     }
@@ -88,10 +87,4 @@ pub fn disable_item_pickup() {
 pub fn set_pause_no_inventory(paused: bool) {
     DISABLE_INVENTORY.store(paused, Ordering::Relaxed);
     DISABLE_ITEM_PICKUP.store(paused, Ordering::Relaxed);
-    let player = EntityManager::global()
-        .iter_with_tag("player_unit")
-        .next()
-        .map(|p| p.id)
-        .unwrap_or_default();
-    PLAYER_ID.store(player, Ordering::Relaxed);
 }

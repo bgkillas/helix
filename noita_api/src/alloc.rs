@@ -119,6 +119,12 @@ impl<T: Sized> StdBox<T> {
         unsafe { self.ptr.as_mut() }
     }
 }
+impl<T: Sized> PartialEq for StdBox<T> {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.ptr == other.ptr
+    }
+}
 impl<T> PartialEq for StdPtr<T> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
