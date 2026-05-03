@@ -1,4 +1,4 @@
-use crate::{DeathMatch, Entity, EntityManager, GameGlobal, StdBox, StdPtr, get_this_call};
+use crate::{DeathMatch, Entity, EntityManager, GameGlobal, StdBox, get_this_call};
 use retour::static_detour;
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -9,9 +9,9 @@ static_detour! {
 }
 #[cfg(not(target_os = "windows"))]
 static_detour! {
-    static PAUSE: extern "C" fn(StdPtr<DeathMatch>, f32);
+    static PAUSE: extern "C" fn(StdBox<DeathMatch>, f32);
 }
-fn pause(this: StdPtr<DeathMatch>, dt: f32) {
+fn pause(this: StdBox<DeathMatch>, dt: f32) {
     PAUSE.call(this, dt);
     if PAUSE_SIMULATE.load(Ordering::Relaxed) {
         let mut game_global = GameGlobal::global();
@@ -26,7 +26,7 @@ fn pause(this: StdPtr<DeathMatch>, dt: f32) {
 #[inline]
 pub fn disable_pause() {
     unsafe {
-        let old_pause = get_this_call!(0x006b_26f0, fn(StdPtr<DeathMatch>, f32));
+        let old_pause = get_this_call!(0x006b_26f0, fn(StdBox<DeathMatch>, f32));
         PAUSE.initialize(old_pause, pause).unwrap();
         PAUSE.enable().unwrap();
     }
