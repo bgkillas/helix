@@ -28,8 +28,10 @@ pub fn game_print(value: &str) {
     if let Some(ptr) = game_global.game_print {
         let game_print =
             unsafe { get_this_call!(0x006c_4ad0, fn(StdBox<c_void>, &StdStringRef, usize)) };
-        let string = StdStringRef::no_alloc(value);
-        game_print(ptr, &string, 1);
+        unsafe {
+            let string = StdStringRef::no_alloc(value);
+            game_print(ptr, &string, 1);
+        }
     }
 }
 #[macro_export]

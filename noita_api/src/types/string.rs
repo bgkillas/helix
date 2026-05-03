@@ -29,10 +29,10 @@ impl Debug for StdStringRef<'_> {
             .finish()
     }
 }
-impl StdStringRef<'static> {
+impl Drop for StdStringRef<'_> {
     #[inline]
-    pub fn free(self) {
-        if self.capacity > 16 {
+    fn drop(&mut self) {
+        if self.capacity > 16 && self.capacity != usize::MAX {
             unsafe { self.buffer.buffer }.free_array(self.capacity);
         }
     }
@@ -71,7 +71,7 @@ impl<'a> StdStringRef<'a> {
     }
     #[must_use]
     #[inline]
-    pub fn no_alloc(value: &'a str) -> Self {
+    pub(crate) unsafe fn no_alloc(value: &'a str) -> Self {
         let buffer = unsafe {
             Buffer {
                 buffer: StdPtr::new_ptr(value.as_ptr().cast_mut()),
@@ -79,7 +79,7 @@ impl<'a> StdStringRef<'a> {
         };
         Self {
             buffer,
-            capacity: value.len().max(32),
+            capacity: usize::MAX,
             size: value.len(),
             lifetime: PhantomData,
         }
@@ -97,15 +97,15 @@ fn test_stdstring() {
     let str = "abcdefghijklmnopqrstuvwxyz";
     let std = StdString::from(str);
     assert_eq!(str, std.as_str());
-    std.free();
     let str = "abcdef";
     let std = StdString::from(str);
     assert_eq!(str, std.as_str());
-    std.free();
-    let str = "abcdefghijklmnopqrstuvwxyz";
-    let std = StdStringRef::no_alloc(str);
-    assert_eq!(str, std.as_str());
-    let str = "abcdef";
-    let std = StdStringRef::no_alloc(str);
-    assert_eq!(str, std.as_str());
+    unsafe {
+        let str = "abcdefghijklmnopqrstuvwxyz";
+        let std = StdStringRef::no_alloc(str);
+        assert_eq!(str, std.as_str());
+        let str = "abcdef";
+        let std = StdStringRef::no_alloc(str);
+        assert_eq!(str, std.as_str());
+    }
 }

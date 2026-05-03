@@ -1,4 +1,6 @@
+use crate::StdPtr;
 use std::ops::{Deref, DerefMut};
+use std::ptr::NonNull;
 use std::slice;
 #[repr(C)]
 #[derive(Debug)]
@@ -6,6 +8,14 @@ pub struct StdVec<T> {
     pub start: *mut T,
     pub end: *mut T,
     pub cap: *mut T,
+}
+impl<T> Drop for StdVec<T> {
+    #[inline]
+    fn drop(&mut self) {
+        if let Some(ptr) = NonNull::new(self.start) {
+            StdPtr::from(ptr).free_array(self.capacity());
+        }
+    }
 }
 impl<T> StdVec<T> {
     #[must_use]
