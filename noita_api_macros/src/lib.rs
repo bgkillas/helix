@@ -520,6 +520,38 @@ pub fn assert_size_with(
     .into()
 }
 #[proc_macro_attribute]
+pub fn generate_globals(
+    _: proc_macro::TokenStream,
+    tokens: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let tokens: TokenStream = tokens.into();
+    let mut new = Vec::new();
+    new.extend(tokens);
+    let Some(TokenTree::Group(g)) = new.pop() else {
+        unreachable!()
+    };
+    let mut group = Vec::new();
+    for token in g.stream() {
+        if let TokenTree::Ident(i) = &token
+            && i == "const"
+        {
+            group.extend(quote! {
+                #[noita_api_macros::generate_global]
+            });
+        }
+        group.push(token);
+    }
+    new.push(TokenTree::Group(Group::new(
+        Delimiter::Brace,
+        group.into_iter().collect(),
+    )));
+    let tokens: TokenStream = new.into_iter().collect();
+    quote! {
+        #tokens
+    }
+    .into()
+}
+#[proc_macro_attribute]
 pub fn generate_global(
     _: proc_macro::TokenStream,
     tokens: proc_macro::TokenStream,

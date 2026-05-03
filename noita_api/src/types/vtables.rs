@@ -21,10 +21,19 @@ pub struct EntityManagerVTable {}
 pub struct EventManagerVTable {}
 #[repr(C)]
 #[derive(Debug)]
-pub struct BiomeModifiersVFTable {}
+pub struct BiomeModifiersVTable {}
 #[repr(C)]
 #[derive(Debug)]
 pub struct GridWorldVTable {}
 #[repr(C)]
 #[derive(Debug)]
 pub struct GridWorldThreadedVTable {}
+#[repr(C)]
+#[derive(Debug)]
+pub struct PlatformVTable {}
+#[repr(C)]
+#[derive(Debug)]
+pub struct AppConfigVTable {}
+#[repr(C)]
+#[derive(Debug)]
+pub struct ComponentVTable {}

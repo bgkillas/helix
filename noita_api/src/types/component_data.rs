@@ -1,9 +1,10 @@
-use crate::{BitSet, StdBox, StdVec};
+use crate::{BitSet, ComponentVTable, StdBox, StdVec};
 use std::ffi::CString;
+use std::ops::{Deref, DerefMut};
 #[repr(C)]
 #[derive(Debug)]
 pub struct ComponentData<T> {
-    pub vtable: StdBox<ComponentVFTable>,
+    pub vtable: StdBox<ComponentVTable>,
     pub local_id: usize,
     pub type_name: CString,
     pub type_id: usize,
@@ -15,6 +16,20 @@ pub struct ComponentData<T> {
     unk4: usize,
     data: T,
 }
-#[repr(C)]
-#[derive(Debug)]
-pub struct ComponentVFTable {}
+#[repr(transparent)]
+pub struct MaxComponent {
+    pub max: usize,
+}
+impl Deref for MaxComponent {
+    type Target = usize;
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.max
+    }
+}
+impl DerefMut for MaxComponent {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.max
+    }
+}

@@ -1,5 +1,5 @@
 use crate::{
-    BiomeModifiersVFTable, ChunkMap, GridWorldThreadedVTable, GridWorldVTable, IAABB, StdBox,
+    BiomeModifiersVTable, ChunkMap, GridWorldThreadedVTable, GridWorldVTable, IAABB, StdBox,
     StdVec, Vec2i,
 };
 #[repr(C)]
@@ -27,7 +27,7 @@ pub struct GridWorld {
 #[repr(C)]
 #[derive(Debug)]
 pub struct BiomeModifiers {
-    pub vftable: StdBox<BiomeModifiersVFTable>,
+    pub vftable: StdBox<BiomeModifiersVTable>,
     pub unk: [usize; 6],
 }
 #[repr(C)]
