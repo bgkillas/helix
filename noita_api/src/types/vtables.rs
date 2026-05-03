@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 #[repr(C)]
 #[derive(Debug)]
 pub struct ComponentBufferVTable {}
@@ -36,7 +37,9 @@ pub struct PlatformVTable {}
 pub struct AppConfigVTable {}
 #[repr(C)]
 #[derive(Debug)]
-pub struct ComponentVTable {}
+pub struct ComponentVTable<T> {
+    phantom: PhantomData<T>,
+}
 #[repr(C)]
 #[derive(Debug)]
 pub struct GlobalStatsVTable {}

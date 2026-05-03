@@ -2,14 +2,21 @@ use crate::{
     BitSet, ComponentBufferInitVTable, ComponentSystemVTable, ComponentUpdaterVTable,
     ComponentVTable, StdBox, StdMap, StdString, StdVec,
 };
-use std::ffi::CString;
+use std::ffi::CStr;
+use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
+pub trait ComponentTrait: Debug + Default {
+    const NAME: &'static CStr;
+}
+impl ComponentTrait for () {
+    const NAME: &'static CStr = c"ERROR";
+}
 #[repr(C)]
 #[derive(Debug)]
-pub struct Component<T> {
-    pub vtable: StdBox<ComponentVTable>,
+pub struct Component<T: ComponentTrait> {
+    pub vtable: StdBox<ComponentVTable<T>>,
     pub local_id: usize,
-    pub type_name: CString,
+    pub type_name: *const CStr,
     pub type_id: usize,
     pub id: usize,
     pub enabled: bool,

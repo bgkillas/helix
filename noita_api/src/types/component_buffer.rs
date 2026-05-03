@@ -1,9 +1,10 @@
 use crate::{
-    Component, ComponentBufferVTable, Entity, EntityManager, EventManager, StdBox, StdVec,
+    Component, ComponentBufferVTable, ComponentTrait, Entity, EntityManager, EventManager, StdBox,
+    StdVec,
 };
 #[repr(C)]
 #[derive(Debug)]
-pub struct ComponentBuffer<T> {
+pub struct ComponentBuffer<T: ComponentTrait> {
     pub vtable: StdBox<ComponentBufferVTable>,
     pub end: usize,
     unk: [isize; 2],
