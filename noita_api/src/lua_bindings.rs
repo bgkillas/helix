@@ -6,7 +6,8 @@
 #![allow(non_snake_case)]
 #![allow(clippy::unreadable_literal)]
 #![allow(clippy::similar_names)]
-
+#![allow(clippy::pub_underscore_fields)]
+use noita_api_macros::gen_stubs;
 pub const WINVER: u32 = 1281;
 pub const _LIBC_LIMITS_H_: u32 = 1;
 pub const _FEATURES_H: u32 = 1;
@@ -275,433 +276,194 @@ pub struct __va_list_tag {
     pub overflow_arg_area: *mut std::os::raw::c_void,
     pub reg_save_area: *mut std::os::raw::c_void,
 }
-pub struct Lua51 {
-    __library: libloading::Library,
-    pub lua_newstate:
-        unsafe extern "C" fn(f: lua_Alloc, ud: *mut std::os::raw::c_void) -> *mut lua_State,
-    pub lua_close: unsafe extern "C" fn(L: *mut lua_State),
-    pub lua_newthread: unsafe extern "C" fn(L: *mut lua_State) -> *mut lua_State,
-    pub lua_atpanic:
-        unsafe extern "C" fn(L: *mut lua_State, panicf: lua_CFunction) -> lua_CFunction,
-    pub lua_gettop: unsafe extern "C" fn(L: *mut lua_State) -> std::os::raw::c_int,
-    pub lua_settop: unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int),
-    pub lua_pushvalue: unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int),
-    pub lua_remove: unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int),
-    pub lua_insert: unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int),
-    pub lua_replace: unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int),
-    pub lua_checkstack:
-        unsafe extern "C" fn(L: *mut lua_State, sz: std::os::raw::c_int) -> std::os::raw::c_int,
-    pub lua_xmove:
-        unsafe extern "C" fn(from: *mut lua_State, to: *mut lua_State, n: std::os::raw::c_int),
-    pub lua_isnumber:
-        unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int) -> std::os::raw::c_int,
-    pub lua_isstring:
-        unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int) -> std::os::raw::c_int,
-    pub lua_iscfunction:
-        unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int) -> std::os::raw::c_int,
-    pub lua_isuserdata:
-        unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int) -> std::os::raw::c_int,
-    pub lua_type:
-        unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int) -> std::os::raw::c_int,
-    pub lua_typename: unsafe extern "C" fn(
-        L: *mut lua_State,
-        tp: std::os::raw::c_int,
-    ) -> *const std::os::raw::c_char,
-    pub lua_equal: unsafe extern "C" fn(
+#[gen_stubs]
+#[link(name = "lua51")]
+unsafe extern "C" {
+    pub fn lua_newstate(f: lua_Alloc, ud: *mut std::os::raw::c_void) -> *mut lua_State;
+    pub fn lua_close(L: *mut lua_State);
+    pub fn lua_newthread(L: *mut lua_State) -> *mut lua_State;
+    pub fn lua_atpanic(L: *mut lua_State, panicf: lua_CFunction) -> lua_CFunction;
+    pub fn lua_gettop(L: *mut lua_State) -> std::os::raw::c_int;
+    pub fn lua_settop(L: *mut lua_State, idx: std::os::raw::c_int);
+    pub fn lua_pushvalue(L: *mut lua_State, idx: std::os::raw::c_int);
+    pub fn lua_remove(L: *mut lua_State, idx: std::os::raw::c_int);
+    pub fn lua_insert(L: *mut lua_State, idx: std::os::raw::c_int);
+    pub fn lua_replace(L: *mut lua_State, idx: std::os::raw::c_int);
+    pub fn lua_checkstack(L: *mut lua_State, sz: std::os::raw::c_int) -> std::os::raw::c_int;
+    pub fn lua_xmove(from: *mut lua_State, to: *mut lua_State, n: std::os::raw::c_int);
+    pub fn lua_isnumber(L: *mut lua_State, idx: std::os::raw::c_int) -> std::os::raw::c_int;
+    pub fn lua_isstring(L: *mut lua_State, idx: std::os::raw::c_int) -> std::os::raw::c_int;
+    pub fn lua_iscfunction(L: *mut lua_State, idx: std::os::raw::c_int) -> std::os::raw::c_int;
+    pub fn lua_isuserdata(L: *mut lua_State, idx: std::os::raw::c_int) -> std::os::raw::c_int;
+    pub fn lua_type(L: *mut lua_State, idx: std::os::raw::c_int) -> std::os::raw::c_int;
+    pub fn lua_typename(L: *mut lua_State, tp: std::os::raw::c_int) -> *const std::os::raw::c_char;
+    pub fn lua_equal(
         L: *mut lua_State,
         idx1: std::os::raw::c_int,
         idx2: std::os::raw::c_int,
-    ) -> std::os::raw::c_int,
-    pub lua_rawequal: unsafe extern "C" fn(
+    ) -> std::os::raw::c_int;
+    pub fn lua_rawequal(
         L: *mut lua_State,
         idx1: std::os::raw::c_int,
         idx2: std::os::raw::c_int,
-    ) -> std::os::raw::c_int,
-    pub lua_lessthan: unsafe extern "C" fn(
+    ) -> std::os::raw::c_int;
+    pub fn lua_lessthan(
         L: *mut lua_State,
         idx1: std::os::raw::c_int,
         idx2: std::os::raw::c_int,
-    ) -> std::os::raw::c_int,
-    pub lua_tonumber:
-        unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int) -> lua_Number,
-    pub lua_tointeger:
-        unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int) -> lua_Integer,
-    pub lua_toboolean:
-        unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int) -> std::os::raw::c_int,
-    pub lua_tolstring: unsafe extern "C" fn(
+    ) -> std::os::raw::c_int;
+    pub fn lua_tonumber(L: *mut lua_State, idx: std::os::raw::c_int) -> lua_Number;
+    pub fn lua_tointeger(L: *mut lua_State, idx: std::os::raw::c_int) -> lua_Integer;
+    pub fn lua_toboolean(L: *mut lua_State, idx: std::os::raw::c_int) -> std::os::raw::c_int;
+    pub fn lua_tolstring(
         L: *mut lua_State,
         idx: std::os::raw::c_int,
         len: *mut usize,
-    ) -> *const std::os::raw::c_char,
-    pub lua_objlen: unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int) -> usize,
-    pub lua_tocfunction:
-        unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int) -> lua_CFunction,
-    pub lua_touserdata: unsafe extern "C" fn(
+    ) -> *const std::os::raw::c_char;
+    pub fn lua_objlen(L: *mut lua_State, idx: std::os::raw::c_int) -> usize;
+    pub fn lua_tocfunction(L: *mut lua_State, idx: std::os::raw::c_int) -> lua_CFunction;
+    pub fn lua_touserdata(L: *mut lua_State, idx: std::os::raw::c_int)
+    -> *mut std::os::raw::c_void;
+    pub fn lua_tothread(L: *mut lua_State, idx: std::os::raw::c_int) -> *mut lua_State;
+    pub fn lua_topointer(
         L: *mut lua_State,
         idx: std::os::raw::c_int,
-    ) -> *mut std::os::raw::c_void,
-    pub lua_tothread:
-        unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int) -> *mut lua_State,
-    pub lua_topointer: unsafe extern "C" fn(
-        L: *mut lua_State,
-        idx: std::os::raw::c_int,
-    ) -> *const std::os::raw::c_void,
-    pub lua_pushnil: unsafe extern "C" fn(L: *mut lua_State),
-    pub lua_pushnumber: unsafe extern "C" fn(L: *mut lua_State, n: lua_Number),
-    pub lua_pushinteger: unsafe extern "C" fn(L: *mut lua_State, n: lua_Integer),
-    pub lua_pushlstring:
-        unsafe extern "C" fn(L: *mut lua_State, s: *const std::os::raw::c_char, l: usize),
-    pub lua_pushstring: unsafe extern "C" fn(L: *mut lua_State, s: *const std::os::raw::c_char),
-    pub lua_pushvfstring: unsafe extern "C" fn(
+    ) -> *const std::os::raw::c_void;
+    pub fn lua_pushnil(L: *mut lua_State);
+    pub fn lua_pushnumber(L: *mut lua_State, n: lua_Number);
+    pub fn lua_pushinteger(L: *mut lua_State, n: lua_Integer);
+    pub fn lua_pushlstring(L: *mut lua_State, s: *const std::os::raw::c_char, l: usize);
+    pub fn lua_pushstring(L: *mut lua_State, s: *const std::os::raw::c_char);
+    pub fn lua_pushvfstring(
         L: *mut lua_State,
         fmt: *const std::os::raw::c_char,
         argp: *mut __va_list_tag,
-    ) -> *const std::os::raw::c_char,
-    pub lua_pushfstring: unsafe extern "C" fn(
-        L: *mut lua_State,
-        fmt: *const std::os::raw::c_char,
-        ...
-    ) -> *const std::os::raw::c_char,
-    pub lua_pushcclosure:
-        unsafe extern "C" fn(L: *mut lua_State, fn_: lua_CFunction, n: std::os::raw::c_int),
-    pub lua_pushboolean: unsafe extern "C" fn(L: *mut lua_State, b: std::os::raw::c_int),
-    pub lua_pushlightuserdata:
-        unsafe extern "C" fn(L: *mut lua_State, p: *mut std::os::raw::c_void),
-    pub lua_pushthread: unsafe extern "C" fn(L: *mut lua_State) -> std::os::raw::c_int,
-    pub lua_gettable: unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int),
-    pub lua_getfield: unsafe extern "C" fn(
+    ) -> *const std::os::raw::c_char;
+    pub fn lua_pushcclosure(L: *mut lua_State, fn_: lua_CFunction, n: std::os::raw::c_int);
+    pub fn lua_pushboolean(L: *mut lua_State, b: std::os::raw::c_int);
+    pub fn lua_pushlightuserdata(L: *mut lua_State, p: *mut std::os::raw::c_void);
+    pub fn lua_pushthread(L: *mut lua_State) -> std::os::raw::c_int;
+    pub fn lua_gettable(L: *mut lua_State, idx: std::os::raw::c_int);
+    pub fn lua_getfield(
         L: *mut lua_State,
         idx: std::os::raw::c_int,
         k: *const std::os::raw::c_char,
-    ),
-    pub lua_rawget: unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int),
-    pub lua_rawgeti:
-        unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int, n: std::os::raw::c_int),
-    pub lua_createtable: unsafe extern "C" fn(
-        L: *mut lua_State,
-        narr: std::os::raw::c_int,
-        nrec: std::os::raw::c_int,
-    ),
-    pub lua_newuserdata:
-        unsafe extern "C" fn(L: *mut lua_State, sz: usize) -> *mut std::os::raw::c_void,
-    pub lua_getmetatable: unsafe extern "C" fn(
+    );
+    pub fn lua_rawget(L: *mut lua_State, idx: std::os::raw::c_int);
+    pub fn lua_rawgeti(L: *mut lua_State, idx: std::os::raw::c_int, n: std::os::raw::c_int);
+    pub fn lua_createtable(L: *mut lua_State, narr: std::os::raw::c_int, nrec: std::os::raw::c_int);
+    pub fn lua_newuserdata(L: *mut lua_State, sz: usize) -> *mut std::os::raw::c_void;
+    pub fn lua_getmetatable(
         L: *mut lua_State,
         objindex: std::os::raw::c_int,
-    ) -> std::os::raw::c_int,
-    pub lua_getfenv: unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int),
-    pub lua_settable: unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int),
-    pub lua_setfield: unsafe extern "C" fn(
+    ) -> std::os::raw::c_int;
+    pub fn lua_getfenv(L: *mut lua_State, idx: std::os::raw::c_int);
+    pub fn lua_settable(L: *mut lua_State, idx: std::os::raw::c_int);
+    pub fn lua_setfield(
         L: *mut lua_State,
         idx: std::os::raw::c_int,
         k: *const std::os::raw::c_char,
-    ),
-    pub lua_rawset: unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int),
-    pub lua_rawseti:
-        unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int, n: std::os::raw::c_int),
-    pub lua_setmetatable: unsafe extern "C" fn(
+    );
+    pub fn lua_rawset(L: *mut lua_State, idx: std::os::raw::c_int);
+    pub fn lua_rawseti(L: *mut lua_State, idx: std::os::raw::c_int, n: std::os::raw::c_int);
+    pub fn lua_setmetatable(
         L: *mut lua_State,
         objindex: std::os::raw::c_int,
-    ) -> std::os::raw::c_int,
-    pub lua_setfenv:
-        unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int) -> std::os::raw::c_int,
-    pub lua_call: unsafe extern "C" fn(
-        L: *mut lua_State,
-        nargs: std::os::raw::c_int,
-        nresults: std::os::raw::c_int,
-    ),
-    pub lua_pcall: unsafe extern "C" fn(
+    ) -> std::os::raw::c_int;
+    pub fn lua_setfenv(L: *mut lua_State, idx: std::os::raw::c_int) -> std::os::raw::c_int;
+    pub fn lua_call(L: *mut lua_State, nargs: std::os::raw::c_int, nresults: std::os::raw::c_int);
+    pub fn lua_pcall(
         L: *mut lua_State,
         nargs: std::os::raw::c_int,
         nresults: std::os::raw::c_int,
         errfunc: std::os::raw::c_int,
-    ) -> std::os::raw::c_int,
-    pub lua_cpcall: unsafe extern "C" fn(
+    ) -> std::os::raw::c_int;
+    pub fn lua_cpcall(
         L: *mut lua_State,
         func: lua_CFunction,
         ud: *mut std::os::raw::c_void,
-    ) -> std::os::raw::c_int,
-    pub lua_load: unsafe extern "C" fn(
+    ) -> std::os::raw::c_int;
+    pub fn lua_load(
         L: *mut lua_State,
         reader: lua_Reader,
         dt: *mut std::os::raw::c_void,
         chunkname: *const std::os::raw::c_char,
-    ) -> std::os::raw::c_int,
-    pub lua_dump: unsafe extern "C" fn(
+    ) -> std::os::raw::c_int;
+    pub fn lua_dump(
         L: *mut lua_State,
         writer: lua_Writer,
         data: *mut std::os::raw::c_void,
-    ) -> std::os::raw::c_int,
-    pub lua_yield: unsafe extern "C" fn(
-        L: *mut lua_State,
-        nresults: std::os::raw::c_int,
-    ) -> std::os::raw::c_int,
-    pub lua_resume:
-        unsafe extern "C" fn(L: *mut lua_State, narg: std::os::raw::c_int) -> std::os::raw::c_int,
-    pub lua_status: unsafe extern "C" fn(L: *mut lua_State) -> std::os::raw::c_int,
-    pub lua_gc: unsafe extern "C" fn(
+    ) -> std::os::raw::c_int;
+    pub fn lua_yield(L: *mut lua_State, nresults: std::os::raw::c_int) -> std::os::raw::c_int;
+    pub fn lua_resume(L: *mut lua_State, narg: std::os::raw::c_int) -> std::os::raw::c_int;
+    pub fn lua_status(L: *mut lua_State) -> std::os::raw::c_int;
+    pub fn lua_gc(
         L: *mut lua_State,
         what: std::os::raw::c_int,
         data: std::os::raw::c_int,
-    ) -> std::os::raw::c_int,
-    pub lua_error: unsafe extern "C" fn(L: *mut lua_State) -> std::os::raw::c_int,
-    pub lua_next:
-        unsafe extern "C" fn(L: *mut lua_State, idx: std::os::raw::c_int) -> std::os::raw::c_int,
-    pub lua_concat: unsafe extern "C" fn(L: *mut lua_State, n: std::os::raw::c_int),
-    pub lua_getallocf:
-        unsafe extern "C" fn(L: *mut lua_State, ud: *mut *mut std::os::raw::c_void) -> lua_Alloc,
-    pub lua_setallocf:
-        unsafe extern "C" fn(L: *mut lua_State, f: lua_Alloc, ud: *mut std::os::raw::c_void),
-    pub luaL_newstate: unsafe extern "C" fn() -> *mut lua_State,
-    //pub lua_setlevel: unsafe extern "C" fn(from: *mut lua_State, to: *mut lua_State),
-    pub lua_getstack: unsafe extern "C" fn(
+    ) -> std::os::raw::c_int;
+    pub fn lua_error(L: *mut lua_State) -> std::os::raw::c_int;
+    pub fn lua_next(L: *mut lua_State, idx: std::os::raw::c_int) -> std::os::raw::c_int;
+    pub fn lua_concat(L: *mut lua_State, n: std::os::raw::c_int);
+    pub fn lua_getallocf(L: *mut lua_State, ud: *mut *mut std::os::raw::c_void) -> lua_Alloc;
+    pub fn lua_setallocf(L: *mut lua_State, f: lua_Alloc, ud: *mut std::os::raw::c_void);
+    pub fn luaL_newstate() -> *mut lua_State;
+    pub fn lua_getstack(
         L: *mut lua_State,
         level: std::os::raw::c_int,
         ar: *mut lua_Debug,
-    ) -> std::os::raw::c_int,
-    pub lua_getinfo: unsafe extern "C" fn(
+    ) -> std::os::raw::c_int;
+    pub fn lua_getinfo(
         L: *mut lua_State,
         what: *const std::os::raw::c_char,
         ar: *mut lua_Debug,
-    ) -> std::os::raw::c_int,
-    pub lua_getlocal: unsafe extern "C" fn(
+    ) -> std::os::raw::c_int;
+    pub fn lua_getlocal(
         L: *mut lua_State,
         ar: *const lua_Debug,
         n: std::os::raw::c_int,
-    ) -> *const std::os::raw::c_char,
-    pub lua_setlocal: unsafe extern "C" fn(
+    ) -> *const std::os::raw::c_char;
+    pub fn lua_setlocal(
         L: *mut lua_State,
         ar: *const lua_Debug,
         n: std::os::raw::c_int,
-    ) -> *const std::os::raw::c_char,
-    pub lua_getupvalue: unsafe extern "C" fn(
+    ) -> *const std::os::raw::c_char;
+    pub fn lua_getupvalue(
         L: *mut lua_State,
         funcindex: std::os::raw::c_int,
         n: std::os::raw::c_int,
-    ) -> *const std::os::raw::c_char,
-    pub lua_setupvalue: unsafe extern "C" fn(
+    ) -> *const std::os::raw::c_char;
+    pub fn lua_setupvalue(
         L: *mut lua_State,
         funcindex: std::os::raw::c_int,
         n: std::os::raw::c_int,
-    ) -> *const std::os::raw::c_char,
-    pub lua_sethook: unsafe extern "C" fn(
+    ) -> *const std::os::raw::c_char;
+    pub fn lua_sethook(
         L: *mut lua_State,
         func: lua_Hook,
         mask: std::os::raw::c_int,
         count: std::os::raw::c_int,
-    ) -> std::os::raw::c_int,
-    pub lua_gethook: unsafe extern "C" fn(L: *mut lua_State) -> lua_Hook,
-    pub lua_gethookmask: unsafe extern "C" fn(L: *mut lua_State) -> std::os::raw::c_int,
-    pub lua_gethookcount: unsafe extern "C" fn(L: *mut lua_State) -> std::os::raw::c_int,
-    pub lua_upvalueid: unsafe extern "C" fn(
+    ) -> std::os::raw::c_int;
+    pub fn lua_gethook(L: *mut lua_State) -> lua_Hook;
+    pub fn lua_gethookmask(L: *mut lua_State) -> std::os::raw::c_int;
+    pub fn lua_gethookcount(L: *mut lua_State) -> std::os::raw::c_int;
+    pub fn lua_upvalueid(
         L: *mut lua_State,
         idx: std::os::raw::c_int,
         n: std::os::raw::c_int,
-    ) -> *mut std::os::raw::c_void,
-    pub lua_upvaluejoin: unsafe extern "C" fn(
+    ) -> *mut std::os::raw::c_void;
+    pub fn lua_upvaluejoin(
         L: *mut lua_State,
         idx1: std::os::raw::c_int,
         n1: std::os::raw::c_int,
         idx2: std::os::raw::c_int,
         n2: std::os::raw::c_int,
-    ),
-    pub lua_loadx: unsafe extern "C" fn(
+    );
+    pub fn lua_loadx(
         L: *mut lua_State,
         reader: lua_Reader,
         dt: *mut std::os::raw::c_void,
         chunkname: *const std::os::raw::c_char,
         mode: *const std::os::raw::c_char,
-    ) -> std::os::raw::c_int,
-}
-
-#[allow(clippy::missing_safety_doc)]
-impl Lua51 {
-    pub unsafe fn new<P>(path: P) -> Result<Self, libloading::Error>
-    where
-        P: libloading::AsFilename,
-    {
-        unsafe {
-            let library = libloading::Library::new(path)?;
-            Self::from_library(library)
-        }
-    }
-    pub unsafe fn from_library<L>(library: L) -> Result<Self, libloading::Error>
-    where
-        L: Into<libloading::Library>,
-    {
-        unsafe {
-            let __library = library.into();
-            let lua_newstate = __library.get(b"lua_newstate\0").map(|sym| *sym)?;
-            let lua_close = __library.get(b"lua_close\0").map(|sym| *sym)?;
-            let lua_newthread = __library.get(b"lua_newthread\0").map(|sym| *sym)?;
-            let lua_atpanic = __library.get(b"lua_atpanic\0").map(|sym| *sym)?;
-            let lua_gettop = __library.get(b"lua_gettop\0").map(|sym| *sym)?;
-            let lua_settop = __library.get(b"lua_settop\0").map(|sym| *sym)?;
-            let lua_pushvalue = __library.get(b"lua_pushvalue\0").map(|sym| *sym)?;
-            let lua_remove = __library.get(b"lua_remove\0").map(|sym| *sym)?;
-            let lua_insert = __library.get(b"lua_insert\0").map(|sym| *sym)?;
-            let lua_replace = __library.get(b"lua_replace\0").map(|sym| *sym)?;
-            let lua_checkstack = __library.get(b"lua_checkstack\0").map(|sym| *sym)?;
-            let lua_xmove = __library.get(b"lua_xmove\0").map(|sym| *sym)?;
-            let lua_isnumber = __library.get(b"lua_isnumber\0").map(|sym| *sym)?;
-            let lua_isstring = __library.get(b"lua_isstring\0").map(|sym| *sym)?;
-            let lua_iscfunction = __library.get(b"lua_iscfunction\0").map(|sym| *sym)?;
-            let lua_isuserdata = __library.get(b"lua_isuserdata\0").map(|sym| *sym)?;
-            let lua_type = __library.get(b"lua_type\0").map(|sym| *sym)?;
-            let lua_typename = __library.get(b"lua_typename\0").map(|sym| *sym)?;
-            let lua_equal = __library.get(b"lua_equal\0").map(|sym| *sym)?;
-            let lua_rawequal = __library.get(b"lua_rawequal\0").map(|sym| *sym)?;
-            let lua_lessthan = __library.get(b"lua_lessthan\0").map(|sym| *sym)?;
-            let lua_tonumber = __library.get(b"lua_tonumber\0").map(|sym| *sym)?;
-            let lua_tointeger = __library.get(b"lua_tointeger\0").map(|sym| *sym)?;
-            let lua_toboolean = __library.get(b"lua_toboolean\0").map(|sym| *sym)?;
-            let lua_tolstring = __library.get(b"lua_tolstring\0").map(|sym| *sym)?;
-            let lua_objlen = __library.get(b"lua_objlen\0").map(|sym| *sym)?;
-            let lua_tocfunction = __library.get(b"lua_tocfunction\0").map(|sym| *sym)?;
-            let lua_touserdata = __library.get(b"lua_touserdata\0").map(|sym| *sym)?;
-            let lua_tothread = __library.get(b"lua_tothread\0").map(|sym| *sym)?;
-            let lua_topointer = __library.get(b"lua_topointer\0").map(|sym| *sym)?;
-            let lua_pushnil = __library.get(b"lua_pushnil\0").map(|sym| *sym)?;
-            let lua_pushnumber = __library.get(b"lua_pushnumber\0").map(|sym| *sym)?;
-            let lua_pushinteger = __library.get(b"lua_pushinteger\0").map(|sym| *sym)?;
-            let lua_pushlstring = __library.get(b"lua_pushlstring\0").map(|sym| *sym)?;
-            let lua_pushstring = __library.get(b"lua_pushstring\0").map(|sym| *sym)?;
-            let lua_pushvfstring = __library.get(b"lua_pushvfstring\0").map(|sym| *sym)?;
-            let lua_pushfstring = __library.get(b"lua_pushfstring\0").map(|sym| *sym)?;
-            let lua_pushcclosure = __library.get(b"lua_pushcclosure\0").map(|sym| *sym)?;
-            let lua_pushboolean = __library.get(b"lua_pushboolean\0").map(|sym| *sym)?;
-            let lua_pushlightuserdata =
-                __library.get(b"lua_pushlightuserdata\0").map(|sym| *sym)?;
-            let lua_pushthread = __library.get(b"lua_pushthread\0").map(|sym| *sym)?;
-            let lua_gettable = __library.get(b"lua_gettable\0").map(|sym| *sym)?;
-            let lua_getfield = __library.get(b"lua_getfield\0").map(|sym| *sym)?;
-            let lua_rawget = __library.get(b"lua_rawget\0").map(|sym| *sym)?;
-            let lua_rawgeti = __library.get(b"lua_rawgeti\0").map(|sym| *sym)?;
-            let lua_createtable = __library.get(b"lua_createtable\0").map(|sym| *sym)?;
-            let lua_newuserdata = __library.get(b"lua_newuserdata\0").map(|sym| *sym)?;
-            let lua_getmetatable = __library.get(b"lua_getmetatable\0").map(|sym| *sym)?;
-            let lua_getfenv = __library.get(b"lua_getfenv\0").map(|sym| *sym)?;
-            let lua_settable = __library.get(b"lua_settable\0").map(|sym| *sym)?;
-            let lua_setfield = __library.get(b"lua_setfield\0").map(|sym| *sym)?;
-            let lua_rawset = __library.get(b"lua_rawset\0").map(|sym| *sym)?;
-            let lua_rawseti = __library.get(b"lua_rawseti\0").map(|sym| *sym)?;
-            let lua_setmetatable = __library.get(b"lua_setmetatable\0").map(|sym| *sym)?;
-            let lua_setfenv = __library.get(b"lua_setfenv\0").map(|sym| *sym)?;
-            let lua_call = __library.get(b"lua_call\0").map(|sym| *sym)?;
-            let lua_pcall = __library.get(b"lua_pcall\0").map(|sym| *sym)?;
-            let lua_cpcall = __library.get(b"lua_cpcall\0").map(|sym| *sym)?;
-            let lua_load = __library.get(b"lua_load\0").map(|sym| *sym)?;
-            let lua_dump = __library.get(b"lua_dump\0").map(|sym| *sym)?;
-            let lua_yield = __library.get(b"lua_yield\0").map(|sym| *sym)?;
-            let lua_resume = __library.get(b"lua_resume\0").map(|sym| *sym)?;
-            let lua_status = __library.get(b"lua_status\0").map(|sym| *sym)?;
-            let lua_gc = __library.get(b"lua_gc\0").map(|sym| *sym)?;
-            let lua_error = __library.get(b"lua_error\0").map(|sym| *sym)?;
-            let lua_next = __library.get(b"lua_next\0").map(|sym| *sym)?;
-            let lua_concat = __library.get(b"lua_concat\0").map(|sym| *sym)?;
-            let lua_getallocf = __library.get(b"lua_getallocf\0").map(|sym| *sym)?;
-            let lua_setallocf = __library.get(b"lua_setallocf\0").map(|sym| *sym)?;
-            let luaL_newstate = __library.get(b"luaL_newstate\0").map(|sym| *sym)?;
-            //let lua_setlevel = __library.get(b"lua_setlevel\0").map(|sym| *sym)?;
-            let lua_getstack = __library.get(b"lua_getstack\0").map(|sym| *sym)?;
-            let lua_getinfo = __library.get(b"lua_getinfo\0").map(|sym| *sym)?;
-            let lua_getlocal = __library.get(b"lua_getlocal\0").map(|sym| *sym)?;
-            let lua_setlocal = __library.get(b"lua_setlocal\0").map(|sym| *sym)?;
-            let lua_getupvalue = __library.get(b"lua_getupvalue\0").map(|sym| *sym)?;
-            let lua_setupvalue = __library.get(b"lua_setupvalue\0").map(|sym| *sym)?;
-            let lua_sethook = __library.get(b"lua_sethook\0").map(|sym| *sym)?;
-            let lua_gethook = __library.get(b"lua_gethook\0").map(|sym| *sym)?;
-            let lua_gethookmask = __library.get(b"lua_gethookmask\0").map(|sym| *sym)?;
-            let lua_gethookcount = __library.get(b"lua_gethookcount\0").map(|sym| *sym)?;
-            let lua_upvalueid = __library.get(b"lua_upvalueid\0").map(|sym| *sym)?;
-            let lua_upvaluejoin = __library.get(b"lua_upvaluejoin\0").map(|sym| *sym)?;
-            let lua_loadx = __library.get(b"lua_loadx\0").map(|sym| *sym)?;
-            Ok(Lua51 {
-                __library,
-                lua_newstate,
-                lua_close,
-                lua_newthread,
-                lua_atpanic,
-                lua_gettop,
-                lua_settop,
-                lua_pushvalue,
-                lua_remove,
-                lua_insert,
-                lua_replace,
-                lua_checkstack,
-                lua_xmove,
-                lua_isnumber,
-                lua_isstring,
-                lua_iscfunction,
-                lua_isuserdata,
-                lua_type,
-                lua_typename,
-                lua_equal,
-                lua_rawequal,
-                lua_lessthan,
-                lua_tonumber,
-                lua_tointeger,
-                lua_toboolean,
-                lua_tolstring,
-                lua_objlen,
-                lua_tocfunction,
-                lua_touserdata,
-                lua_tothread,
-                lua_topointer,
-                lua_pushnil,
-                lua_pushnumber,
-                lua_pushinteger,
-                lua_pushlstring,
-                lua_pushstring,
-                lua_pushvfstring,
-                lua_pushfstring,
-                lua_pushcclosure,
-                lua_pushboolean,
-                lua_pushlightuserdata,
-                lua_pushthread,
-                lua_gettable,
-                lua_getfield,
-                lua_rawget,
-                lua_rawgeti,
-                lua_createtable,
-                lua_newuserdata,
-                lua_getmetatable,
-                lua_getfenv,
-                lua_settable,
-                lua_setfield,
-                lua_rawset,
-                lua_rawseti,
-                lua_setmetatable,
-                lua_setfenv,
-                lua_call,
-                lua_pcall,
-                lua_cpcall,
-                lua_load,
-                lua_dump,
-                lua_yield,
-                lua_resume,
-                lua_status,
-                lua_gc,
-                lua_error,
-                lua_next,
-                lua_concat,
-                lua_getallocf,
-                lua_setallocf,
-                luaL_newstate,
-                //lua_setlevel,
-                lua_getstack,
-                lua_getinfo,
-                lua_getlocal,
-                lua_setlocal,
-                lua_getupvalue,
-                lua_setupvalue,
-                lua_sethook,
-                lua_gethook,
-                lua_gethookmask,
-                lua_gethookcount,
-                lua_upvalueid,
-                lua_upvaluejoin,
-                lua_loadx,
-            })
-        }
-    }
+    ) -> std::os::raw::c_int;
 }

@@ -377,24 +377,24 @@ fn luaopen(
     let name = quote! {concat!(env!("CARGO_PKG_NAME"), "\0")};
     quote! {
         #[unsafe(no_mangle)]
-        unsafe extern "C" fn luaopen(lua: *mut noita_api::lua::lua_State) -> std::ffi::c_int {
+        unsafe extern "C" fn luaopen(lua: *mut noita_api::lua_bindings::lua_State) -> std::ffi::c_int {
             std::panic::set_hook(Box::new(|panic| noita_api::log_println!("{panic}")));
             #keep_loaded
             #(#groups_funs)*
             #(#inner_funs)*
-            fn register_functions(lua: *mut noita_api::lua::lua_State) {
+            fn register_functions(lua: *mut noita_api::lua_bindings::lua_State) {
                 unsafe {
-                    (noita_api::lua::LUA.lua_createtable)(lua, 0, 0);
+                    noita_api::lua_bindings::lua_createtable(lua, 0, 0);
                     #(#inner_defs)*
                     #(#groups_defs)*
-                    (noita_api::lua::LUA.lua_setfield)(
+                    noita_api::lua_bindings::lua_setfield(
                         lua,
-                        noita_api::lua::LUA_GLOBALSINDEX,
+                        noita_api::lua_bindings::LUA_GLOBALSINDEX,
                         #name.as_ptr().cast(),
                     );
                 }
             }
-            fn newstate() -> *mut noita_api::lua::lua_State {
+            fn newstate() -> *mut noita_api::lua_bindings::lua_State {
                 let lua = unsafe { noita_api::NEW_STATE.call() };
                 register_functions(lua);
                 lua
@@ -650,7 +650,7 @@ fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, Toke
     };
     (
         quote! {
-            unsafe extern "C" fn #bridge_fn_name(lua: *mut noita_api::lua::lua_State) -> std::ffi::c_int {
+            unsafe extern "C" fn #bridge_fn_name(lua: *mut noita_api::lua_bindings::lua_State) -> std::ffi::c_int {
                 let lua_state = noita_api::lua::LuaState::new(lua);
                 #index
                 #(#vars)*
@@ -660,8 +660,8 @@ fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, Toke
             }
         },
         quote! {
-            (noita_api::lua::LUA.lua_pushcclosure)(lua, Some(#bridge_fn_name), 0);
-            (noita_api::lua::LUA.lua_setfield)(lua, -2, #fn_name_c.as_ptr());
+            noita_api::lua_bindings::lua_pushcclosure(lua, Some(#bridge_fn_name), 0);
+            noita_api::lua_bindings::lua_setfield(lua, -2, #fn_name_c.as_ptr());
         },
     )
 }
@@ -739,6 +739,53 @@ pub fn make_lua_ret_tuples(tokens: proc_macro::TokenStream) -> proc_macro::Token
     let tuple = (2..=n).map(make_lua_ret_tuple);
     quote! {
         #(#tuple)*
+    }
+    .into()
+}
+#[proc_macro_attribute]
+pub fn gen_stubs(
+    _: proc_macro::TokenStream,
+    tokens: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let tokens = TokenStream::from(tokens);
+    let group = tokens
+        .clone()
+        .into_iter()
+        .find_map(|a| {
+            if let TokenTree::Group(g) = a
+                && g.delimiter() == Delimiter::Brace
+            {
+                Some(g)
+            } else {
+                None
+            }
+        })
+        .unwrap();
+    let vec: Vec<TokenTree> = group.stream().into_iter().collect();
+    let mut stubs: Vec<TokenStream> = vec
+        .split(|t| {
+            if let TokenTree::Punct(p) = t {
+                p.as_char() == ';'
+            } else {
+                false
+            }
+        })
+        .map(|t| {
+            let t: TokenStream = t.iter().skip(1).cloned().collect();
+            quote! {
+                #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+                #[allow(unused)]
+                pub unsafe extern "C" #t {
+                    unreachable!()
+                }
+            }
+        })
+        .collect();
+    stubs.pop();
+    quote! {
+        #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+        #tokens
+        #(#stubs)*
     }
     .into()
 }

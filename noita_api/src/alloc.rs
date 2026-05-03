@@ -9,21 +9,14 @@ use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, DerefMut};
 use std::ptr;
 use std::ptr::NonNull;
+#[link(name = "msvcr120")]
 #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
-struct Msvcr {
-    operator_new: unsafe extern "C" fn(n: c_uint) -> *mut c_void,
-    operator_delete: unsafe extern "C" fn(*mut c_void),
+unsafe extern "C" {
+    #[link_name = "??2@YAPAXI@Z"]
+    fn operator_new(size: c_uint) -> *mut c_void;
+    #[link_name = "??3@YAXPAX@Z"]
+    fn operator_delete(ptr: *mut c_void);
 }
-#[cfg(all(target_os = "windows", target_pointer_width = "32"))]
-static MSVCR: std::sync::LazyLock<Msvcr> = std::sync::LazyLock::new(|| unsafe {
-    let lib = libloading::Library::new("msvcr120.dll").expect("library to exist");
-    let operator_new = *lib.get(b"??2@YAPAXI@Z\0").expect("symbol to exist");
-    let operator_delete = *lib.get(b"??3@YAXPAX@Z\0").expect("symbol to exist");
-    Msvcr {
-        operator_new,
-        operator_delete,
-    }
-});
 #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
 const ALLOC: Global = Global;
 #[repr(transparent)]
@@ -39,16 +32,13 @@ pub struct StdBox<T: Sized> {
 impl<T: Sized> StdPtr<T> {
     #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
     pub fn malloc() -> Self {
-        let ptr = unsafe {
-            NonNull::new_unchecked((MSVCR.operator_new)(size_of::<T>() as c_uint).cast())
-        };
+        let ptr = unsafe { NonNull::new_unchecked(operator_new(size_of::<T>() as c_uint).cast()) };
         Self { ptr }
     }
     #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
     pub fn malloc_array(n: usize) -> Self {
-        let ptr = unsafe {
-            NonNull::new_unchecked((MSVCR.operator_new)((size_of::<T>() * n) as c_uint).cast())
-        };
+        let ptr =
+            unsafe { NonNull::new_unchecked(operator_new((size_of::<T>() * n) as c_uint).cast()) };
         Self { ptr }
     }
     #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
@@ -69,11 +59,11 @@ impl<T: Sized> StdPtr<T> {
     }
     #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
     pub fn free(&mut self) {
-        unsafe { (MSVCR.operator_delete)(self.ptr.as_ptr().cast()) }
+        unsafe { operator_delete(self.ptr.as_ptr().cast()) }
     }
     #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
     pub fn free_array(&mut self, _: usize) {
-        unsafe { (MSVCR.operator_delete)(self.ptr.as_ptr().cast()) }
+        unsafe { operator_delete(self.ptr.as_ptr().cast()) }
     }
     #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
     #[inline]

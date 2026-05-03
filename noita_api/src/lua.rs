@@ -1,5 +1,10 @@
-pub use crate::lua_bindings::{LUA_GLOBALSINDEX, lua_State};
-use crate::lua_bindings::{Lua51, lua_CFunction};
+use crate::lua_bindings::lua_CFunction;
+use crate::lua_bindings::{
+    LUA_GLOBALSINDEX, lua_State, lua_createtable, lua_error, lua_getfield, lua_gettable,
+    lua_objlen, lua_pushboolean, lua_pushinteger, lua_pushlstring, lua_pushnil, lua_pushnumber,
+    lua_rawseti, lua_settop, lua_toboolean, lua_tocfunction, lua_tointeger, lua_tolstring,
+    lua_tonumber, lua_type,
+};
 use noita_api_macros::{make_lua_get_tuples, make_lua_ret_tuples};
 use std::convert::Infallible;
 use std::error::Error;
@@ -9,10 +14,7 @@ use std::ops::{ControlFlow, Deref, DerefMut, Try};
 use std::{
     ffi::{CStr, c_char, c_int},
     ptr, slice,
-    sync::LazyLock,
 };
-pub static LUA: LazyLock<Lua51> =
-    LazyLock::new(|| unsafe { Lua51::new("lua51.dll").expect("library to be lua") });
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct LuaState {
@@ -33,17 +35,17 @@ impl LuaState {
     #[must_use]
     #[inline]
     pub fn to_integer(self, index: i32) -> isize {
-        unsafe { (LUA.lua_tointeger)(self.lua, index) }
+        unsafe { lua_tointeger(self.lua, index) }
     }
     #[must_use]
     #[inline]
     pub fn to_number(self, index: i32) -> f64 {
-        unsafe { (LUA.lua_tonumber)(self.lua, index) }
+        unsafe { lua_tonumber(self.lua, index) }
     }
     #[must_use]
     #[inline]
     pub fn to_bool(self, index: i32) -> bool {
-        unsafe { (LUA.lua_toboolean)(self.lua, index) > 0 }
+        unsafe { lua_toboolean(self.lua, index) > 0 }
     }
     #[inline]
     pub fn to_str<'a>(self, index: i32) -> Result<&'a str, LuaError> {
@@ -53,7 +55,7 @@ impl LuaState {
     #[inline]
     pub fn to_raw_str<'a>(self, index: i32) -> Result<&'a RawStr, LuaError> {
         let mut size = 0;
-        let buf = unsafe { (LUA.lua_tolstring)(self.lua, index, &raw mut size) };
+        let buf = unsafe { lua_tolstring(self.lua, index, &raw mut size) };
         if buf.is_null() {
             return Err(LuaError::NullStr);
         }
@@ -63,57 +65,57 @@ impl LuaState {
     #[must_use]
     #[inline]
     pub fn to_cfunction(self, index: i32) -> lua_CFunction {
-        unsafe { (LUA.lua_tocfunction)(self.lua, index) }
+        unsafe { lua_tocfunction(self.lua, index) }
     }
     #[inline]
     pub fn push_number(self, val: f64) {
-        unsafe { (LUA.lua_pushnumber)(self.lua, val) };
+        unsafe { lua_pushnumber(self.lua, val) };
     }
     #[inline]
     pub fn push_integer(self, val: isize) {
-        unsafe { (LUA.lua_pushinteger)(self.lua, val) };
+        unsafe { lua_pushinteger(self.lua, val) };
     }
     #[inline]
     pub fn push_bool(self, val: bool) {
-        unsafe { (LUA.lua_pushboolean)(self.lua, i32::from(val)) };
+        unsafe { lua_pushboolean(self.lua, i32::from(val)) };
     }
     #[inline]
     pub fn push_str(self, s: &str) {
         unsafe {
-            (LUA.lua_pushlstring)(self.lua, s.as_bytes().as_ptr().cast::<c_char>(), s.len());
+            lua_pushlstring(self.lua, s.as_bytes().as_ptr().cast::<c_char>(), s.len());
         }
     }
     #[inline]
     pub fn push_raw_str(self, s: &RawStr) {
         unsafe {
-            (LUA.lua_pushlstring)(self.lua, s.as_ptr().cast::<c_char>(), s.len());
+            lua_pushlstring(self.lua, s.as_ptr().cast::<c_char>(), s.len());
         }
     }
     #[inline]
     pub fn push_nil(self) {
-        unsafe { (LUA.lua_pushnil)(self.lua) }
+        unsafe { lua_pushnil(self.lua) }
     }
     #[inline]
     pub fn get_global(self, name: &CStr) {
-        unsafe { (LUA.lua_getfield)(self.lua, LUA_GLOBALSINDEX, name.as_ptr()) };
+        unsafe { lua_getfield(self.lua, LUA_GLOBALSINDEX, name.as_ptr()) };
     }
     #[must_use]
     #[inline]
     pub fn objlen(self, index: i32) -> usize {
-        unsafe { (LUA.lua_objlen)(self.lua, index) }
+        unsafe { lua_objlen(self.lua, index) }
     }
     #[inline]
     pub fn index_table(self, table_index: i32, index_in_table: usize) {
         self.push_integer(index_in_table.cast_signed());
         if table_index < 0 {
-            unsafe { (LUA.lua_gettable)(self.lua, table_index - 1) };
+            unsafe { lua_gettable(self.lua, table_index - 1) };
         } else {
-            unsafe { (LUA.lua_gettable)(self.lua, table_index) };
+            unsafe { lua_gettable(self.lua, table_index) };
         }
     }
     #[inline]
     pub fn pop_last(self) {
-        unsafe { (LUA.lua_settop)(self.lua, -2) };
+        unsafe { lua_settop(self.lua, -2) };
     }
     /// Raise an error with message `s`
     ///
@@ -123,22 +125,22 @@ impl LuaState {
     pub unsafe fn raise_error(self, s: String) -> ! {
         self.push_str(&s);
         drop(s);
-        unsafe { (LUA.lua_error)(self.lua) };
+        unsafe { lua_error(self.lua) };
         // lua_error does not return.
         unreachable!()
     }
     #[must_use]
     #[inline]
     pub fn is_nil_or_none(self, index: i32) -> bool {
-        (unsafe { (LUA.lua_type)(self.lua, index) }) <= 0
+        (unsafe { lua_type(self.lua, index) }) <= 0
     }
     #[inline]
     pub fn create_table(self, narr: c_int, nrec: c_int) {
-        unsafe { (LUA.lua_createtable)(self.lua, narr, nrec) };
+        unsafe { lua_createtable(self.lua, narr, nrec) };
     }
     #[inline]
     pub fn rawset_table(self, table_index: i32, index_in_table: i32) {
-        unsafe { (LUA.lua_rawseti)(self.lua, table_index, index_in_table) };
+        unsafe { lua_rawseti(self.lua, table_index, index_in_table) };
     }
 }
 
