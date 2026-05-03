@@ -15,7 +15,7 @@ use std::{
     ffi::{CStr, c_char, c_int},
     ptr, slice,
 };
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
 pub struct LuaState {
     lua: *mut lua_State,

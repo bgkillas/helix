@@ -1,5 +1,5 @@
 use crate::{
-    ComponentBufferVTable, ComponentData, Entity, EntityManager, EventManager, StdBox, StdVec,
+    Component, ComponentBufferVTable, Entity, EntityManager, EventManager, StdBox, StdVec,
 };
 #[repr(C)]
 #[derive(Debug)]
@@ -11,7 +11,7 @@ pub struct ComponentBuffer<T> {
     pub entities: StdVec<Option<StdBox<Entity>>>,
     pub prev: StdVec<usize>,
     pub next: StdVec<usize>,
-    pub component_list: StdVec<Option<StdBox<ComponentData<T>>>>,
+    pub component_list: StdVec<Option<StdBox<Component<T>>>>,
     unk1r: *const u64,
     unk1: [*const usize; 4],
     unk1_vec: StdVec<*const usize>,

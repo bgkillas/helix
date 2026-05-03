@@ -4,7 +4,7 @@ use crate::{AppConfigVTable, PlatformVTable, StdBox, StdString, StdVec, Vec2};
 pub struct Platform {
     pub vftable: StdBox<PlatformVTable>,
     pub application: *const usize,
-    pub app_config: &'static WizardAppConfig,
+    pub app_config: StdBox<WizardAppConfig>,
     pub internal_width: f32,
     pub internal_height: f32,
     pub input_disabled: bool,

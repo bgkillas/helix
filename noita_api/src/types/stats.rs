@@ -1,0 +1,53 @@
+use crate::{GameStatsVTable, GlobalStatsVTable, StdBox, StdMap, StdString, Vec2};
+#[derive(Debug)]
+#[repr(C)]
+pub struct GlobalStats {
+    pub vftable: StdBox<GlobalStatsVTable>,
+    pub stats_version: usize,
+    pub debug_tracker: usize,
+    pub debug: bool,
+    padding1: [u8; 3],
+    pub debug_reset_counter: usize,
+    pub fix_stats_flag: bool,
+    pub session_dead: bool,
+    padding2: [u8; 2],
+    pub key_value_stats: StdMap<StdString, usize>,
+    pub session: GameStats,
+    pub highest: GameStats,
+    pub global: GameStats,
+    pub prev_best: GameStats,
+}
+#[derive(Debug)]
+#[repr(C)]
+pub struct GameStats {
+    pub vftable: StdBox<GameStatsVTable>,
+    pub dead: bool,
+    padding1: [u8; 3],
+    pub death_count: usize,
+    pub streaks: usize,
+    pub world_seed: usize,
+    pub killed_by: StdString,
+    pub killed_by_extra: StdString,
+    pub death_pos: Vec2,
+    field_0x4c: usize,
+    pub playtime: f64,
+    pub playtime_str: StdString,
+    pub places_visited: usize,
+    pub enemies_killed: usize,
+    pub heart_containers: usize,
+    field_0x7c: usize,
+    pub hp: i64,
+    pub gold: i64,
+    pub gold_all: i64,
+    pub gold_infinite: bool,
+    padding2: [u8; 3],
+    pub items: usize,
+    pub projectiles_shot: usize,
+    pub kicks: usize,
+    pub damage_taken: f64,
+    pub healed: f64,
+    pub teleports: usize,
+    pub wands_edited: usize,
+    pub biomes_visited_with_wands: usize,
+    field_0xc4: usize,
+}

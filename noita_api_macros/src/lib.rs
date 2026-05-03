@@ -587,6 +587,9 @@ pub fn generate_global(
                 }
                 n += 1;
             }
+            TokenTree::Group(g) if is_ptr || is_ptr_ptr => {
+                type_name.push(TokenTree::Group(g));
+            }
             TokenTree::Punct(p) if (is_ptr || is_ptr_ptr) && p.as_char() == '>' && n > 1 => {
                 type_name.push(TokenTree::Punct(p));
                 n -= 1;

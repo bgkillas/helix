@@ -37,3 +37,24 @@ pub struct AppConfigVTable {}
 #[repr(C)]
 #[derive(Debug)]
 pub struct ComponentVTable {}
+#[repr(C)]
+#[derive(Debug)]
+pub struct GlobalStatsVTable {}
+#[repr(C)]
+#[derive(Debug)]
+pub struct GameStatsVTable {}
+#[repr(C)]
+#[derive(Debug)]
+pub struct TranslationManagerVTable {}
+#[repr(C)]
+#[derive(Debug)]
+pub struct ComponentBufferInitVTable {}
+#[repr(C)]
+#[derive(Debug)]
+pub struct ComponentUpdaterVTable {}
+#[repr(C)]
+#[derive(Debug)]
+pub struct ComponentSystemVTable {}
+#[derive(Debug)]
+#[repr(C)]
+pub struct ModVTable {}
