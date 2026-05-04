@@ -21,7 +21,7 @@ pub use libloading;
 pub use lua_global::*;
 pub use new_game::*;
 pub(crate) use noita_api_macros::{assert_size, assert_size_with, search_fun};
-pub use noita_api_macros::{lua_function, lua_module};
+pub use noita_api_macros::{fire_hook, lua_function, lua_module};
 pub use pause::*;
 pub use print::*;
 pub use types::*;

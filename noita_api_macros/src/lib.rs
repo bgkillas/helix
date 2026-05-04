@@ -10,9 +10,10 @@ use std::{iter, mem};
 #[derive(Default, Debug)]
 struct Function {
     name: Option<Ident>,
-    args: Vec<Type>,
+    args: Vec<(Option<Type>, TokenStream)>,
     arg_names: Vec<String>,
-    ret: Option<Type>,
+    ret: Option<(Option<Type>, TokenStream)>,
+    fire_hook: bool,
 }
 #[derive(Debug, Clone)]
 enum Type {
@@ -106,9 +107,10 @@ impl ToTokens for Type {
         }
     }
 }
-impl From<&str> for Type {
-    fn from(value: &str) -> Self {
-        match value {
+impl TryFrom<&str> for Type {
+    type Error = ();
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(match value {
             "& str" => Self::Str,
             "& RawStr" => Self::RawStr,
             "LuaState" => Self::LuaState,
@@ -120,41 +122,46 @@ impl From<&str> for Type {
             s if let Some(s) = s.strip_prefix("Option < ")
                 && let Some(s) = s.strip_suffix(" >") =>
             {
-                Self::NilOr(Box::new(Type::from(s)))
+                Self::NilOr(Box::new(Type::try_from(s)?))
             }
             s if let Some(s) = s.strip_prefix("Vec < ")
                 && let Some(s) = s.strip_suffix(" >") =>
             {
-                Self::Vec(Box::new(Type::from(s)))
+                Self::Vec(Box::new(Type::try_from(s)?))
             }
             s if let Some(s) = s.strip_prefix("& mut [")
                 && let Some(s) = s.strip_suffix("]") =>
             {
-                Self::Slice(Box::new(Type::from(s)))
+                Self::Slice(Box::new(Type::try_from(s)?))
             }
             s if let Some(s) = s.strip_prefix("& [")
                 && let Some(s) = s.strip_suffix("]") =>
             {
-                Self::Slice(Box::new(Type::from(s)))
+                Self::Slice(Box::new(Type::try_from(s)?))
             }
             s if let Some(s) = s.strip_prefix("[")
                 && let Some(s) = s.strip_suffix("]")
                 && let Some((t, n)) = s.rsplit_once("; ") =>
             {
-                Self::Array(Box::new(Type::from(t)), n.parse().unwrap())
+                Self::Array(Box::new(Type::try_from(t)?), n.parse().unwrap())
             }
             s if let Some(s) = s.strip_prefix("(")
                 && let Some(s) = s.strip_suffix(")") =>
             {
-                Self::Tuple(s.split(", ").map(Type::from).collect())
+                Self::Tuple(
+                    s.split(", ")
+                        .map(Type::try_from)
+                        .collect::<Result<Vec<_>, Self::Error>>()?,
+                )
             }
-            _ => panic!("unsupported type {value:?}"),
-        }
+            _ => return Err(()),
+        })
     }
 }
-impl From<TokenStream> for Type {
-    fn from(value: TokenStream) -> Self {
-        Type::from(value.to_string().as_str())
+impl TryFrom<TokenStream> for Type {
+    type Error = ();
+    fn try_from(value: TokenStream) -> Result<Self, Self::Error> {
+        Type::try_from(value.to_string().as_str())
     }
 }
 #[derive(Debug)]
@@ -177,7 +184,8 @@ fn parse_group(tokens: TokenStream) -> (Vec<Function>, Vec<FunGroup>) {
             TokenTree::Group(_) if is_ret != 0 => {
                 is_ret = 0;
                 if !ret.is_empty() {
-                    function.ret = Some(TokenStream::from_iter(mem::take(&mut ret)).into());
+                    let tok = TokenStream::from_iter(mem::take(&mut ret));
+                    function.ret = Some((tok.clone().try_into().ok(), tok));
                 }
                 funs.push(mem::take(&mut function));
             }
@@ -205,9 +213,8 @@ fn parse_group(tokens: TokenStream) -> (Vec<Function>, Vec<FunGroup>) {
                         TokenTree::Punct(p) if p.as_char() == ',' => {
                             arg.pop();
                             start = false;
-                            function
-                                .args
-                                .push(TokenStream::from_iter(mem::take(&mut arg)).into());
+                            let tok = TokenStream::from_iter(mem::take(&mut arg));
+                            function.args.push((tok.clone().try_into().ok(), tok));
                         }
                         TokenTree::Ident(i) if !start && i != "mut" => {
                             function.arg_names.push(i.to_string());
@@ -216,7 +223,8 @@ fn parse_group(tokens: TokenStream) -> (Vec<Function>, Vec<FunGroup>) {
                     }
                 }
                 if !arg.is_empty() {
-                    function.args.push(TokenStream::from_iter(arg).into());
+                    let tok = TokenStream::from_iter(arg);
+                    function.args.push((tok.clone().try_into().ok(), tok));
                 }
                 is_fun = false;
                 is_ret = 1;
@@ -227,6 +235,16 @@ fn parse_group(tokens: TokenStream) -> (Vec<Function>, Vec<FunGroup>) {
                     && let Some(TokenTree::Ident(i)) = g.stream().into_iter().next()
                     && i == "lua_function" =>
             {
+                is_fun = true;
+                punct = false;
+            }
+            TokenTree::Group(g)
+                if punct
+                    && g.delimiter() == Delimiter::Bracket
+                    && let Some(TokenTree::Ident(i)) = g.stream().into_iter().next()
+                    && i == "fire_hook" =>
+            {
+                function.fire_hook = true;
                 is_fun = true;
                 punct = false;
             }
@@ -286,7 +304,7 @@ fn parse_attribute(
     let mut inner_tokens = tokens.clone();
     let (funs, groups) = parse_group(tokens);
     let luaopen = luaopen(funs, groups, dont_unload, file_path);
-    inner_tokens.extend(quote! {use noita_api::lua_function;});
+    inner_tokens.extend(quote! {use noita_api::{lua_function, fire_hook};});
     inner_tokens.extend(luaopen);
     let mut group = Group::new(Delimiter::Brace, TokenStream::from_iter(inner_tokens));
     group.set_span(span.unwrap());
@@ -301,7 +319,7 @@ fn make_group(group: FunGroup) -> (TokenStream, TokenStream) {
     let defs = funs_defs.iter().map(|a| a.1.clone());
     (
         quote! {
-            static #name: std::cell::SyncUnsafeCell<std::sync::LazyLock<#ident>> = std::cell::SyncUnsafeCell::new(std::sync::LazyLock::new(#ident::default));
+            pub static #name: std::cell::SyncUnsafeCell<std::sync::LazyLock<#ident>> = std::cell::SyncUnsafeCell::new(std::sync::LazyLock::new(#ident::default));
             #(#funs)*
         },
         quote! {
@@ -310,13 +328,18 @@ fn make_group(group: FunGroup) -> (TokenStream, TokenStream) {
     )
 }
 fn get_str(fun: &Function, name: &str) -> String {
+    if fun.fire_hook {
+        return String::new();
+    }
     let mut str = String::new();
     for (ty, name) in fun.args.iter().zip(&fun.arg_names) {
+        let ty = ty.0.as_ref().unwrap();
         if ty.put_in_lua() {
             writeln!(str, "---@param {name} {ty}").unwrap();
         }
     }
     if let Some(ret) = &fun.ret {
+        let ret = ret.0.as_ref().unwrap();
         writeln!(str, "---@return {ret}").unwrap();
     }
     writeln!(
@@ -407,6 +430,13 @@ fn luaopen(
 }
 #[proc_macro_attribute]
 pub fn lua_function(
+    _: proc_macro::TokenStream,
+    tokens: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    tokens
+}
+#[proc_macro_attribute]
+pub fn fire_hook(
     _: proc_macro::TokenStream,
     tokens: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
@@ -623,6 +653,9 @@ fn get_global_type(global_const: &Ident, type_name: &TokenStream, is_ptr_ptr: bo
 }
 fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, TokenStream) {
     let ident = fun.name.unwrap();
+    if fun.fire_hook && struct_ident.is_none() {
+        return (quote! {noita_api::install_fire_wand!(#ident);}, quote! {});
+    }
     let bridge_fn_name = format_ident!("{ident}_lua_bridge");
     let fn_name_c = name_to_c_literal(&ident.to_string());
     let vars: Vec<_> = fun
@@ -632,6 +665,7 @@ fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, Toke
         .enumerate()
         .filter_map(|(i, ts)| {
             let ident = format_ident!("a{}", i);
+            let ts = ts.0.unwrap();
             if ts.put_in_lua() {
                 Some(quote! {
                     let val: Result<(i32, #ts), noita_api::lua::LuaError> = noita_api::lua::LuaGetValue::get(lua_state, index);
@@ -657,6 +691,7 @@ fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, Toke
         .into_iter()
         .enumerate()
         .filter_map(|(i, t)| {
+            let t = t.0.unwrap();
             if t.put_in_lua() || matches!(t, Type::LuaState) {
                 let ident = format_ident!("a{}", i);
                 Some(if t.make_ref() {
