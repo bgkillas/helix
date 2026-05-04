@@ -1,23 +1,22 @@
-use crate::{Entity, Vec2, fast_call, get_fast_call, search_fun};
+use crate::{Entity, StdBox, Vec2, fast_call, get_fast_call, search_fun};
 static RAW: std::sync::atomic::AtomicPtr<retour::RawDetour> = std::sync::atomic::AtomicPtr::null();
+pub type FireWandFun = fast_call!(
+    fn(
+        Option<StdBox<Entity>>,
+        Option<StdBox<Entity>>,
+        StdBox<Vec2>,
+        Option<StdBox<Entity>>,
+        isize,
+        isize,
+        u8,
+        bool,
+        f32,
+        f32,
+    )
+);
 #[allow(clippy::as_conversions)]
 #[inline]
-pub fn install_fire_wand_manual(
-    hook: fast_call!(
-        fn(
-            *const Entity,
-            *const Entity,
-            *const Vec2,
-            *const Entity,
-            isize,
-            isize,
-            u8,
-            bool,
-            f32,
-            f32,
-        )
-    ),
-) {
+pub fn install_fire_wand_manual(hook: FireWandFun) {
     if !RAW.load(std::sync::atomic::Ordering::Relaxed).is_null() {
         return;
     }
@@ -58,10 +57,10 @@ fn get_ptr() -> *const () {
 #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 #[unsafe(naked)]
 pub extern "fastcall" fn call_orig(
-    _entity: *const Entity,
-    _varlet_parent: *const Entity,
-    _position: *const Vec2,
-    _projectile: *const Entity,
+    _entity: Option<StdBox<Entity>>,
+    _varlet_parent: Option<StdBox<Entity>>,
+    _position: StdBox<Vec2>,
+    _projectile: Option<StdBox<Entity>>,
     _unk1: isize,
     _unk2: isize,
     _unk3: u8,
@@ -93,42 +92,11 @@ macro_rules! install_fire_wand {
     ($fun:path) => {
         #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
         #[allow(clippy::too_many_arguments)]
-        fn inner_fun(
-            entity: *const $crate::Entity,
-            verlet_parent: *const $crate::Entity,
-            position: *const $crate::Vec2,
-            projectile: *const $crate::Entity,
-            unk1: isize,
-            unk2: isize,
-            unk3: u8,
-            send_message: bool,
-            target_x: f32,
-            target_y: f32,
-        ) {
-            $crate::call_orig(entity, verlet_parent, position, projectile, unk1, unk2, unk3, send_message, target_x, target_y);
-        }
-        #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
-        #[allow(clippy::too_many_arguments)]
-        fn inner_fun(
-            _entity: *const $crate::Entity,
-            _verlet_parent: *const $crate::Entity,
-            _position: *const $crate::Vec2,
-            _projectile: *const $crate::Entity,
-            _unk1: isize,
-            _unk2: isize,
-            _unk3: u8,
-            _send_message: bool,
-            _target_x: f32,
-            _target_y: f32,
-        ) {
-        }
-        #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
-        #[allow(clippy::too_many_arguments)]
         extern "fastcall" fn on_fire_inner(
-            entity: *const $crate::Entity,
-            verlet_parent: *const $crate::Entity,
-            position: *const $crate::Vec2,
-            projectile: *const $crate::Entity,
+            entity: Option<$crate::StdBox<$crate::Entity>>,
+            verlet_parent: Option<$crate::StdBox<$crate::Entity>>,
+            position: $crate::StdBox<$crate::Vec2>,
+            projectile: Option<$crate::StdBox<$crate::Entity>>,
             unk1: isize,
             unk2: isize,
             unk3: u8,
@@ -137,7 +105,7 @@ macro_rules! install_fire_wand {
             target_y: f32,
         ) {
             $fun(
-                inner_fun,
+                $crate::call_orig,
                 entity,
                 verlet_parent,
                 position,
@@ -153,10 +121,10 @@ macro_rules! install_fire_wand {
         #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
         #[unsafe(naked)]
         pub extern "fastcall" fn hook(
-            _entity: *const $crate::Entity,
-            _varlet_parent: *const $crate::Entity,
-            _position: *const $crate::Vec2,
-            _projectile: *const $crate::Entity,
+            _entity: Option<$crate::StdBox<$crate::Entity>>,
+            _verlet_parent: Option<$crate::StdBox<$crate::Entity>>,
+            _position: $crate::StdBox<$crate::Vec2>,
+            _projectile: Option<$crate::StdBox<$crate::Entity>>,
             _unk1: isize,
             _unk2: isize,
             _unk3: u8,
@@ -182,35 +150,7 @@ macro_rules! install_fire_wand {
                 on_fire_inner = sym on_fire_inner,
             )
         }
-        #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
-        #[allow(clippy::too_many_arguments)]
-        #[allow(unused)]
-        fn on_fire_inner(
-            entity: *const $crate::Entity,
-            verlet_parent: *const $crate::Entity,
-            position: *const $crate::Vec2,
-            projectile: *const $crate::Entity,
-            unk1: isize,
-            unk2: isize,
-            unk3: u8,
-            send_message: bool,
-            target_x: f32,
-            target_y: f32,
-        ) {
-            $fun(
-                inner_fun,
-                entity,
-                verlet_parent,
-                position,
-                projectile,
-                unk1,
-                unk2,
-                unk3,
-                send_message,
-                target_x,
-                target_y,
-            );
-        }
+        _ = $fun;
         #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
         $crate::install_fire_wand_manual(hook)
     };

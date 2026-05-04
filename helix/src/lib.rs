@@ -14,8 +14,8 @@ mod lua {
     use crate::{Context, DEFAULT_PORT, Message};
     use bevy_tangled::{ClientTrait as _, Compression, Reliability};
     use noita_api::{
-        Entity, PAUSE_SIMULATE, Vec2, WorldSeed, game_print, new_game_pause_update,
-        set_pause_no_inventory,
+        Entity, FireWandFun, PAUSE_SIMULATE, StdBox, Vec2, WorldSeed, game_print,
+        new_game_pause_update, set_pause_no_inventory,
     };
     use rand::Rng as _;
     use std::net::{IpAddr, Ipv6Addr, SocketAddr};
@@ -126,22 +126,11 @@ mod lua {
     #[allow(clippy::too_many_arguments)]
     #[fire_hook]
     fn on_fire(
-        orig: impl FnOnce(
-            *const Entity,
-            *const Entity,
-            *const Vec2,
-            *const Entity,
-            isize,
-            isize,
-            u8,
-            bool,
-            f32,
-            f32,
-        ),
-        entity: *const Entity,
-        varlet_parent: *const Entity,
-        position: *const Vec2,
-        projectile: *const Entity,
+        orig: FireWandFun,
+        entity: Option<StdBox<Entity>>,
+        varlet_parent: Option<StdBox<Entity>>,
+        position: StdBox<Vec2>,
+        projectile: Option<StdBox<Entity>>,
         unk1: isize,
         unk2: isize,
         unk3: u8,
@@ -149,36 +138,6 @@ mod lua {
         target_x: f32,
         target_y: f32,
     ) {
-        noita_api::log_println!(
-            "{:?}",
-            (
-                entity,
-                varlet_parent,
-                position,
-                projectile,
-                unk1,
-                unk2,
-                unk3,
-                send_message,
-                target_x,
-                target_y
-            )
-        );
-        noita_api::game_print!(
-            "{:?}",
-            (
-                entity,
-                varlet_parent,
-                position,
-                projectile,
-                unk1,
-                unk2,
-                unk3,
-                send_message,
-                target_x,
-                target_y
-            )
-        );
         orig(
             entity,
             varlet_parent,
@@ -190,36 +149,6 @@ mod lua {
             send_message,
             target_x,
             target_y,
-        );
-        noita_api::log_println!(
-            "{:?}",
-            (
-                entity,
-                varlet_parent,
-                position,
-                projectile,
-                unk1,
-                unk2,
-                unk3,
-                send_message,
-                target_x,
-                target_y
-            )
-        );
-        noita_api::game_print!(
-            "{:?}",
-            (
-                entity,
-                varlet_parent,
-                position,
-                projectile,
-                unk1,
-                unk2,
-                unk3,
-                send_message,
-                target_x,
-                target_y
-            )
         );
     }
 }
