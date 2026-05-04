@@ -1,6 +1,5 @@
 #![feature(sync_unsafe_cell)]
 use bevy_tangled::Client;
-use noita_api::{disable_inventory, disable_item_pickup, disable_pause, lua_module};
 use tokio::runtime::Runtime;
 const DEFAULT_PORT: u16 = 5463;
 pub struct Context {
@@ -8,14 +7,15 @@ pub struct Context {
     pub runtime: Runtime,
     pub net: Client,
 }
-//#[lua_module(true, "./mod/helix.lua")]
-#[lua_module(true)]
+//#[noita_api::lua_module(true, "./mod/helix.lua")]
+#[noita_api::lua_module(true)]
 mod lua {
     use crate::{Context, DEFAULT_PORT, Message};
     use bevy_tangled::{ClientTrait as _, Compression, Reliability};
     use noita_api::{
-        Entity, FireWandFun, PAUSE_SIMULATE, StdBox, Vec2, WorldSeed, game_print,
-        new_game_pause_update, set_pause_no_inventory,
+        Entity, FireWandFun, PAUSE_SIMULATE, StdBox, Vec2, WorldSeed, disable_inventory,
+        disable_item_pickup, disable_pause, game_print, new_game_pause_update,
+        set_pause_no_inventory,
     };
     use rand::Rng as _;
     use std::net::{IpAddr, Ipv6Addr, SocketAddr};
@@ -116,6 +116,9 @@ mod lua {
     }
     #[lua_function]
     fn mod_init() {
+        disable_pause();
+        disable_inventory();
+        disable_item_pickup();
         set_pause_no_inventory(false);
         PAUSE_SIMULATE.store(true, Ordering::Relaxed);
     }
@@ -160,9 +163,6 @@ pub enum Message {
 impl Default for Context {
     #[inline]
     fn default() -> Self {
-        disable_pause();
-        disable_inventory();
-        disable_item_pickup();
         Self {
             world_seed: 0,
             runtime: Runtime::new().unwrap(),

@@ -25,6 +25,9 @@ fn pause(this: StdBox<DeathMatch>, dt: f32) {
 }
 #[inline]
 pub fn disable_pause() {
+    if PAUSE.is_enabled() {
+        return;
+    }
     unsafe {
         let old_pause = get_this_call!(0x006b_26f0, fn(StdBox<DeathMatch>, f32));
         PAUSE.initialize(old_pause, pause).unwrap();
@@ -47,6 +50,9 @@ fn inventory(this: StdBox<c_void>, entity: StdBox<c_void>, component: StdBox<c_v
 }
 #[inline]
 pub fn disable_inventory() {
+    if INVENTORY.is_enabled() {
+        return;
+    }
     unsafe {
         let old_inv = get_this_call!(
             0x00b7_d8d0,
@@ -74,6 +80,9 @@ fn item_pickup(this: StdBox<c_void>, entity: StdBox<Entity>, component: StdBox<c
 }
 #[inline]
 pub fn disable_item_pickup() {
+    if INVENTORY.is_enabled() {
+        return;
+    }
     unsafe {
         let old_item = get_this_call!(
             0x00b9_0480,

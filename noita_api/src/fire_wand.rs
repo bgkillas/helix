@@ -20,6 +20,7 @@ pub fn install_fire_wand_manual(hook: FireWandFun) {
     if !RAW.load(std::sync::atomic::Ordering::Relaxed).is_null() {
         return;
     }
+    // 0xc0d290
     let fun_addr = search_fun![0x80, 0xbf, ???2, 0x00, 0x00, 0x00, 0x0f, 0x84, ???4, 0x69, 0x0d, ???4, 0xfd, 0x43, 0x03, 0x00];
     unsafe {
         let fun = get_fast_call!(
