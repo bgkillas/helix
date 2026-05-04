@@ -1,6 +1,9 @@
 #![feature(sync_unsafe_cell)]
 use bevy_tangled::Client;
-use noita_api::{disable_inventory, disable_item_pickup, disable_pause, lua_module};
+use noita_api::{
+    Entity, StdBox, Vec2, disable_inventory, disable_item_pickup, disable_pause, install_fire_wand,
+    log_println, lua_module,
+};
 use tokio::runtime::Runtime;
 const DEFAULT_PORT: u16 = 5463;
 pub struct Context {
@@ -128,9 +131,54 @@ pub enum Message {
     Text(String),
     World(usize),
 }
+#[allow(clippy::too_many_arguments)]
+fn on_fire(
+    orig: impl FnOnce(
+        *const Entity,
+        *const Entity,
+        StdBox<Vec2>,
+        *const Entity,
+        isize,
+        isize,
+        u8,
+        bool,
+        f32,
+        f32,
+    ),
+    entity: *const Entity,
+    varlet_parent: *const Entity,
+    position: StdBox<Vec2>,
+    projectile: *const Entity,
+    unk1: isize,
+    unk2: isize,
+    unk3: u8,
+    send_message: bool,
+    target_x: f32,
+    target_y: f32,
+) {
+    log_println!(
+        "1: {position:?} {projectile:p} {unk1} {unk2} {unk3} {send_message} {target_x} {target_y}"
+    );
+    orig(
+        entity,
+        varlet_parent,
+        position,
+        projectile,
+        unk1,
+        unk2,
+        unk3,
+        send_message,
+        target_x,
+        target_y,
+    );
+    log_println!(
+        "2: {position:?} {projectile:p} {unk1} {unk2} {unk3} {send_message} {target_x} {target_y}"
+    );
+}
 impl Default for Context {
     #[inline]
     fn default() -> Self {
+        install_fire_wand!(on_fire);
         disable_pause();
         disable_inventory();
         disable_item_pickup();

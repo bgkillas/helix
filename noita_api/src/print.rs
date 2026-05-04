@@ -13,13 +13,13 @@ pub fn log_print(value: &CStr) {
 #[macro_export]
 macro_rules! log_print {
     ($($arg:tt)*) => {
-        unsafe{$crate::log_print(std::ffi::CStr::from_bytes_with_nul_unchecked(format!("{}\0", format_args!($($arg)*)).as_bytes()))}
+        $crate::log_print(std::ffi::CStr::from_bytes_with_nul(format!("{}\0", format_args!($($arg)*)).as_bytes()).unwrap())
     };
 }
 #[macro_export]
 macro_rules! log_println {
     ($($arg:tt)*) => {
-        unsafe{$crate::log_print(std::ffi::CStr::from_bytes_with_nul_unchecked(format!("{}\n\0", format_args!($($arg)*)).as_bytes()))}
+        $crate::log_print!("{}\n", format_args!($($arg)*))
     };
 }
 #[inline]

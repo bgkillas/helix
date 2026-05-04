@@ -11,6 +11,12 @@ macro_rules! get_fast_call {
     };
 }
 #[macro_export]
+macro_rules! get_cdecl {
+    ($addr:expr, $($tt:tt)*) => {
+        std::mem::transmute::<usize, $crate::cdecl!($($tt)*)>($addr)
+    };
+}
+#[macro_export]
 macro_rules! get_std_call {
     ($addr:expr, $($tt:tt)*) => {
         std::mem::transmute::<usize, $crate::std_call!($($tt)*)>($addr)
@@ -30,6 +36,16 @@ macro_rules! std_call {
 #[macro_export]
 macro_rules! fast_call {
     ($($tt:tt)*) => {extern "fastcall" $($tt)*};
+}
+#[cfg(target_os = "windows")]
+#[macro_export]
+macro_rules! cdecl {
+    ($($tt:tt)*) => {extern "cdecl" $($tt)*};
+}
+#[cfg(not(target_os = "windows"))]
+#[macro_export]
+macro_rules! cdecl {
+    ($($tt:tt)*) => {extern "C" $($tt)*};
 }
 #[cfg(not(target_os = "windows"))]
 #[macro_export]

@@ -692,6 +692,7 @@ version = "0.1.0"
 dependencies = [
  "libloading",
  "noita_api_macros",
+ "region",
  "retour",
 ]
 

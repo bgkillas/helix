@@ -6,7 +6,7 @@ use std::ffi::CString;
 use std::fmt::{Display, Formatter, Write as _};
 use std::fs::OpenOptions;
 use std::io::Write as _;
-use std::mem;
+use std::{iter, mem};
 #[derive(Default, Debug)]
 struct Function {
     name: Option<Ident>,
@@ -823,4 +823,109 @@ pub fn gen_stubs(
         #(#stubs)*
     }
     .into()
+}
+fn search_data(tokens: TokenStream) -> (Vec<TokenStream>, Vec<TokenStream>) {
+    let mut ignore = false;
+    let mut is_var = false;
+    let mut is_wildcard = false;
+    let mut count = 1;
+    let mut cursor = 0;
+    let mut rets = Vec::new();
+    let mut tokens: Vec<TokenStream> = tokens
+        .into_iter()
+        .filter_map(|p| match p {
+            TokenTree::Punct(p) if p.as_char() == '?' && !ignore => {
+                count = 1;
+                is_var = false;
+                is_wildcard = true;
+                ignore = true;
+                None
+            }
+            TokenTree::Punct(p) if p.as_char() == '!' && !ignore => {
+                count = 1;
+                is_var = true;
+                is_wildcard = true;
+                ignore = true;
+                None
+            }
+            TokenTree::Literal(l) if is_wildcard => {
+                count = l.to_string().parse().unwrap();
+                None
+            }
+            TokenTree::Literal(l) => {
+                cursor += 1;
+                Some(quote! {crate::search::Token::Byte(#l),})
+            }
+            TokenTree::Punct(p) if p.as_char() == ',' => {
+                ignore = false;
+                if is_wildcard {
+                    is_wildcard = false;
+                    if is_var {
+                        is_var = false;
+                        rets.push((cursor, count));
+                    }
+                    cursor += count;
+                    let any = iter::repeat_n(quote! {crate::search::Token::Any}, count);
+                    Some(quote! {#(#any,)*})
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        })
+        .collect();
+    if is_wildcard {
+        if is_var {
+            rets.push((cursor, count));
+        }
+        tokens.push(quote! {crate::search::Token::Any,});
+    }
+    let rets = rets.into_iter().map(|(cursor, size)| {
+        quote! {
+            unsafe{std::mem::transmute(ptr.add(#cursor).cast::<[u8; #size]>().read())}
+        }
+    });
+    (tokens, rets.collect())
+}
+#[proc_macro]
+pub fn search(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let tokens: TokenStream = tokens.into();
+    let (tokens, rets) = search_data(tokens);
+    if rets.is_empty() {
+        quote! {
+            {
+                crate::search::search([#(#tokens)*])
+            }
+        }
+        .into()
+    } else {
+        quote! {
+            {
+                let ptr = crate::search::search([#(#tokens)*]);
+                (ptr,#(#rets,)*)
+            }
+        }
+        .into()
+    }
+}
+#[proc_macro]
+pub fn search_fun(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let tokens: TokenStream = tokens.into();
+    let (tokens, rets) = search_data(tokens);
+    if rets.is_empty() {
+        quote! {
+            {
+                crate::search::get_function(crate::search::search([#(#tokens)*]))
+            }
+        }
+        .into()
+    } else {
+        quote! {
+            {
+                let ptr = crate::search::search([#(#tokens)*]);
+                (crate::search::get_function(ptr),#(#rets,)*)
+            }
+        }
+        .into()
+    }
 }

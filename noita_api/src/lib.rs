@@ -4,6 +4,7 @@
     feature(allocator_api)
 )]
 pub mod alloc;
+pub mod fire_wand;
 mod funs;
 mod globals;
 pub mod lua;
@@ -12,12 +13,14 @@ pub mod lua_global;
 pub mod new_game;
 pub mod pause;
 pub mod print;
+pub(crate) mod search;
 pub mod types;
 pub use alloc::*;
+pub use fire_wand::*;
 pub use libloading;
 pub use lua_global::*;
 pub use new_game::*;
-pub(crate) use noita_api_macros::{assert_size, assert_size_with};
+pub(crate) use noita_api_macros::{assert_size, assert_size_with, search_fun};
 pub use noita_api_macros::{lua_function, lua_module};
 pub use pause::*;
 pub use print::*;
