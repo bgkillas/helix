@@ -6,6 +6,8 @@ pub enum Token {
     Byte(u8),
 }
 #[allow(clippy::needless_pass_by_value)]
+#[must_use]
+#[inline]
 pub fn search<const N: usize>(list: [Token; N]) -> *const u8 {
     for region in query_range(null::<u8>(), usize::MAX)
         .unwrap()
@@ -23,6 +25,9 @@ pub fn search<const N: usize>(list: [Token; N]) -> *const u8 {
     }
     unreachable!()
 }
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[must_use]
+#[inline]
 pub fn get_function(mut ptr: *const u8) -> *const u8 {
     unsafe {
         ptr = ptr.sub(ptr.addr() % 0x10);

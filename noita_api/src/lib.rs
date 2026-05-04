@@ -1,4 +1,5 @@
 #![feature(try_trait_v2)]
+#![feature(atomic_ptr_null)]
 #![cfg_attr(
     not(all(target_os = "windows", target_pointer_width = "32")),
     feature(allocator_api)

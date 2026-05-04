@@ -1,53 +1,103 @@
-use crate::{Entity, StdBox, Vec2, get_cdecl, search_fun};
-use retour::static_detour;
-#[cfg(target_os = "windows")]
-static_detour! {
-    pub static FIRE: extern "cdecl" fn(
-        StdBox<Vec2>,
-        *const Entity,
-        isize,
-        isize,
-        u8,
-        bool,
-        f32,
-        f32,
-    );
-}
-#[cfg(not(target_os = "windows"))]
-static_detour! {
-    pub static FIRE: extern "C" fn(
-        StdBox<Vec2>,
-        *const Entity,
-        isize,
-        isize,
-        u8,
-        bool,
-        f32,
-        f32,
-    );
-}
+use crate::{Entity, Vec2, fast_call, get_fast_call, search_fun};
+static RAW: std::sync::atomic::AtomicPtr<retour::RawDetour> = std::sync::atomic::AtomicPtr::null();
 #[allow(clippy::as_conversions)]
 #[inline]
 pub fn install_fire_wand_manual(
-    fire: impl Fn(StdBox<Vec2>, *const Entity, isize, isize, u8, bool, f32, f32) + Send + 'static,
+    hook: fast_call!(
+        fn(
+            *const Entity,
+            *const Entity,
+            *const Vec2,
+            *const Entity,
+            isize,
+            isize,
+            u8,
+            bool,
+            f32,
+            f32,
+        )
+    ),
 ) {
+    if !RAW.load(std::sync::atomic::Ordering::Relaxed).is_null() {
+        return;
+    }
     let fun_addr = search_fun![0x80, 0xbf, ???2, 0x00, 0x00, 0x00, 0x0f, 0x84, ???4, 0x69, 0x0d, ???4, 0xfd, 0x43, 0x03, 0x00];
     unsafe {
-        let fun = get_cdecl!(
+        let fun = get_fast_call!(
             fun_addr as usize,
-            fn(StdBox<Vec2>, *const Entity, isize, isize, u8, bool, f32, f32)
+            fn(
+                *const Entity,
+                *const Entity,
+                *const Vec2,
+                *const Entity,
+                isize,
+                isize,
+                u8,
+                bool,
+                f32,
+                f32,
+            )
         );
-        FIRE.initialize(fun, fire).unwrap();
-        FIRE.enable().unwrap();
+        let raw = retour::RawDetour::new(fun as *const (), hook as *const ()).unwrap();
+        raw.enable().unwrap();
+        RAW.store(
+            Box::leak(Box::new(raw)),
+            std::sync::atomic::Ordering::Relaxed,
+        );
     }
+}
+#[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+fn get_ptr() -> *const () {
+    unsafe {
+        RAW.load(std::sync::atomic::Ordering::Relaxed)
+            .as_ref()
+            .unwrap()
+    }
+    .trampoline() as *const ()
+}
+#[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+#[unsafe(naked)]
+pub extern "fastcall" fn call_orig(
+    _entity: *const Entity,
+    _varlet_parent: *const Entity,
+    _position: *const Vec2,
+    _projectile: *const Entity,
+    _unk1: isize,
+    _unk2: isize,
+    _unk3: u8,
+    _send_message: bool,
+    _target_x: f32,
+    _target_y: f32,
+) {
+    std::arch::naked_asm!(
+        "push ebp",
+        "mov ebp,esp",
+        "push [ebp+0x24]",
+        "push [ebp+0x20]",
+        "push [ebp+0x1c]",
+        "push [ebp+0x18]",
+        "push [ebp+0x14]",
+        "push [ebp+0x10]",
+        "push [ebp+0x0c]",
+        "push [ebp+0x08]",
+        "call {get_ptr}",
+        "call eax",
+        "mov esp,ebp",
+        "pop ebp",
+        "ret 0x20",
+        get_ptr = sym get_ptr,
+    )
 }
 #[macro_export]
 macro_rules! install_fire_wand {
     ($fun:path) => {
+        #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
         #[allow(clippy::too_many_arguments)]
-        fn on_fire_inner(
-            position: StdBox<Vec2>,
-            projectile: *const Entity,
+        fn inner_fun(
+            entity: *const $crate::Entity,
+            verlet_parent: *const $crate::Entity,
+            position: *const $crate::Vec2,
+            projectile: *const $crate::Entity,
             unk1: isize,
             unk2: isize,
             unk3: u8,
@@ -55,46 +105,37 @@ macro_rules! install_fire_wand {
             target_x: f32,
             target_y: f32,
         ) {
-            let entity: *const Entity;
-            let verlet_parent: *const Entity;
-            unsafe {
-                std::arch::asm!(
-                    "",
-                    out("ecx") entity,
-                    out("edx") verlet_parent,
-                );
-            }
-            #[allow(clippy::too_many_arguments)]
-            fn inner_fun(
-                entity: *const Entity,
-                verlet_parent: *const Entity,
-                position: StdBox<Vec2>,
-                projectile: *const Entity,
-                unk1: isize,
-                unk2: isize,
-                unk3: u8,
-                send_message: bool,
-                target_x: f32,
-                target_y: f32,
-            ) {
-                unsafe {
-                    std::arch::asm!(
-                        "",
-                        in("ecx") entity,
-                        in("edx") verlet_parent,
-                    );
-                }
-                $crate::FIRE.call(
-                    position,
-                    projectile,
-                    unk1,
-                    unk2,
-                    unk3,
-                    send_message,
-                    target_x,
-                    target_y,
-                );
-            }
+            $crate::call_orig(entity, verlet_parent, position, projectile, unk1, unk2, unk3, send_message, target_x, target_y);
+        }
+        #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+        #[allow(clippy::too_many_arguments)]
+        fn inner_fun(
+            _entity: *const $crate::Entity,
+            _verlet_parent: *const $crate::Entity,
+            _position: *const $crate::Vec2,
+            _projectile: *const $crate::Entity,
+            _unk1: isize,
+            _unk2: isize,
+            _unk3: u8,
+            _send_message: bool,
+            _target_x: f32,
+            _target_y: f32,
+        ) {
+        }
+        #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+        #[allow(clippy::too_many_arguments)]
+        extern "fastcall" fn on_fire_inner(
+            entity: *const $crate::Entity,
+            verlet_parent: *const $crate::Entity,
+            position: *const $crate::Vec2,
+            projectile: *const $crate::Entity,
+            unk1: isize,
+            unk2: isize,
+            unk3: u8,
+            send_message: bool,
+            target_x: f32,
+            target_y: f32,
+        ) {
             $fun(
                 inner_fun,
                 entity,
@@ -109,6 +150,68 @@ macro_rules! install_fire_wand {
                 target_y,
             );
         }
-        $crate::install_fire_wand_manual(on_fire_inner)
+        #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+        #[unsafe(naked)]
+        pub extern "fastcall" fn hook(
+            _entity: *const $crate::Entity,
+            _varlet_parent: *const $crate::Entity,
+            _position: *const $crate::Vec2,
+            _projectile: *const $crate::Entity,
+            _unk1: isize,
+            _unk2: isize,
+            _unk3: u8,
+            _send_message: bool,
+            _target_x: f32,
+            _target_y: f32,
+        ) {
+            std::arch::naked_asm!(
+                "push ebp",
+                "mov ebp,esp",
+                "push [ebp+0x24]",
+                "push [ebp+0x20]",
+                "push [ebp+0x1c]",
+                "push [ebp+0x18]",
+                "push [ebp+0x14]",
+                "push [ebp+0x10]",
+                "push [ebp+0x0c]",
+                "push [ebp+0x08]",
+                "call {on_fire_inner}",
+                "mov esp,ebp",
+                "pop ebp",
+                "ret",
+                on_fire_inner = sym on_fire_inner,
+            )
+        }
+        #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+        #[allow(clippy::too_many_arguments)]
+        #[allow(unused)]
+        fn on_fire_inner(
+            entity: *const $crate::Entity,
+            verlet_parent: *const $crate::Entity,
+            position: *const $crate::Vec2,
+            projectile: *const $crate::Entity,
+            unk1: isize,
+            unk2: isize,
+            unk3: u8,
+            send_message: bool,
+            target_x: f32,
+            target_y: f32,
+        ) {
+            $fun(
+                inner_fun,
+                entity,
+                verlet_parent,
+                position,
+                projectile,
+                unk1,
+                unk2,
+                unk3,
+                send_message,
+                target_x,
+                target_y,
+            );
+        }
+        #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+        $crate::install_fire_wand_manual(hook)
     };
 }
