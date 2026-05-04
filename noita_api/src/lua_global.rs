@@ -5,6 +5,9 @@ static_detour! {
 }
 #[inline]
 pub fn install_global(f: impl Fn() -> *mut lua_State + Send + 'static) {
+    if NEW_STATE.is_enabled() {
+        return;
+    }
     unsafe {
         NEW_STATE.initialize(luaL_newstate, f).unwrap();
         NEW_STATE.enable().unwrap();
