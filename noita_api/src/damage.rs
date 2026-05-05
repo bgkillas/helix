@@ -1,5 +1,7 @@
 use crate::{Entity, StdBox, StdString, Vec2, fast_call, get_fast_call};
 use noita_api_macros::{search, search_fun};
+use retour::RawDetour;
+use std::sync::OnceLock;
 #[repr(C)]
 #[derive(Debug)]
 pub struct DamageModel {}
@@ -33,7 +35,7 @@ pub type DamageFun = fast_call!(
         f32,
     )
 );
-static RAW: std::sync::atomic::AtomicPtr<retour::RawDetour> = std::sync::atomic::AtomicPtr::null();
+static RAW: OnceLock<RawDetour> = OnceLock::new();
 #[inline]
 #[allow(clippy::as_conversions)]
 pub fn install_damage_function_manual(
@@ -47,6 +49,9 @@ pub fn install_damage_function_manual(
         )
     ),
 ) {
+    if RAW.get().is_some() {
+        return;
+    }
     let ptr = search!("TakeDamage_Impl() - DamageModelComponent couldn't be found");
     // 0x1034ad0
     let fun_addr = search_fun!(0x68, ptr);
@@ -61,22 +66,14 @@ pub fn install_damage_function_manual(
                 StdBox<DamageThing>,
             )
         );
-        let raw = retour::RawDetour::new(fun as *const (), damage_fun_hook as *const ()).unwrap();
+        let raw = RawDetour::new(fun as *const (), damage_fun_hook as *const ()).unwrap();
         raw.enable().unwrap();
-        RAW.store(
-            Box::leak(Box::new(raw)),
-            std::sync::atomic::Ordering::Relaxed,
-        );
+        RAW.set(raw).unwrap();
     }
 }
 #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 fn get_ptr() -> *const () {
-    unsafe {
-        RAW.load(std::sync::atomic::Ordering::Relaxed)
-            .as_ref()
-            .unwrap()
-    }
-    .trampoline() as *const ()
+    RAW.get().unwrap().trampoline() as *const ()
 }
 #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 #[unsafe(naked)]

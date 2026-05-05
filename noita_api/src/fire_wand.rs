@@ -1,5 +1,7 @@
 use crate::{Entity, StdBox, Vec2, fast_call, get_fast_call, search_fun};
-static RAW: std::sync::atomic::AtomicPtr<retour::RawDetour> = std::sync::atomic::AtomicPtr::null();
+use retour::RawDetour;
+use std::sync::OnceLock;
+static RAW: OnceLock<RawDetour> = OnceLock::new();
 pub type FireWandFun = fast_call!(
     fn(
         Option<StdBox<Entity>>,
@@ -17,7 +19,7 @@ pub type FireWandFun = fast_call!(
 #[allow(clippy::as_conversions)]
 #[inline]
 pub fn install_fire_wand_manual(fire_fun_hook: FireWandFun) {
-    if !RAW.load(std::sync::atomic::Ordering::Relaxed).is_null() {
+    if RAW.get().is_some() {
         return;
     }
     // 0xc0d290
@@ -38,22 +40,14 @@ pub fn install_fire_wand_manual(fire_fun_hook: FireWandFun) {
                 f32,
             )
         );
-        let raw = retour::RawDetour::new(fun as *const (), fire_fun_hook as *const ()).unwrap();
+        let raw = RawDetour::new(fun as *const (), fire_fun_hook as *const ()).unwrap();
         raw.enable().unwrap();
-        RAW.store(
-            Box::leak(Box::new(raw)),
-            std::sync::atomic::Ordering::Relaxed,
-        );
+        RAW.set(raw).unwrap();
     }
 }
 #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 fn get_ptr() -> *const () {
-    unsafe {
-        RAW.load(std::sync::atomic::Ordering::Relaxed)
-            .as_ref()
-            .unwrap()
-    }
-    .trampoline() as *const ()
+    RAW.get().unwrap().trampoline() as *const ()
 }
 #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 #[unsafe(naked)]
