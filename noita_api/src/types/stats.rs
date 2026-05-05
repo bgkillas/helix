@@ -28,7 +28,7 @@ pub struct GameStats {
     pub world_seed: usize,
     pub killed_by: StdString,
     pub killed_by_extra: StdString,
-    pub death_pos: Vec2,
+    pub death_pos: Vec2<f32>,
     field_0x4c: usize,
     pub playtime: f64,
     pub playtime_str: StdString,

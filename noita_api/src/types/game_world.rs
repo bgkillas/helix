@@ -2,7 +2,7 @@ use crate::{AABB, GridWorld, PixelScene, StdBox, StdVec};
 #[repr(C)]
 #[derive(Debug)]
 pub struct GameWorld {
-    pub cam: AABB,
+    pub cam: AABB<f32>,
     unknown1: [isize; 13],
     pub grid_world: StdBox<GridWorld>,
     pub pixel_scenes: StdBox<StdVec<PixelScene>>,

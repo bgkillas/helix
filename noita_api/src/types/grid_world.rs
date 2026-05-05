@@ -1,6 +1,6 @@
 use crate::{
-    BiomeModifiersVTable, ChunkMap, GridWorldThreadedVTable, GridWorldVTable, IAABB, StdBox,
-    StdVec, Vec2i,
+    AABB, BiomeModifiersVTable, ChunkMap, GridWorldThreadedVTable, GridWorldVTable, StdBox, StdVec,
+    Vec2,
 };
 #[repr(C)]
 #[derive(Debug)]
@@ -10,13 +10,13 @@ pub struct GridWorld {
     pub unk: [isize; 270],
     pub biome_modifiers: BiomeModifiers,
     pub unk2: [isize; 15],
-    pub cam_pos: Vec2i,
-    pub cam_dimen: Vec2i,
+    pub cam_pos: Vec2<isize>,
+    pub cam_dimen: Vec2<isize>,
     pub unknown: [isize; 6],
-    pub unk_cam: IAABB,
-    pub unk2_cam: IAABB,
+    pub unk_cam: AABB<isize>,
+    pub unk2_cam: AABB<isize>,
     pub unkown3: isize,
-    pub cam: IAABB,
+    pub cam: AABB<isize>,
     pub unkown2: isize,
     pub unk_counter: isize,
     pub world_update_count: isize,
@@ -43,12 +43,12 @@ pub struct GridWorldThreadImpl {
 pub struct GridWorldThreaded {
     pub grid_world_threaded_vtable: StdBox<GridWorldThreadedVTable>,
     pub unknown: [isize; 287],
-    pub update_region: IAABB,
+    pub update_region: AABB<isize>,
 }
 #[repr(C)]
 #[derive(Debug)]
 pub struct WorldUpdateParams {
-    pub update_region: IAABB,
+    pub update_region: AABB<isize>,
     unknown: isize,
     grid_world_threaded: StdBox<GridWorldThreaded>,
 }

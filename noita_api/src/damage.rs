@@ -10,8 +10,8 @@ pub struct DamageModel {}
 pub struct DamageThing {
     pub entity: Option<StdBox<Entity>>,
     pub damage_by_type: [u8; 0x40],
-    pub impulse: Vec2,
-    pub world_pos: Vec2,
+    pub impulse: Vec2<f32>,
+    pub world_pos: Vec2<f32>,
     pub knockback_force: f32,
     pub entity_thats_responsible: usize,
     pub entity_type_id: usize,

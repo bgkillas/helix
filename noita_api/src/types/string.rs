@@ -18,6 +18,17 @@ pub struct StdStringRef<'a> {
     capacity: usize,
     lifetime: PhantomData<&'a u8>,
 }
+impl Default for StdString {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            buffer: Buffer { sso_array: [0; 16] },
+            size: 0,
+            capacity: 0,
+            lifetime: PhantomData,
+        }
+    }
+}
 pub type StdString = StdStringRef<'static>;
 impl Debug for StdStringRef<'_> {
     #[inline]

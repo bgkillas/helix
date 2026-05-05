@@ -23,6 +23,12 @@ mod lua {
     impl Context {
         #[lua_function]
         fn update(&mut self) {
+            if noita_api::GameGlobal::global().frame_num > 100 {
+                noita_api::log_println!(
+                    "{:#?}",
+                    noita_api::Component::<noita_api::WorldState>::global()
+                );
+            }
             if let Err(e) = self.net.update() {
                 game_print!("{e:?}");
             }
@@ -132,7 +138,7 @@ mod lua {
         orig: FireWandFun,
         entity: Option<StdBox<Entity>>,
         varlet_parent: Option<StdBox<Entity>>,
-        position: StdBox<Vec2>,
+        position: StdBox<Vec2<f32>>,
         projectile: Option<StdBox<Entity>>,
         unk1: isize,
         unk2: isize,

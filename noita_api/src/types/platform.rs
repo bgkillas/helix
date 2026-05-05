@@ -29,7 +29,7 @@ pub struct Platform {
     pub file_system: *const usize,
     pub running: bool,
     padding3: [u8; 3],
-    pub mouse_pos: Vec2,
+    pub mouse_pos: Vec2<f32>,
     pub sleeping_mode: isize,
     pub print_framerate: bool,
     padding4: [u8; 3],

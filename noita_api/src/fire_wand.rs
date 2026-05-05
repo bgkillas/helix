@@ -1,4 +1,5 @@
-use crate::{Entity, StdBox, Vec2, fast_call, get_fast_call, search_fun};
+use crate::{Entity, StdBox, Vec2, fast_call, get_fast_call};
+use noita_api_macros::search_fun;
 use retour::RawDetour;
 use std::sync::OnceLock;
 static RAW: OnceLock<RawDetour> = OnceLock::new();
@@ -6,7 +7,7 @@ pub type FireWandFun = fast_call!(
     fn(
         Option<StdBox<Entity>>,
         Option<StdBox<Entity>>,
-        StdBox<Vec2>,
+        StdBox<Vec2<f32>>,
         Option<StdBox<Entity>>,
         isize,
         isize,
@@ -30,7 +31,7 @@ pub fn install_fire_wand_manual(fire_fun_hook: FireWandFun) {
             fn(
                 Option<StdBox<Entity>>,
                 Option<StdBox<Entity>>,
-                StdBox<Vec2>,
+                StdBox<Vec2<f32>>,
                 Option<StdBox<Entity>>,
                 isize,
                 isize,
@@ -54,7 +55,7 @@ fn get_ptr() -> *const () {
 pub extern "fastcall" fn call_orig(
     _entity: Option<StdBox<Entity>>,
     _varlet_parent: Option<StdBox<Entity>>,
-    _position: StdBox<Vec2>,
+    _position: StdBox<Vec2<f32>>,
     _projectile: Option<StdBox<Entity>>,
     _unk1: isize,
     _unk2: isize,
@@ -90,7 +91,7 @@ macro_rules! install_fire_wand {
         extern "fastcall" fn on_fire_inner(
             entity: Option<$crate::StdBox<$crate::Entity>>,
             verlet_parent: Option<$crate::StdBox<$crate::Entity>>,
-            position: $crate::StdBox<$crate::Vec2>,
+            position: $crate::StdBox<$crate::Vec2<f32>>,
             projectile: Option<$crate::StdBox<$crate::Entity>>,
             unk1: isize,
             unk2: isize,
@@ -118,7 +119,7 @@ macro_rules! install_fire_wand {
         pub extern "fastcall" fn fire_fun_hook(
             _entity: Option<$crate::StdBox<$crate::Entity>>,
             _verlet_parent: Option<$crate::StdBox<$crate::Entity>>,
-            _position: $crate::StdBox<$crate::Vec2>,
+            _position: $crate::StdBox<$crate::Vec2<f32>>,
             _projectile: Option<$crate::StdBox<$crate::Entity>>,
             _unk1: isize,
             _unk2: isize,

@@ -49,6 +49,13 @@ impl<T: Sized> StdPtr<T> {
         let ptr = ALLOC.allocate(layout).unwrap().cast();
         Self { ptr }
     }
+    #[must_use]
+    #[inline]
+    pub fn cast<K: Sized>(self) -> StdPtr<K> {
+        StdPtr {
+            ptr: self.ptr.cast(),
+        }
+    }
     #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
     #[must_use]
     #[inline]
@@ -106,6 +113,13 @@ impl<T: Sized> StdBox<T> {
             ptr.write(value);
         }
         Self { ptr }
+    }
+    #[must_use]
+    #[inline]
+    pub fn cast<K: Sized>(self) -> StdBox<K> {
+        StdBox {
+            ptr: self.ptr.cast(),
+        }
     }
     #[allow(clippy::should_implement_trait)]
     #[must_use]

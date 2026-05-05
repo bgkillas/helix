@@ -4,7 +4,7 @@ mod inner {
         Component, ComponentSystemManager, ComponentTypeManager, DeathMatch, DebugSettings, Entity,
         EntityManager, EventManager, GameGlobal, GameMode, GlobalStats, Inventory, LogFlush,
         LogLevel, MaxComponent, Mods, NewGameCount, Platform, StdBox, StdPtr, StdString, StdVec,
-        TagManager, TranslationManager, WorldSeed,
+        TagManager, TranslationManager, WorldSeed, WorldState,
     };
     const GAME_GLOBAL: StdPtr<StdPtr<GameGlobal>> = StdPtr::new(0x0122_374c);
     const DEATH_MATCH: StdPtr<StdPtr<DeathMatch>> = StdPtr::new(0x0120_4bc0);
@@ -12,7 +12,7 @@ mod inner {
     const ENTITY_TAG_MANAGER: StdPtr<StdPtr<TagManager<u16>>> = StdPtr::new(0x0120_6fac);
     const COMPONENT_TAG_MANAGER: StdPtr<StdPtr<TagManager<u8>>> = StdPtr::new(0x0120_4b30);
     const WORLD_STATE: StdPtr<StdPtr<Entity>> = StdPtr::new(0x0120_4bd0);
-    const WORLD_STATE_COMPONENT: StdPtr<StdPtr<Component<()>>> = StdPtr::new(0x0120_5010);
+    const WORLD_STATE_COMPONENT: StdPtr<StdPtr<Component<WorldState>>> = StdPtr::new(0x0120_5010);
     const EVENT_MANAGER: StdPtr<StdPtr<EventManager>> = StdPtr::new(0x0120_4b34);
     const WORLD_SEED: StdPtr<WorldSeed> = StdPtr::new(0x0120_5004);
     const GAME_MODE: StdPtr<GameMode> = StdPtr::new(0x0120_761c);

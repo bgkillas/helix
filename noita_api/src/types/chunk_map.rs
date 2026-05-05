@@ -1,6 +1,6 @@
 use crate::{
     CellVTable, ConfigExplosion, ConfigGridCosmeticParticle, StdBox, StdString, StdVec,
-    TextureInfo, Vec2i,
+    TextureInfo, Vec2,
 };
 use std::ffi::c_void;
 #[repr(C)]
@@ -10,10 +10,10 @@ pub struct ChunkMap {
     pub unknown: isize,
     pub chunk_array: StdBox<[Option<StdBox<Chunk>>; 512 * 512]>,
     pub chunk_count: usize,
-    pub min_chunk: Vec2i,
-    pub max_chunk: Vec2i,
-    pub min_pixel: Vec2i,
-    pub max_pixel: Vec2i,
+    pub min_chunk: Vec2<isize>,
+    pub max_chunk: Vec2<isize>,
+    pub min_pixel: Vec2<isize>,
+    pub max_pixel: Vec2<isize>,
 }
 #[repr(C)]
 #[derive(Debug)]

@@ -1,10 +1,13 @@
+pub mod world_state;
 use crate::{
     BitSet, ComponentBufferInitVTable, ComponentSystemVTable, ComponentUpdaterVTable,
     ComponentVTable, StdBox, StdMap, StdString, StdVec,
 };
-use std::ffi::CStr;
+use noita_api_macros::assert_size_with;
+use std::ffi::{CStr, c_char};
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
+pub use world_state::*;
 pub trait ComponentTrait: Debug + Default {
     const NAME: &'static CStr;
 }
@@ -12,11 +15,12 @@ impl ComponentTrait for () {
     const NAME: &'static CStr = c"ERROR";
 }
 #[repr(C)]
+#[assert_size_with(0x48, ())]
 #[derive(Debug)]
 pub struct Component<T: ComponentTrait> {
     pub vtable: StdBox<ComponentVTable<T>>,
     pub local_id: usize,
-    pub type_name: *const CStr,
+    pub type_name: *const c_char,
     pub type_id: usize,
     pub id: usize,
     pub enabled: bool,

@@ -1,6 +1,6 @@
 use crate::StdPtr;
 use std::ops::{Deref, DerefMut};
-use std::ptr::NonNull;
+use std::ptr::{NonNull, null_mut};
 use std::slice;
 #[repr(C)]
 #[derive(Debug)]
@@ -8,6 +8,16 @@ pub struct StdVec<T> {
     pub start: *mut T,
     pub end: *mut T,
     pub cap: *mut T,
+}
+impl<T> Default for StdVec<T> {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            start: null_mut(),
+            end: null_mut(),
+            cap: null_mut(),
+        }
+    }
 }
 impl<T> Drop for StdVec<T> {
     #[inline]
