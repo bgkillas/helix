@@ -5,6 +5,7 @@
     feature(allocator_api)
 )]
 pub mod alloc;
+pub mod damage;
 pub mod fire_wand;
 mod funs;
 mod globals;
@@ -17,6 +18,7 @@ pub mod print;
 pub(crate) mod search;
 pub mod types;
 pub use alloc::*;
+pub use damage::*;
 pub use fire_wand::*;
 pub use libloading;
 pub use lua_global::*;

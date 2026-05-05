@@ -14,8 +14,8 @@ mod lua {
     use bevy_tangled::{ClientTrait as _, Compression, Reliability};
     use noita_api::{
         Entity, FireWandFun, PAUSE_SIMULATE, StdBox, Vec2, WorldSeed, disable_inventory,
-        disable_item_pickup, disable_pause, game_print, new_game_pause_update,
-        set_pause_no_inventory,
+        disable_item_pickup, disable_pause, game_print, install_damage_function,
+        new_game_pause_update, set_pause_no_inventory,
     };
     use rand::Rng as _;
     use std::net::{IpAddr, Ipv6Addr, SocketAddr};
@@ -119,6 +119,7 @@ mod lua {
         disable_pause();
         disable_inventory();
         disable_item_pickup();
+        install_damage_function();
         set_pause_no_inventory(false);
         PAUSE_SIMULATE.store(true, Ordering::Relaxed);
     }

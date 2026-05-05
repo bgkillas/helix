@@ -883,6 +883,25 @@ fn search_data(tokens: TokenStream) -> (Vec<TokenStream>, Vec<TokenStream>) {
                 ignore = true;
                 None
             }
+            TokenTree::Ident(ident) => {
+                let b = (0..4usize).map(|i| {
+                    quote! {(#ident as usize).to_ne_bytes()[#i]}
+                });
+                Some(quote! {#(crate::search::Token::Byte(#b),)*})
+            }
+            TokenTree::Literal(l)
+                if let Some(l) = l.to_string().strip_prefix("\"")
+                    && let Some(l) = l.strip_suffix("\"") =>
+            {
+                let chars = l.chars().map(|c| {
+                    if let Ok(b) = u8::try_from(c) {
+                        quote! {crate::search::Token::Byte(#b)}
+                    } else {
+                        unreachable!()
+                    }
+                });
+                Some(quote! {#(#chars,)*})
+            }
             TokenTree::Literal(l) if is_wildcard => {
                 count = l.to_string().parse().unwrap();
                 None
