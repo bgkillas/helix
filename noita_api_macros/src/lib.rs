@@ -677,7 +677,45 @@ fn get_global_type(global_const: &Ident, type_name: &TokenStream, is_ptr_ptr: bo
 }
 fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, TokenStream) {
     let ident = fun.name.unwrap();
-    if struct_ident.is_none() {
+    if let Some(struct_ident) = struct_ident {
+        let name = format_ident!("GLOBAL_{}", struct_ident.to_string().to_ascii_uppercase());
+        let fun_wrap_name = format_ident!("{}_wrapper", ident);
+        let names = fun
+            .arg_names
+            .into_iter()
+            .map(|a| Ident::new(&a, Span::call_site()));
+        let fun_type = names
+            .clone()
+            .zip(fun.args.iter().map(|a| a.1.clone()))
+            .map(|(n, a)| quote! {#n: #a});
+        let fun_wrap = quote! {
+            #[allow(clippy::too_many_arguments)]
+            fn #fun_wrap_name(#(#fun_type,)*) {
+                #struct_ident::#ident(unsafe{#name.get().as_mut().unwrap()}, #(#names,)*)
+            }
+        };
+        match fun.hook_type {
+            HookType::Lua => {}
+            HookType::WandFire => {
+                return (
+                    quote! {
+                        #fun_wrap
+                        noita_api::install_fire_wand!(#fun_wrap_name);
+                    },
+                    quote! {},
+                );
+            }
+            HookType::Damage => {
+                return (
+                    quote! {
+                        #fun_wrap
+                        noita_api::install_damage_function!(#fun_wrap_name);
+                    },
+                    quote! {},
+                );
+            }
+        }
+    } else {
         match fun.hook_type {
             HookType::Lua => {}
             HookType::WandFire => {
