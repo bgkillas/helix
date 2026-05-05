@@ -16,7 +16,7 @@ pub type FireWandFun = fast_call!(
 );
 #[allow(clippy::as_conversions)]
 #[inline]
-pub fn install_fire_wand_manual(hook: FireWandFun) {
+pub fn install_fire_wand_manual(fire_fun_hook: FireWandFun) {
     if !RAW.load(std::sync::atomic::Ordering::Relaxed).is_null() {
         return;
     }
@@ -26,10 +26,10 @@ pub fn install_fire_wand_manual(hook: FireWandFun) {
         let fun = get_fast_call!(
             fun_addr as usize,
             fn(
-                *const Entity,
-                *const Entity,
-                *const Vec2,
-                *const Entity,
+                Option<StdBox<Entity>>,
+                Option<StdBox<Entity>>,
+                StdBox<Vec2>,
+                Option<StdBox<Entity>>,
                 isize,
                 isize,
                 u8,
@@ -38,7 +38,7 @@ pub fn install_fire_wand_manual(hook: FireWandFun) {
                 f32,
             )
         );
-        let raw = retour::RawDetour::new(fun as *const (), hook as *const ()).unwrap();
+        let raw = retour::RawDetour::new(fun as *const (), fire_fun_hook as *const ()).unwrap();
         raw.enable().unwrap();
         RAW.store(
             Box::leak(Box::new(raw)),
@@ -121,7 +121,7 @@ macro_rules! install_fire_wand {
         }
         #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
         #[unsafe(naked)]
-        pub extern "fastcall" fn hook(
+        pub extern "fastcall" fn fire_fun_hook(
             _entity: Option<$crate::StdBox<$crate::Entity>>,
             _verlet_parent: Option<$crate::StdBox<$crate::Entity>>,
             _position: $crate::StdBox<$crate::Vec2>,
@@ -151,8 +151,11 @@ macro_rules! install_fire_wand {
                 on_fire_inner = sym on_fire_inner,
             )
         }
-        _ = $fun;
+        #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+        {
+            _ = $fun;
+        }
         #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
-        $crate::install_fire_wand_manual(hook)
+        $crate::install_fire_wand_manual(fire_fun_hook)
     };
 }

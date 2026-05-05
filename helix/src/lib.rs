@@ -13,9 +13,9 @@ mod lua {
     use crate::{Context, DEFAULT_PORT, Message};
     use bevy_tangled::{ClientTrait as _, Compression, Reliability};
     use noita_api::{
-        Entity, FireWandFun, PAUSE_SIMULATE, StdBox, Vec2, WorldSeed, disable_inventory,
-        disable_item_pickup, disable_pause, game_print, install_damage_function,
-        new_game_pause_update, set_pause_no_inventory,
+        DamageFun, DamageModel, DamageThing, Entity, FireWandFun, PAUSE_SIMULATE, StdBox,
+        StdString, Vec2, WorldSeed, disable_inventory, disable_item_pickup, disable_pause,
+        game_print, new_game_pause_update, set_pause_no_inventory,
     };
     use rand::Rng as _;
     use std::net::{IpAddr, Ipv6Addr, SocketAddr};
@@ -119,7 +119,6 @@ mod lua {
         disable_pause();
         disable_inventory();
         disable_item_pickup();
-        install_damage_function();
         set_pause_no_inventory(false);
         PAUSE_SIMULATE.store(true, Ordering::Relaxed);
     }
@@ -153,6 +152,25 @@ mod lua {
             send_message,
             target_x,
             target_y,
+        );
+    }
+    #[damage_hook]
+    fn on_damage(
+        orig: DamageFun,
+        entity: Option<StdBox<Entity>>,
+        damage_model: Option<StdBox<DamageModel>>,
+        description: StdBox<StdString>,
+        damage_types: usize,
+        damage_args: StdBox<DamageThing>,
+        damage: f32,
+    ) {
+        orig(
+            entity,
+            damage_model,
+            description,
+            damage_types,
+            damage_args,
+            damage,
         );
     }
 }

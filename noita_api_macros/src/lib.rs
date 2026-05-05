@@ -8,12 +8,19 @@ use std::fs::OpenOptions;
 use std::io::Write as _;
 use std::{iter, mem};
 #[derive(Default, Debug)]
+enum HookType {
+    #[default]
+    Lua,
+    WandFire,
+    Damage,
+}
+#[derive(Default, Debug)]
 struct Function {
     name: Option<Ident>,
     args: Vec<(Option<Type>, TokenStream)>,
     arg_names: Vec<String>,
     ret: Option<(Option<Type>, TokenStream)>,
-    fire_hook: bool,
+    hook_type: HookType,
 }
 #[derive(Debug, Clone)]
 enum Type {
@@ -244,7 +251,17 @@ fn parse_group(tokens: TokenStream) -> (Vec<Function>, Vec<FunGroup>) {
                     && let Some(TokenTree::Ident(i)) = g.stream().into_iter().next()
                     && i == "fire_hook" =>
             {
-                function.fire_hook = true;
+                function.hook_type = HookType::WandFire;
+                is_fun = true;
+                punct = false;
+            }
+            TokenTree::Group(g)
+                if punct
+                    && g.delimiter() == Delimiter::Bracket
+                    && let Some(TokenTree::Ident(i)) = g.stream().into_iter().next()
+                    && i == "damage_hook" =>
+            {
+                function.hook_type = HookType::Damage;
                 is_fun = true;
                 punct = false;
             }
@@ -304,7 +321,7 @@ fn parse_attribute(
     let mut inner_tokens = tokens.clone();
     let (funs, groups) = parse_group(tokens);
     let luaopen = luaopen(funs, groups, dont_unload, file_path);
-    inner_tokens.extend(quote! {use noita_api::{lua_function, fire_hook};});
+    inner_tokens.extend(quote! {use noita_api::{lua_function, fire_hook, damage_hook};});
     inner_tokens.extend(luaopen);
     let mut group = Group::new(Delimiter::Brace, TokenStream::from_iter(inner_tokens));
     group.set_span(span.unwrap());
@@ -328,7 +345,7 @@ fn make_group(group: FunGroup) -> (TokenStream, TokenStream) {
     )
 }
 fn get_str(fun: &Function, name: &str) -> String {
-    if fun.fire_hook {
+    if !matches!(fun.hook_type, HookType::Lua) {
         return String::new();
     }
     let mut str = String::new();
@@ -437,6 +454,13 @@ pub fn lua_function(
 }
 #[proc_macro_attribute]
 pub fn fire_hook(
+    _: proc_macro::TokenStream,
+    tokens: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    tokens
+}
+#[proc_macro_attribute]
+pub fn damage_hook(
     _: proc_macro::TokenStream,
     tokens: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
@@ -653,8 +677,19 @@ fn get_global_type(global_const: &Ident, type_name: &TokenStream, is_ptr_ptr: bo
 }
 fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, TokenStream) {
     let ident = fun.name.unwrap();
-    if fun.fire_hook && struct_ident.is_none() {
-        return (quote! {noita_api::install_fire_wand!(#ident);}, quote! {});
+    if struct_ident.is_none() {
+        match fun.hook_type {
+            HookType::Lua => {}
+            HookType::WandFire => {
+                return (quote! {noita_api::install_fire_wand!(#ident);}, quote! {});
+            }
+            HookType::Damage => {
+                return (
+                    quote! {noita_api::install_damage_function!(#ident);},
+                    quote! {},
+                );
+            }
+        }
     }
     let bridge_fn_name = format_ident!("{ident}_lua_bridge");
     let fn_name_c = name_to_c_literal(&ident.to_string());
