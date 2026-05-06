@@ -1,7 +1,7 @@
 use crate::StdPtr;
 use std::ops::{Deref, DerefMut};
-use std::ptr::{NonNull, null_mut};
-use std::slice;
+use std::ptr::NonNull;
+use std::{ptr, slice};
 #[repr(C)]
 #[derive(Debug)]
 pub struct StdVec<T> {
@@ -13,9 +13,9 @@ impl<T> Default for StdVec<T> {
     #[inline]
     fn default() -> Self {
         Self {
-            start: null_mut(),
-            end: null_mut(),
-            cap: null_mut(),
+            start: ptr::null_mut(),
+            end: ptr::null_mut(),
+            cap: ptr::null_mut(),
         }
     }
 }

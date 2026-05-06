@@ -78,7 +78,7 @@ impl<'a> StdStringRef<'a> {
         } else {
             unsafe { self.buffer.sso_array.as_ptr() }
         };
-        unsafe { str::from_utf8_unchecked(slice::from_raw_parts(ptr, self.size)) }
+        unsafe { str::from_utf8(slice::from_raw_parts(ptr, self.size)).unwrap() }
     }
     #[must_use]
     #[inline]

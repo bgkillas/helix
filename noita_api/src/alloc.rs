@@ -32,13 +32,13 @@ pub struct StdBox<T: Sized> {
 impl<T: Sized> StdPtr<T> {
     #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
     pub fn malloc() -> Self {
-        let ptr = unsafe { NonNull::new_unchecked(operator_new(size_of::<T>() as c_uint).cast()) };
+        let ptr = NonNull::new(unsafe { operator_new(size_of::<T>() as c_uint).cast() }).unwrap();
         Self { ptr }
     }
     #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
     pub fn malloc_array(n: usize) -> Self {
         let ptr =
-            unsafe { NonNull::new_unchecked(operator_new((size_of::<T>() * n) as c_uint).cast()) };
+            NonNull::new(unsafe { operator_new((size_of::<T>() * n) as c_uint).cast() }).unwrap();
         Self { ptr }
     }
     #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
@@ -87,12 +87,12 @@ impl<T: Sized> StdPtr<T> {
     #[must_use]
     #[inline]
     pub const fn new(value: usize) -> Self {
-        let ptr = unsafe { NonNull::new_unchecked(ptr::with_exposed_provenance_mut(value)) };
+        let ptr = NonNull::new(ptr::with_exposed_provenance_mut(value)).unwrap();
         Self { ptr }
     }
     #[inline]
     pub(crate) const unsafe fn new_ptr(value: *mut T) -> Self {
-        let ptr = unsafe { NonNull::new_unchecked(value) };
+        let ptr = NonNull::new(value).unwrap();
         Self { ptr }
     }
 }
