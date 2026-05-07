@@ -39,40 +39,67 @@ impl Context {
             },
         };
         let mut chunks: Vec<Chunk> = Vec::with_capacity(map.chunk_count * SECTIONS);
-        for y in (map.min_chunk.y + 256).cast_unsigned()..=(map.max_chunk.y + 256).cast_unsigned() {
-            for x in
-                (map.min_chunk.x + 256).cast_unsigned()..=(map.max_chunk.x + 256).cast_unsigned()
-            {
+        for y in aabb.top_left.y / 512..=aabb.bottom_right.y / 512 {
+            for x in aabb.top_left.x / 512..=aabb.bottom_right.x / 512 {
                 if let Some(chunk) = map.chunk_array[y][x] {
                     for (section, priority, chunk_section) in
                         get_sections(aabb, inner_aabb, x, y, chunk.data.as_ref())
                     {
                         let mut pixel_run = PixelRunBuilder::default();
                         pixel_run.extend(chunk_section);
+                        let pos = ChunkPos { x, y, section };
+                        self.seen_chunks.insert(pos, true);
                         chunks.push(Chunk {
                             pixel_run: pixel_run.build(),
-                            x,
-                            y,
-                            section,
+                            pos,
                             priority,
                         });
                     }
                 }
             }
         }
-        if self.net.is_host() {
-            self.world_sync.as_mut().unwrap().push_world(
-                SendType::World(self.world_write),
-                self.net.my_id(),
-                chunks,
-            );
-        } else if let Err(e) = self.net.send(
-            self.net.host_id(),
-            &Message::Chunks(chunks),
-            Reliability::Reliable,
-            Compression::Compressed,
-        ) {
-            game_print!("{e:?}");
+        let mut del = Vec::with_capacity(self.seen_chunks.len());
+        self.seen_chunks.retain(|pos, is_seen| {
+            if *is_seen {
+                true
+            } else {
+                del.push(*pos);
+                false
+            }
+        });
+        for is_seen in self.seen_chunks.values_mut() {
+            *is_seen = false;
+        }
+        if !del.is_empty() {
+            if self.net.is_host() {
+                self.world_sync
+                    .as_mut()
+                    .unwrap()
+                    .del_world(self.net.my_id(), del);
+            } else if let Err(e) = self.net.send(
+                self.net.host_id(),
+                &Message::RemoveChunks(del),
+                Reliability::Reliable,
+                Compression::Compressed,
+            ) {
+                game_print!("{e:?}");
+            }
+        }
+        if !chunks.is_empty() {
+            if self.net.is_host() {
+                self.world_sync.as_mut().unwrap().push_world(
+                    SendType::World(self.world_write),
+                    self.net.my_id(),
+                    chunks,
+                );
+            } else if let Err(e) = self.net.send(
+                self.net.host_id(),
+                &Message::Chunks(chunks),
+                Reliability::Reliable,
+                Compression::Compressed,
+            ) {
+                game_print!("{e:?}");
+            }
         }
     }
 }
@@ -145,12 +172,16 @@ pub fn get_section_mut_enumerate(
                 .map(move |(x, p)| (sx + x, sy + y, p))
         })
 }
-#[derive(bitcode::Encode, bitcode::Decode)]
-pub struct Chunk {
-    pub pixel_run: PixelRun,
+#[derive(bitcode::Encode, bitcode::Decode, Hash, Eq, PartialEq, Clone, Copy)]
+pub struct ChunkPos {
     pub x: usize,
     pub y: usize,
     pub section: u8,
+}
+#[derive(bitcode::Encode, bitcode::Decode)]
+pub struct Chunk {
+    pub pixel_run: PixelRun,
+    pub pos: ChunkPos,
     pub priority: Priority,
 }
 #[derive(bitcode::Encode, bitcode::Decode, Clone)]
@@ -251,6 +282,7 @@ impl Pixel {
 }
 #[derive(bitcode::Encode, bitcode::Decode, PartialOrd, PartialEq)]
 pub enum Priority {
+    None,
     Low,
     Medium,
     High,

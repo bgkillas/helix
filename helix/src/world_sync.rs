@@ -1,5 +1,5 @@
 use crate::Message;
-use crate::world::{Chunk, PixelRun, Priority, SECTIONS};
+use crate::world::{Chunk, ChunkPos, PixelRun, Priority, SECTIONS};
 use crate::world_write::{ChunkWrite, WorldWrite};
 use bevy_tangled::{ClientTrait as _, ClientTypeRef, Compression, PeerId, Reliability};
 use noita_api::game_print;
@@ -27,22 +27,23 @@ impl WorldSync {
     pub fn push_world(&mut self, send_type: SendType, peer: PeerId, mut chunks: Vec<Chunk>) {
         let mut send_back = Vec::with_capacity(chunks.len());
         for chunk in chunks.drain(..) {
-            let section = usize::from(chunk.section);
-            if let Some(prev) = &mut self.chunks[chunk.y][chunk.x][section] {
-                if chunk.priority > prev.priority || prev.peer == peer {
+            let section = usize::from(chunk.pos.section);
+            if let Some(prev) = &mut self.chunks[chunk.pos.y][chunk.pos.x][section] {
+                if prev.peer == peer {
+                    prev.pixel_run = chunk.pixel_run;
+                    prev.priority = chunk.priority;
+                } else if chunk.priority > prev.priority {
                     prev.pixel_run = chunk.pixel_run;
                     prev.priority = chunk.priority;
                     prev.peer = peer;
                 } else {
                     send_back.push(ChunkWrite {
                         pixel_run: prev.pixel_run.clone(),
-                        x: chunk.x,
-                        y: chunk.y,
-                        section: chunk.section,
+                        pos: chunk.pos,
                     });
                 }
             } else {
-                self.chunks[chunk.y][chunk.x][section] = Some(Box::new(ChunkVal {
+                self.chunks[chunk.pos.y][chunk.pos.x][section] = Some(Box::new(ChunkVal {
                     pixel_run: chunk.pixel_run,
                     priority: chunk.priority,
                     peer,
@@ -62,6 +63,16 @@ impl WorldSync {
                     }
                 }
                 SendType::World(world_write) => world_write.write_chunks(&send_back),
+            }
+        }
+    }
+    pub fn del_world(&mut self, src: PeerId, chunks: Vec<ChunkPos>) {
+        for pos in chunks {
+            let section = usize::from(pos.section);
+            if let Some(prev) = &mut self.chunks[pos.y][pos.x][section]
+                && prev.peer == src
+            {
+                prev.priority = Priority::None;
             }
         }
     }

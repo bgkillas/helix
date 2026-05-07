@@ -3,11 +3,12 @@ mod text;
 mod world;
 mod world_sync;
 mod world_write;
-use crate::world::Chunk;
+use crate::world::{Chunk, ChunkPos};
 use crate::world_sync::WorldSync;
 use crate::world_write::{ChunkWrite, WorldWrite};
 use bevy_tangled::{Client, ClientTrait as _};
 use noita_api::WorldSeed;
+use std::collections::HashMap;
 use tokio::runtime::Runtime;
 const DEFAULT_PORT: u16 = 5463;
 pub(crate) struct Context {
@@ -17,6 +18,7 @@ pub(crate) struct Context {
     pub world_init: bool,
     pub world_sync: Option<WorldSync>,
     pub world_write: WorldWrite,
+    pub seen_chunks: HashMap<ChunkPos, bool>,
 }
 impl Context {
     pub fn is_connected(&self) -> bool {
@@ -51,6 +53,9 @@ mod lua {
                     msg.src,
                     chunks,
                 ),
+                Message::RemoveChunks(chunks) => {
+                    self.world_sync.as_mut().unwrap().del_world(msg.src, chunks);
+                }
                 Message::ChunksWrite(chunks) => self.world_write.write_chunks(&chunks),
                 Message::World(world) => {
                     self.world_seed = world;
@@ -148,6 +153,7 @@ pub(crate) enum Message {
     Text(String),
     World(usize),
     Chunks(Vec<Chunk>),
+    RemoveChunks(Vec<ChunkPos>),
     ChunksWrite(Vec<ChunkWrite>),
 }
 impl Default for Context {
@@ -159,6 +165,7 @@ impl Default for Context {
             world_init: false,
             world_sync: None,
             world_write: WorldWrite::default(),
+            seen_chunks: HashMap::new(),
         }
     }
 }
