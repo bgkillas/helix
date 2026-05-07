@@ -109,6 +109,8 @@ mod lua {
             damage,
         );
     }
+    #[exit_hook]
+    fn on_exit() {}
 }
 #[derive(bitcode::Encode, bitcode::Decode)]
 pub(crate) enum Message {

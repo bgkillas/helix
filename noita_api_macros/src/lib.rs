@@ -13,6 +13,7 @@ enum HookType {
     Lua,
     WandFire,
     Damage,
+    Exit,
 }
 #[derive(Default, Debug)]
 struct Function {
@@ -265,6 +266,16 @@ fn parse_group(tokens: TokenStream) -> (Vec<Function>, Vec<FunGroup>) {
                 is_fun = true;
                 punct = false;
             }
+            TokenTree::Group(g)
+                if punct
+                    && g.delimiter() == Delimiter::Bracket
+                    && let Some(TokenTree::Ident(i)) = g.stream().into_iter().next()
+                    && i == "exit_hook" =>
+            {
+                function.hook_type = HookType::Exit;
+                is_fun = true;
+                punct = false;
+            }
             TokenTree::Punct(p) if p.as_char() == '#' => {
                 punct = true;
                 is_fun = false;
@@ -321,7 +332,7 @@ fn parse_attribute(
     let mut inner_tokens = tokens.clone();
     let (funs, groups) = parse_group(tokens);
     let luaopen = luaopen(funs, groups, dont_unload, file_path);
-    inner_tokens.extend(quote! {use noita_api::{lua_function, fire_hook, damage_hook};});
+    inner_tokens.extend(quote! {use noita_api::{lua_function, fire_hook, damage_hook, exit_hook};});
     inner_tokens.extend(luaopen);
     let mut group = Group::new(Delimiter::Brace, TokenStream::from_iter(inner_tokens));
     group.set_span(span.unwrap());
@@ -422,7 +433,7 @@ fn luaopen(
             #keep_loaded
             #(#groups_funs)*
             #(#inner_funs)*
-            fn register_functions(lua: *mut noita_api::lua_bindings::lua_State) {
+            fn register_functions(lua: *mut noita_api::lua_bindings::lua_State, orig: bool) {
                 unsafe {
                     noita_api::lua_bindings::lua_createtable(lua, 0, 0);
                     #(#inner_defs)*
@@ -436,11 +447,11 @@ fn luaopen(
             }
             fn newstate() -> *mut noita_api::lua_bindings::lua_State {
                 let lua = unsafe { noita_api::NEW_STATE.call() };
-                register_functions(lua);
+                register_functions(lua, false);
                 lua
             }
             noita_api::install_global(newstate);
-            register_functions(lua);
+            register_functions(lua, true);
             0
         }
     }
@@ -461,6 +472,13 @@ pub fn fire_hook(
 }
 #[proc_macro_attribute]
 pub fn damage_hook(
+    _: proc_macro::TokenStream,
+    tokens: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    tokens
+}
+#[proc_macro_attribute]
+pub fn exit_hook(
     _: proc_macro::TokenStream,
     tokens: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
@@ -726,7 +744,7 @@ fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, Toke
             }
         };
         match fun.hook_type {
-            HookType::Lua => {}
+            HookType::Lua | HookType::Exit => {}
             HookType::WandFire => {
                 return (
                     quote! {
@@ -748,7 +766,7 @@ fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, Toke
         }
     } else {
         match fun.hook_type {
-            HookType::Lua => {}
+            HookType::Lua | HookType::Exit => {}
             HookType::WandFire => {
                 return (quote! {noita_api::install_fire_wand!(#ident);}, quote! {});
             }
@@ -833,9 +851,22 @@ fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, Toke
                 ret
             }
         },
-        quote! {
-            noita_api::lua_bindings::lua_pushcclosure(lua, Some(#bridge_fn_name), 0);
-            noita_api::lua_bindings::lua_setfield(lua, -2, #fn_name_c.as_ptr());
+        if matches!(fun.hook_type, HookType::Exit) {
+            quote! {
+                if orig {
+                    noita_api::lua_bindings::lua_newuserdata(lua, 0);
+                    noita_api::lua_bindings::lua_createtable(lua, 0, 0);
+                    noita_api::lua_bindings::lua_pushcclosure(lua, Some(#bridge_fn_name), 0);
+                    noita_api::lua_bindings::lua_setfield(lua, -2, c"__gc".as_ptr());
+                    noita_api::lua_bindings::lua_setmetatable(lua, -2);
+                    noita_api::lua_bindings::lua_setfield(lua, -2, c"luaclose".as_ptr());
+                }
+            }
+        } else {
+            quote! {
+                noita_api::lua_bindings::lua_pushcclosure(lua, Some(#bridge_fn_name), 0);
+                noita_api::lua_bindings::lua_setfield(lua, -2, #fn_name_c.as_ptr());
+            }
         },
     )
 }

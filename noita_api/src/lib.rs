@@ -22,7 +22,7 @@ pub use fire_wand::*;
 pub use libloading;
 pub use lua_global::*;
 pub use new_game::*;
-pub use noita_api_macros::{damage_hook, fire_hook, lua_function, lua_module};
+pub use noita_api_macros::{damage_hook, exit_hook, fire_hook, lua_function, lua_module};
 pub use pause::*;
 pub use print::*;
 pub use types::*;
