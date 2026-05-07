@@ -1,10 +1,10 @@
 use crate::{Context, Message};
 use bevy_tangled::{ClientTrait as _, Compression, Reliability};
 use noita_api::{AABB, Cell, GameGlobal, StdBox, Vec2, game_print};
-const COLS: usize = 16;
-const SECTIONS: usize = COLS * COLS;
-const WIDTH: usize = 512 / COLS;
-const AREA: usize = WIDTH * WIDTH;
+pub const COLS: usize = 16;
+pub const SECTIONS: usize = COLS * COLS;
+pub const WIDTH: usize = 512 / COLS;
+pub const AREA: usize = WIDTH * WIDTH;
 impl Context {
     pub fn sync_world(&mut self) {
         let game_global = GameGlobal::global();
@@ -124,15 +124,15 @@ fn get_section(
 }
 #[derive(bitcode::Encode, bitcode::Decode)]
 pub struct Chunk {
-    pixel_run: PixelRun,
-    x: usize,
-    y: usize,
-    section: u8,
-    priority: Priority,
+    pub pixel_run: PixelRun,
+    pub x: usize,
+    pub y: usize,
+    pub section: u8,
+    pub priority: Priority,
 }
-#[derive(bitcode::Encode, bitcode::Decode)]
+#[derive(bitcode::Encode, bitcode::Decode, Clone)]
 pub struct PixelRun {
-    vec: Vec<(u16, Pixel)>,
+    pub vec: Vec<(u16, Pixel)>,
 }
 pub struct PixelRunBuilder {
     vec: Vec<(u16, Pixel)>,
@@ -176,8 +176,8 @@ impl Default for PixelRunBuilder {
     }
 }
 #[derive(Default, Clone, Copy, PartialEq, bitcode::Encode, bitcode::Decode)]
-struct Pixel {
-    id: u16,
+pub struct Pixel {
+    pub id: u16,
 }
 impl From<usize> for Pixel {
     fn from(value: usize) -> Self {

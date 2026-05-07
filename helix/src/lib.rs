@@ -2,8 +2,12 @@
 mod text;
 mod world;
 mod world_sync;
+mod world_write;
 use crate::world::Chunk;
-use bevy_tangled::Client;
+use crate::world_sync::WorldSync;
+use crate::world_write::ChunkWrite;
+use bevy_tangled::{Client, ClientTrait as _};
+use noita_api::WorldSeed;
 use tokio::runtime::Runtime;
 const DEFAULT_PORT: u16 = 5463;
 pub(crate) struct Context {
@@ -11,11 +15,17 @@ pub(crate) struct Context {
     pub runtime: Runtime,
     pub net: Client,
     pub world_init: bool,
+    pub world_sync: Option<WorldSync>,
+}
+impl Context {
+    pub fn is_connected(&self) -> bool {
+        self.net.is_connected() && WorldSeed::global().seed == self.world_seed
+    }
 }
 //#[noita_api::lua_module("./mod/helix.lua")]
 #[noita_api::lua_module]
 mod lua {
-    use crate::{Context, Message, world_sync::push_world};
+    use crate::{Context, Message, world_write::write_chunks};
     use bevy_tangled::ClientTrait as _;
     use noita_api::{
         DamageFun, DamageModel, DamageThing, Entity, FireWandFun, PAUSE_SIMULATE, StdBox,
@@ -31,13 +41,20 @@ mod lua {
             }
             self.net.recv(|client, msg| match msg.data {
                 Message::Text(s) => game_print!("{s}"),
-                Message::Chunks(chunks) => push_world(client, &chunks),
+                Message::Chunks(chunks) => self
+                    .world_sync
+                    .as_mut()
+                    .unwrap()
+                    .push_world(&client, msg.src, chunks),
+                Message::ChunksWrite(chunks) => write_chunks(chunks),
                 Message::World(world) => {
                     self.world_seed = world;
                     game_print!("new seed: {}", self.world_seed);
                 }
             });
-            self.sync_world();
+            if self.is_connected() {
+                self.sync_world();
+            }
         }
         #[lua_function]
         fn text_msg(&mut self, msg: &str) {
@@ -129,6 +146,7 @@ pub(crate) enum Message {
     Text(String),
     World(usize),
     Chunks(Vec<Chunk>),
+    ChunksWrite(Vec<ChunkWrite>),
 }
 impl Default for Context {
     fn default() -> Self {
@@ -137,6 +155,7 @@ impl Default for Context {
             runtime: Runtime::new().unwrap(),
             net: Client::new().unwrap(),
             world_init: false,
+            world_sync: None,
         }
     }
 }

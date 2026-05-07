@@ -1,3 +1,4 @@
+use crate::world_sync::WorldSync;
 use crate::{Context, DEFAULT_PORT, Message};
 use bevy_tangled::{ClientTrait as _, Compression, Reliability};
 use noita_api::{WorldSeed, game_print};
@@ -58,6 +59,7 @@ impl Context {
                 ) {
                     game_print!("{e:?}");
                 } else {
+                    self.world_sync = Some(WorldSync::default());
                     self.world_seed = WorldSeed::global().seed;
                     game_print!("hosting session");
                 }
