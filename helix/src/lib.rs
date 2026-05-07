@@ -118,6 +118,8 @@ mod lua {
             damage,
         );
     }
+    #[open_hook]
+    fn on_enter() {}
 }
 #[derive(bitcode::Encode, bitcode::Decode)]
 pub(crate) enum Message {
