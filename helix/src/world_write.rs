@@ -2,10 +2,12 @@ use crate::world::{Pixel, PixelRun, get_section_mut_enumerate};
 use noita_api::{
     Cell, CellData, CellType, GameGlobal, GridWorld, StdBox, get_construct_cell, this_call,
 };
+use std::ptr;
 #[derive(Clone, Copy)]
 pub struct WorldWrite {
-    construct_cell:
-        this_call!(fn(StdBox<GridWorld>, isize, isize, StdBox<CellData>) -> Option<StdBox<Cell>>),
+    construct_cell: this_call!(
+        fn(StdBox<GridWorld>, isize, isize, StdBox<CellData>, *mut ()) -> Option<StdBox<Cell>>
+    ),
 }
 unsafe impl Send for WorldWrite {}
 unsafe impl Sync for WorldWrite {}
@@ -50,7 +52,9 @@ impl WorldWrite {
                         );
                         let x = (chunk.x.cast_signed() - 256) * 512 + sx.cast_signed();
                         let y = (chunk.y.cast_signed() - 256) * 512 + sy.cast_signed();
-                        if let Some(cell) = (self.construct_cell)(grid_world, x, y, mat) {
+                        if let Some(cell) =
+                            (self.construct_cell)(grid_world, x, y, mat, ptr::null_mut())
+                        {
                             *pixel = Some(cell);
                         } else {
                             *pixel = None;

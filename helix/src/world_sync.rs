@@ -42,7 +42,6 @@ impl WorldSync {
                     });
                 }
             } else {
-                noita_api::game_print!("{} {}", chunk.x, chunk.y);
                 self.chunks[chunk.y][chunk.x][section] = Some(Box::new(ChunkVal {
                     pixel_run: chunk.pixel_run,
                     priority: chunk.priority,
