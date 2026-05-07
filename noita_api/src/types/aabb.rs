@@ -34,6 +34,9 @@ impl<T: PartialOrd> Vec2<T> {
     fn intersects(self, other: &Vec2<T>) -> bool {
         self.x <= other.x && other.x < self.y
     }
+    fn contains(self, other: &Vec2<T>) -> bool {
+        self.x <= other.x && other.x < self.y && self.x <= other.y && other.y < self.y
+    }
 }
 impl<T: PartialOrd> AABB<T> {
     #[inline]
@@ -56,5 +59,26 @@ impl<T: PartialOrd> AABB<T> {
             y: other.bottom_right.y,
         };
         self_x_range.intersects(&other_x_range) && self_y_range.intersects(&other_y_range)
+    }
+    #[inline]
+    #[allow(clippy::similar_names)]
+    pub fn contains(self, other: Self) -> bool {
+        let self_x_range = Vec2 {
+            x: self.top_left.x,
+            y: self.bottom_right.x,
+        };
+        let self_y_range = Vec2 {
+            x: self.top_left.y,
+            y: self.bottom_right.y,
+        };
+        let other_x_range = Vec2 {
+            x: other.top_left.x,
+            y: other.bottom_right.x,
+        };
+        let other_y_range = Vec2 {
+            x: other.top_left.y,
+            y: other.bottom_right.y,
+        };
+        self_x_range.contains(&other_x_range) && self_y_range.contains(&other_y_range)
     }
 }

@@ -1,6 +1,8 @@
 #![feature(sync_unsafe_cell)]
 mod text;
 mod world;
+mod world_sync;
+use crate::world::Chunk;
 use bevy_tangled::Client;
 use tokio::runtime::Runtime;
 const DEFAULT_PORT: u16 = 5463;
@@ -13,7 +15,7 @@ pub(crate) struct Context {
 //#[noita_api::lua_module("./mod/helix.lua")]
 #[noita_api::lua_module]
 mod lua {
-    use crate::{Context, Message};
+    use crate::{Context, Message, world_sync::push_world};
     use bevy_tangled::ClientTrait as _;
     use noita_api::{
         DamageFun, DamageModel, DamageThing, Entity, FireWandFun, PAUSE_SIMULATE, StdBox,
@@ -27,8 +29,9 @@ mod lua {
             if let Err(e) = self.net.update() {
                 game_print!("{e:?}");
             }
-            self.net.recv(|_, msg| match msg.data {
+            self.net.recv(|client, msg| match msg.data {
                 Message::Text(s) => game_print!("{s}"),
+                Message::Chunks(chunks) => push_world(client, &chunks),
                 Message::World(world) => {
                     self.world_seed = world;
                     game_print!("new seed: {}", self.world_seed);
@@ -125,6 +128,7 @@ mod lua {
 pub(crate) enum Message {
     Text(String),
     World(usize),
+    Chunks(Vec<Chunk>),
 }
 impl Default for Context {
     fn default() -> Self {
