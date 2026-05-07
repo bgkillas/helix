@@ -29,6 +29,11 @@ pub struct StdPtr<T: Sized> {
 pub struct StdBox<T: Sized> {
     pub ptr: StdPtr<T>,
 }
+#[repr(transparent)]
+#[assert_size_with(0x4, ())]
+pub struct MaybeStdBox<T: Sized> {
+    pub ptr: Option<StdBox<T>>,
+}
 impl<T: Sized> StdPtr<T> {
     #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
     pub fn malloc() -> Self {
@@ -194,6 +199,19 @@ impl<T: Sized> DerefMut for StdBox<T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.as_mut()
+    }
+}
+impl<T: Sized> Deref for MaybeStdBox<T> {
+    type Target = T;
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        self.ptr.unwrap().as_ref()
+    }
+}
+impl<T: Sized> DerefMut for MaybeStdBox<T> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.ptr.unwrap().as_mut()
     }
 }
 impl<T: Sized> Deref for StdPtr<T> {

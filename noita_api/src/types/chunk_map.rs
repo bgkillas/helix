@@ -8,7 +8,7 @@ use std::ffi::c_void;
 pub struct ChunkMap {
     pub len: usize,
     pub unknown: isize,
-    pub chunk_array: StdBox<[Option<StdBox<Chunk>>; 512 * 512]>,
+    pub chunk_array: StdBox<[[Option<StdBox<Chunk>>; 512]; 512]>,
     pub chunk_count: usize,
     pub min_chunk: Vec2<isize>,
     pub max_chunk: Vec2<isize>,
@@ -18,7 +18,7 @@ pub struct ChunkMap {
 #[repr(C)]
 #[derive(Debug)]
 pub struct Chunk {
-    pub data: StdBox<[Option<StdBox<Cell>>; 512 * 512]>,
+    pub data: StdBox<[[Option<StdBox<Cell>>; 512]; 512]>,
 }
 #[repr(C)]
 #[derive(Debug)]
@@ -67,7 +67,7 @@ pub struct CellGraphics {
 pub struct CellData {
     pub name: StdString,
     pub ui_name: StdString,
-    pub material_type: isize,
+    pub material_type: usize,
     pub id_2: isize,
     pub cell_type: CellType,
     pub platform_type: isize,

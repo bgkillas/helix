@@ -1,8 +1,10 @@
 #![feature(sync_unsafe_cell)]
+mod text;
+mod world;
 use bevy_tangled::Client;
 use tokio::runtime::Runtime;
 const DEFAULT_PORT: u16 = 5463;
-pub struct Context {
+pub(crate) struct Context {
     pub world_seed: usize,
     pub runtime: Runtime,
     pub net: Client,
@@ -10,15 +12,13 @@ pub struct Context {
 //#[noita_api::lua_module(true, "./mod/helix.lua")]
 #[noita_api::lua_module(true)]
 mod lua {
-    use crate::{Context, DEFAULT_PORT, Message};
-    use bevy_tangled::{ClientTrait as _, Compression, Reliability};
+    use crate::{Context, Message};
+    use bevy_tangled::ClientTrait as _;
     use noita_api::{
         DamageFun, DamageModel, DamageThing, Entity, FireWandFun, PAUSE_SIMULATE, StdBox,
         StdString, Vec2, WorldSeed, disable_inventory, disable_item_pickup, disable_pause,
         game_print, new_game_pause_update, set_pause_no_inventory,
     };
-    use rand::Rng as _;
-    use std::net::{IpAddr, Ipv6Addr, SocketAddr};
     use std::sync::atomic::Ordering;
     impl Context {
         #[lua_function]
@@ -33,75 +33,11 @@ mod lua {
                     game_print!("new seed: {}", self.world_seed);
                 }
             });
+            self.sync_world();
         }
         #[lua_function]
         fn text_msg(&mut self, msg: &str) {
-            if let Some(cmd) = msg.strip_prefix("/") {
-                if let Some(host) = cmd.strip_prefix("join") {
-                    let addr_str = host.trim();
-                    let addr = addr_str.parse().map_or_else(
-                        |_| {
-                            host.parse().unwrap_or(SocketAddr::new(
-                                IpAddr::V6(Ipv6Addr::LOCALHOST),
-                                DEFAULT_PORT,
-                            ))
-                        },
-                        |ip| SocketAddr::new(ip, DEFAULT_PORT),
-                    );
-                    if let Err(e) = self.net.join_ip_runtime(addr, None, None, &self.runtime) {
-                        game_print!("{e:?}");
-                    } else {
-                        game_print!("joining session");
-                    }
-                } else if let Some(seed) = cmd.strip_prefix("new")
-                    && self.net.is_host()
-                {
-                    let seed_str = seed.trim();
-                    self.world_seed = seed_str
-                        .parse()
-                        .unwrap_or_else(|_| usize::try_from(rand::rng().next_u32()).unwrap());
-                    if let Err(e) = self.net.broadcast(
-                        &Message::World(self.world_seed),
-                        Reliability::Reliable,
-                        Compression::Uncompressed,
-                    ) {
-                        game_print!("{e:?}");
-                    }
-                    game_print!("new seed: {}", self.world_seed);
-                } else if let Some(port) = cmd.strip_prefix("host") {
-                    let port_str = port.trim();
-                    if let Err(e) = self.net.host_ip_runtime(
-                        port_str.parse().unwrap_or(DEFAULT_PORT),
-                        Some(Box::new(|client, peer| {
-                            let world = WorldSeed::global();
-                            if let Err(e) = client.send(
-                                peer,
-                                &Message::World(world.seed),
-                                Reliability::Reliable,
-                                Compression::Uncompressed,
-                            ) {
-                                game_print!("{e:?}");
-                            }
-                        })),
-                        None,
-                        &self.runtime,
-                    ) {
-                        game_print!("{e:?}");
-                    } else {
-                        self.world_seed = WorldSeed::global().seed;
-                        game_print!("hosting session");
-                    }
-                }
-            } else {
-                game_print!("{msg}");
-                if let Err(e) = self.net.broadcast(
-                    &Message::Text(msg.to_owned()),
-                    Reliability::Reliable,
-                    Compression::Uncompressed,
-                ) {
-                    game_print!("{e:?}");
-                }
-            }
+            self.text(msg);
         }
         #[lua_function]
         fn world_seed_init(&self) {
@@ -175,12 +111,11 @@ mod lua {
     }
 }
 #[derive(bitcode::Encode, bitcode::Decode)]
-pub enum Message {
+pub(crate) enum Message {
     Text(String),
     World(usize),
 }
 impl Default for Context {
-    #[inline]
     fn default() -> Self {
         Self {
             world_seed: 0,
