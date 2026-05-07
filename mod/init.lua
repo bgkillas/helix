@@ -11,6 +11,9 @@ end
 function OnMagicNumbersAndWorldSeedInitialized()
     helix.world_seed_init()
 end
+function OnWorldInitialized()
+    helix.world_init()
+end
 function OnPausePreUpdate()
     helix.on_pause()
 end

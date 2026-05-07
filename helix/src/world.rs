@@ -8,10 +8,13 @@ const WIDTH: usize = 512 / COLS;
 const AREA: usize = WIDTH * WIDTH;
 impl Context {
     pub fn sync_world(&mut self) {
-        _ = self;
         let tmr = std::time::Instant::now();
-        let grid_world = GameGlobal::global().m_grid_world;
-        let aabb_cam = grid_world.cam;
+        let game_global = GameGlobal::global();
+        let map = &game_global.m_grid_world.chunk_map;
+        if !self.world_init || map.len == 0 || map.min_chunk.x > map.max_chunk.x {
+            return;
+        }
+        let aabb_cam = game_global.m_grid_world.cam;
         let aabb = AABB {
             top_left: Vec2 {
                 x: (aabb_cam.top_left.x + 512 * 256).cast_unsigned(),
@@ -22,7 +25,6 @@ impl Context {
                 y: (aabb_cam.bottom_right.y + 512 * 256).cast_unsigned(),
             },
         };
-        let map = &grid_world.chunk_map;
         let mut chunks: Vec<Chunk> = Vec::with_capacity(map.chunk_count * SECTIONS);
         for y in (map.min_chunk.y + 256).cast_unsigned()..=(map.max_chunk.y + 256).cast_unsigned() {
             for x in
@@ -46,16 +48,18 @@ impl Context {
         let encode = encode(&chunks);
         let chunk = decode::<Vec<Chunk>>(&encode).unwrap();
         black_box(chunk);
-        log_println!(
-            "{aabb_cam:?} {aabb:?} {} {} {} {:?}",
-            tmr.elapsed().as_nanos(),
-            encode.len(),
-            chunks.len(),
-            chunks
-                .iter()
-                .map(|a| a.pixel_run.vec.len())
-                .collect::<Vec<_>>()
-        );
+        if game_global.frame_num.is_multiple_of(10) {
+            log_println!(
+                "{aabb_cam:?} {aabb:?} {} {} {} {:?}",
+                tmr.elapsed().as_nanos(),
+                encode.len(),
+                chunks.len(),
+                chunks
+                    .iter()
+                    .map(|a| a.pixel_run.vec.len())
+                    .collect::<Vec<_>>()
+            );
+        }
     }
 }
 fn get_sections(

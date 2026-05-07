@@ -8,6 +8,7 @@ pub(crate) struct Context {
     pub world_seed: usize,
     pub runtime: Runtime,
     pub net: Client,
+    pub world_init: bool,
 }
 //#[noita_api::lua_module("./mod/helix.lua")]
 #[noita_api::lua_module]
@@ -44,6 +45,14 @@ mod lua {
             if self.net.is_connected() {
                 WorldSeed::global().seed = self.world_seed;
             }
+        }
+        #[lua_function]
+        fn world_init(&mut self) {
+            self.world_init = true;
+        }
+        #[exit_hook]
+        fn on_exit(&mut self) {
+            self.world_init = false;
         }
     }
     #[lua_function]
@@ -109,8 +118,6 @@ mod lua {
             damage,
         );
     }
-    #[exit_hook]
-    fn on_exit() {}
 }
 #[derive(bitcode::Encode, bitcode::Decode)]
 pub(crate) enum Message {
@@ -123,6 +130,7 @@ impl Default for Context {
             world_seed: 0,
             runtime: Runtime::new().unwrap(),
             net: Client::new().unwrap(),
+            world_init: false,
         }
     }
 }
