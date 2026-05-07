@@ -473,12 +473,7 @@ pub fn lua_module(
 ) -> proc_macro::TokenStream {
     let arg: TokenStream = arg.into();
     let mut arg_iter = arg.into_iter();
-    let dont_unload = if let Some(TokenTree::Ident(ident)) = arg_iter.next() {
-        ident == "true"
-    } else {
-        false
-    };
-    arg_iter.next();
+    let dont_unload = true;
     let file_path = if let Some(TokenTree::Literal(l)) = arg_iter.next()
         && let Some(s) = l.to_string().strip_prefix("\"")
         && let Some(s) = s.strip_suffix("\"")

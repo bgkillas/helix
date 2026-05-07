@@ -9,8 +9,8 @@ pub(crate) struct Context {
     pub runtime: Runtime,
     pub net: Client,
 }
-//#[noita_api::lua_module(true, "./mod/helix.lua")]
-#[noita_api::lua_module(true)]
+//#[noita_api::lua_module("./mod/helix.lua")]
+#[noita_api::lua_module]
 mod lua {
     use crate::{Context, Message};
     use bevy_tangled::ClientTrait as _;
