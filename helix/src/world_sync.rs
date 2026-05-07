@@ -1,6 +1,6 @@
 use crate::Message;
 use crate::world::{Chunk, PixelRun, Priority, SECTIONS};
-use crate::world_write::ChunkWrite;
+use crate::world_write::{ChunkWrite, WorldWrite};
 use bevy_tangled::{ClientTrait as _, ClientTypeRef, Compression, PeerId, Reliability};
 use noita_api::game_print;
 pub struct ChunkVal {
@@ -19,8 +19,12 @@ impl Default for WorldSync {
         }
     }
 }
+pub enum SendType<'a> {
+    Net(ClientTypeRef<'a>),
+    World(WorldWrite),
+}
 impl WorldSync {
-    pub fn push_world(&mut self, client: &ClientTypeRef, peer: PeerId, mut chunks: Vec<Chunk>) {
+    pub fn push_world(&mut self, send_type: SendType, peer: PeerId, mut chunks: Vec<Chunk>) {
         let mut send_back = Vec::with_capacity(chunks.len());
         for chunk in chunks.drain(..) {
             let section = usize::from(chunk.section);
@@ -32,9 +36,13 @@ impl WorldSync {
                 } else {
                     send_back.push(ChunkWrite {
                         pixel_run: prev.pixel_run.clone(),
+                        x: chunk.x,
+                        y: chunk.y,
+                        section: chunk.section,
                     });
                 }
             } else {
+                noita_api::game_print!("{} {}", chunk.x, chunk.y);
                 self.chunks[chunk.y][chunk.x][section] = Some(Box::new(ChunkVal {
                     pixel_run: chunk.pixel_run,
                     priority: chunk.priority,
@@ -42,15 +50,20 @@ impl WorldSync {
                 }));
             }
         }
-        if !send_back.is_empty()
-            && let Err(e) = client.send(
-                peer,
-                &Message::ChunksWrite(send_back),
-                Reliability::Reliable,
-                Compression::Compressed,
-            )
-        {
-            game_print!("{e:?}");
+        if !send_back.is_empty() {
+            match send_type {
+                SendType::Net(client) => {
+                    if let Err(e) = client.send(
+                        peer,
+                        &Message::ChunksWrite(send_back),
+                        Reliability::Reliable,
+                        Compression::Compressed,
+                    ) {
+                        game_print!("{e:?}");
+                    }
+                }
+                SendType::World(world_write) => world_write.write_chunks(&send_back),
+            }
         }
     }
 }

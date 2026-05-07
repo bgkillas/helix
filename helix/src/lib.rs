@@ -5,7 +5,7 @@ mod world_sync;
 mod world_write;
 use crate::world::Chunk;
 use crate::world_sync::WorldSync;
-use crate::world_write::ChunkWrite;
+use crate::world_write::{ChunkWrite, WorldWrite};
 use bevy_tangled::{Client, ClientTrait as _};
 use noita_api::WorldSeed;
 use tokio::runtime::Runtime;
@@ -16,6 +16,7 @@ pub(crate) struct Context {
     pub net: Client,
     pub world_init: bool,
     pub world_sync: Option<WorldSync>,
+    pub world_write: WorldWrite,
 }
 impl Context {
     pub fn is_connected(&self) -> bool {
@@ -25,7 +26,8 @@ impl Context {
 //#[noita_api::lua_module("./mod/helix.lua")]
 #[noita_api::lua_module]
 mod lua {
-    use crate::{Context, Message, world_write::write_chunks};
+    use crate::world_sync::SendType;
+    use crate::{Context, Message};
     use bevy_tangled::ClientTrait as _;
     use noita_api::{
         DamageFun, DamageModel, DamageThing, Entity, FireWandFun, PAUSE_SIMULATE, StdBox,
@@ -39,22 +41,22 @@ mod lua {
             if let Err(e) = self.net.update() {
                 game_print!("{e:?}");
             }
+            if self.is_connected() {
+                self.sync_world();
+            }
             self.net.recv(|client, msg| match msg.data {
                 Message::Text(s) => game_print!("{s}"),
-                Message::Chunks(chunks) => self
-                    .world_sync
-                    .as_mut()
-                    .unwrap()
-                    .push_world(&client, msg.src, chunks),
-                Message::ChunksWrite(chunks) => write_chunks(chunks),
+                Message::Chunks(chunks) => self.world_sync.as_mut().unwrap().push_world(
+                    SendType::Net(client),
+                    msg.src,
+                    chunks,
+                ),
+                Message::ChunksWrite(chunks) => self.world_write.write_chunks(&chunks),
                 Message::World(world) => {
                     self.world_seed = world;
                     game_print!("new seed: {}", self.world_seed);
                 }
             });
-            if self.is_connected() {
-                self.sync_world();
-            }
         }
         #[lua_function]
         fn text_msg(&mut self, msg: &str) {
@@ -156,6 +158,7 @@ impl Default for Context {
             net: Client::new().unwrap(),
             world_init: false,
             world_sync: None,
+            world_write: WorldWrite::default(),
         }
     }
 }

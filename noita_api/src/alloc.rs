@@ -233,3 +233,11 @@ impl<T: Sized + Debug> Debug for StdBox<T> {
         write!(f, "{:?}", **self)
     }
 }
+impl<T> From<&mut T> for StdBox<T> {
+    #[inline]
+    fn from(value: &mut T) -> Self {
+        Self {
+            ptr: StdPtr::from(NonNull::new(ptr::from_mut(value)).unwrap()),
+        }
+    }
+}

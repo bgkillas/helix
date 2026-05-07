@@ -1,6 +1,7 @@
+use crate::world_sync::SendType;
 use crate::{Context, Message};
 use bevy_tangled::{ClientTrait as _, Compression, Reliability};
-use noita_api::{AABB, Cell, GameGlobal, StdBox, Vec2, game_print};
+use noita_api::{AABB, Cell, CellType, GameGlobal, StdBox, Vec2, game_print};
 pub const COLS: usize = 16;
 pub const SECTIONS: usize = COLS * COLS;
 pub const WIDTH: usize = 512 / COLS;
@@ -59,7 +60,13 @@ impl Context {
                 }
             }
         }
-        if let Err(e) = self.net.send(
+        if self.net.is_host() {
+            self.world_sync.as_mut().unwrap().push_world(
+                SendType::World(self.world_write),
+                self.net.my_id(),
+                chunks,
+            );
+        } else if let Err(e) = self.net.send(
             self.net.host_id(),
             &Message::Chunks(chunks),
             Reliability::Reliable,
@@ -69,7 +76,7 @@ impl Context {
         }
     }
 }
-fn get_sections(
+pub fn get_sections(
     aabb: AABB<usize>,
     inner_aabb: AABB<usize>,
     x: usize,
@@ -111,7 +118,7 @@ fn section_in(
         None
     }
 }
-fn get_section(
+pub fn get_section(
     section: usize,
     arr: &[[Option<StdBox<Cell>>; 512]; 512],
 ) -> impl Iterator<Item = Option<StdBox<Cell>>> + '_ {
@@ -121,6 +128,22 @@ fn get_section(
         .iter()
         .flat_map(move |arr_y| &arr_y[sx..sx + WIDTH])
         .copied()
+}
+pub fn get_section_mut_enumerate(
+    section: usize,
+    arr: &mut [[Option<StdBox<Cell>>; 512]; 512],
+) -> impl Iterator<Item = (usize, usize, &mut Option<StdBox<Cell>>)> + '_ {
+    let sx = (section % COLS) * WIDTH;
+    let sy = (section / COLS) * WIDTH;
+    arr[sy..sy + WIDTH]
+        .iter_mut()
+        .enumerate()
+        .flat_map(move |(y, arr_y)| {
+            arr_y[sx..sx + WIDTH]
+                .iter_mut()
+                .enumerate()
+                .map(move |(x, p)| (sx + x, sy + y, p))
+        })
 }
 #[derive(bitcode::Encode, bitcode::Decode)]
 pub struct Chunk {
@@ -134,6 +157,37 @@ pub struct Chunk {
 pub struct PixelRun {
     pub vec: Vec<(u16, Pixel)>,
 }
+impl PixelRun {
+    pub fn iter(&self) -> PixelRunIter<'_> {
+        PixelRunIter {
+            vec: &self.vec,
+            current: self.vec[0].0,
+            pixel: self.vec[0].1,
+        }
+    }
+}
+pub struct PixelRunIter<'a> {
+    vec: &'a [(u16, Pixel)],
+    current: u16,
+    pixel: Pixel,
+}
+impl Iterator for PixelRunIter<'_> {
+    type Item = Pixel;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.vec.is_empty() {
+            None
+        } else if self.current == 0 {
+            self.vec = &self.vec[1..];
+            self.current = self.vec[0].0;
+            self.pixel = self.vec[0].1;
+            self.current -= 1;
+            Some(self.pixel)
+        } else {
+            self.current -= 1;
+            Some(self.pixel)
+        }
+    }
+}
 pub struct PixelRunBuilder {
     vec: Vec<(u16, Pixel)>,
     current: Pixel,
@@ -142,7 +196,13 @@ pub struct PixelRunBuilder {
 impl Extend<Option<StdBox<Cell>>> for PixelRunBuilder {
     fn extend<T: IntoIterator<Item = Option<StdBox<Cell>>>>(&mut self, iter: T) {
         for p in iter {
-            self.push(p.map_or(Pixel::default(), |c| Pixel::from(c.material.material_type)));
+            self.push(p.map_or(Pixel::default(), |c| {
+                if matches!(c.material.cell_type, CellType::Solid) {
+                    Pixel::MAX
+                } else {
+                    Pixel::from(c.material.material_type)
+                }
+            }));
         }
     }
 }
@@ -185,6 +245,9 @@ impl From<usize> for Pixel {
             id: u16::try_from(value).unwrap(),
         }
     }
+}
+impl Pixel {
+    pub const MAX: Pixel = Pixel { id: u16::MAX };
 }
 #[derive(bitcode::Encode, bitcode::Decode, PartialOrd, PartialEq)]
 pub enum Priority {
