@@ -14,7 +14,7 @@ opt-level = 3
 
 [workspace]
 resolver = "3"
-members = ["helix", "noita_api", "noita_api_macros"]
+members = ["coil","helix", "noita_api", "noita_api_macros"]
 
 [workspace.dependencies]
 noita_api = {path = "noita_api"}

@@ -10,7 +10,7 @@ pub struct Entity {
     unknown1: isize,
     pub name: StdString,
     unknown2: isize,
-    pub tags: BitSet<16>,
+    pub tags: BitSet<u16>,
     pub transform: Transform,
     pub children: *mut StdVec<*mut Entity>,
     pub parent: *mut Entity,

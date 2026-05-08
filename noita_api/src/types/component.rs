@@ -25,7 +25,7 @@ pub struct Component<T: ComponentTrait> {
     pub id: usize,
     pub enabled: bool,
     unk2: [u8; 3],
-    pub tags: BitSet<8>,
+    pub tags: BitSet<u8>,
     unk3: StdVec<usize>,
     unk4: usize,
     data: T,
