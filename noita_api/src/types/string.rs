@@ -33,11 +33,7 @@ pub type StdString = StdStringRef<'static>;
 impl Debug for StdStringRef<'_> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("StdString")
-            .field("value", &self.as_str())
-            .field("size", &self.size)
-            .field("capacity", &self.capacity)
-            .finish()
+        write!(f, "{:?}", self.as_str())
     }
 }
 impl Drop for StdStringRef<'_> {

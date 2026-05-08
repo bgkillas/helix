@@ -1,13 +1,19 @@
 use crate::StdPtr;
+use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, DerefMut};
 use std::ptr::NonNull;
 use std::{ptr, slice};
 #[repr(C)]
-#[derive(Debug)]
 pub struct StdVec<T> {
     pub start: *mut T,
     pub end: *mut T,
     pub cap: *mut T,
+}
+impl<T: Debug> Debug for StdVec<T> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", &**self)
+    }
 }
 impl<T> Default for StdVec<T> {
     #[inline]

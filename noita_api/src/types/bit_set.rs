@@ -28,9 +28,14 @@ macro_rules! define_bitset {
             }
             #[must_use]
             #[inline]
-            pub fn count(&self) -> usize {
+            pub fn len(&self) -> usize {
                 let n: u32 = self.iter().map(|s| s.count_ones()).sum();
                 usize::try_from(n).unwrap()
+            }
+            #[must_use]
+            #[inline]
+            pub fn is_empty(&self) -> bool {
+                self.iter().all(|a| *a == 0)
             }
             #[must_use]
             #[inline]
@@ -52,12 +57,26 @@ macro_rules! define_bitset {
                 }
             }
             #[inline]
-            pub fn get_tags(&self) -> impl Iterator<Item = &str> {
+            pub fn iter_tags(&self) -> impl Iterator<Item = &str> {
                 let tag_manager = TagManager::<$ty>::global().as_ref();
-                tag_manager
-                    .tag_indices
-                    .iter()
-                    .filter_map(|(a, b)| if self.get(*b) { Some(a.as_str()) } else { None })
+                (0..<$ty>::try_from(32 * <$ty>::BITS).unwrap()).filter_map(|i| {
+                    if self.get(i) {
+                        Some(tag_manager.tags[usize::from(i)].as_str())
+                    } else {
+                        None
+                    }
+                })
+            }
+            #[inline]
+            pub fn iter_tags_indices(&self) -> impl Iterator<Item = ($ty, &str)> {
+                let tag_manager = TagManager::<$ty>::global().as_ref();
+                (0..<$ty>::try_from(32 * <$ty>::BITS).unwrap()).filter_map(|i| {
+                    if self.get(i) {
+                        Some((i, tag_manager.tags[usize::from(i)].as_str()))
+                    } else {
+                        None
+                    }
+                })
             }
         }
     };
