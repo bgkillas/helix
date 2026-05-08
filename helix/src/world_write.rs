@@ -1,4 +1,4 @@
-use crate::world::{ChunkPos, Pixel, PixelRun, get_section_mut_enumerate};
+use crate::world_read::{ChunkPos, Pixel, PixelRun, get_section_mut_enumerate};
 use noita_api::{
     Cell, CellData, CellType, GameGlobal, GridWorld, StdBox, get_construct_cell, this_call,
 };

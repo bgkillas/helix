@@ -5,7 +5,6 @@ use noita_api::{WorldSeed, game_print};
 use rand::Rng as _;
 use std::net::{IpAddr, Ipv6Addr, SocketAddr};
 impl Context {
-    #[inline]
     pub fn text(&mut self, msg: &str) {
         if let Some(cmd) = msg.strip_prefix("/") {
             if let Some(host) = cmd.strip_prefix("join") {

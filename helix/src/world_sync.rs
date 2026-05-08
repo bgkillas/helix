@@ -1,5 +1,5 @@
 use crate::Message;
-use crate::world::{Chunk, ChunkPos, PixelRun, Priority, SECTIONS};
+use crate::world_read::{Chunk, ChunkPos, PixelRun, Priority, SECTIONS};
 use crate::world_write::{ChunkWrite, WorldWrite};
 use bevy_tangled::{ClientTrait as _, ClientTypeRef, Compression, PeerId, Reliability};
 use noita_api::game_print;

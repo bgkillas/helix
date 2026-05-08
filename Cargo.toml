@@ -8,8 +8,8 @@ lto = true
 strip = true
 panic = "abort"
 split-debuginfo = "packed"
-incremental=true
-codegen-units=1
+incremental = true
+codegen-units = 1
 opt-level = 3
 
 [workspace]

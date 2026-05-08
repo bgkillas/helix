@@ -1,9 +1,9 @@
 #![feature(sync_unsafe_cell)]
 mod text;
-mod world;
+mod world_read;
 mod world_sync;
 mod world_write;
-use crate::world::{Chunk, ChunkPos};
+use crate::world_read::{Chunk, ChunkPos};
 use crate::world_sync::WorldSync;
 use crate::world_write::{ChunkWrite, WorldWrite};
 use bevy_tangled::{Client, ClientTrait as _};
