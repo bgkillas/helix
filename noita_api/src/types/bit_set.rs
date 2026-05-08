@@ -43,6 +43,15 @@ macro_rules! define_bitset {
                 }
             }
             #[inline]
+            pub fn set_tag(&mut self, tag: &str, value: bool) {
+                let tag_manager = TagManager::<$ty>::global();
+                if let Some(n) = tag_manager.tag_indices.get(tag) {
+                    self.set(*n, value)
+                } else {
+                    todo!()
+                }
+            }
+            #[inline]
             pub fn get_tags(&self) -> impl Iterator<Item = &str> {
                 let tag_manager = TagManager::<$ty>::global().as_ref();
                 tag_manager
