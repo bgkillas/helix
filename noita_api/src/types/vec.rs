@@ -49,6 +49,32 @@ impl<T> StdVec<T> {
     pub fn is_empty(&self) -> bool {
         self.start == self.end
     }
+    #[inline]
+    pub fn push(&mut self, value: T) {
+        self.alloc(1);
+        unsafe {
+            self.end.write(value);
+            self.end = self.end.add(1);
+        }
+    }
+    fn alloc(&mut self, n: usize) {
+        if self.capacity() < self.len() + n {
+            let old_len = self.len();
+            let new_cap = (old_len + n).next_power_of_two();
+            let new_ptr = StdPtr::<T>::malloc_array(new_cap).as_ptr();
+            if old_len > 0 {
+                unsafe {
+                    ptr::copy_nonoverlapping(self.start, new_ptr, old_len);
+                }
+            }
+            if let Some(ptr) = NonNull::new(self.start) {
+                StdPtr::from(ptr).free();
+            }
+            self.start = new_ptr;
+            self.end = unsafe { new_ptr.add(old_len) };
+            self.cap = unsafe { new_ptr.add(new_cap) };
+        }
+    }
 }
 impl<T> Deref for StdVec<T> {
     type Target = [T];
