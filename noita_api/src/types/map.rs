@@ -2,7 +2,15 @@ use crate::StdBox;
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
+use std::mem;
 use std::ops::Deref;
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
+#[repr(u8)]
+pub enum RBColor {
+    Red = 0,
+    #[default]
+    Black = 1,
+}
 #[repr(C)]
 pub struct StdMap<K, V> {
     pub root: StdBox<StdMapNode<K, V>>,
@@ -27,10 +35,121 @@ pub struct StdMapNode<K, V> {
     pub left: StdBox<StdMapNode<K, V>>,
     pub parent: StdBox<StdMapNode<K, V>>,
     pub right: StdBox<StdMapNode<K, V>>,
-    pub color: bool,
+    pub color: RBColor,
     pub end: bool,
     pub key: K,
     pub value: V,
+}
+impl<K: Ord, V> StdMap<K, V> {
+    #[inline]
+    pub fn insert(&mut self, k: K, v: V) {
+        self.len += 1;
+        let mut node = StdMapNode {
+            left: self.root,
+            parent: self.root,
+            right: self.root,
+            color: RBColor::default(),
+            end: true,
+            key: k,
+            value: v,
+        };
+        let mut y = self.root;
+        let mut x = self.root.parent;
+        while x.ptr != self.root.ptr {
+            y = x;
+            x = if node.key < x.key { x.left } else { x.right };
+        }
+        node.parent = y;
+        if y.ptr == self.root.ptr {
+            self.root.parent = StdBox::new(node);
+            self.insert_fixup(self.root.parent);
+        } else {
+            node.color = RBColor::Red;
+            if node.key < y.key {
+                y.left = StdBox::new(node);
+                self.insert_fixup(y.left);
+            } else {
+                y.right = StdBox::new(node);
+                self.insert_fixup(y.right);
+            }
+        }
+    }
+    fn insert_fixup(&mut self, mut node: StdBox<StdMapNode<K, V>>) {
+        let mut parent;
+        let mut gparent;
+        while node.parent.color == RBColor::Red {
+            parent = node.parent;
+            gparent = parent.parent;
+            if parent == gparent.left {
+                let mut uncle = gparent.right;
+                if uncle.ptr != self.root.ptr && uncle.color == RBColor::Red {
+                    uncle.color = RBColor::Black;
+                    parent.color = RBColor::Black;
+                    gparent.color = RBColor::Red;
+                    node = gparent;
+                    continue;
+                }
+                if parent.right == node {
+                    self.left_rotate(parent);
+                    mem::swap(&mut parent, &mut node);
+                }
+                parent.color = RBColor::Black;
+                gparent.color = RBColor::Red;
+                self.right_rotate(gparent);
+            } else {
+                let mut uncle = gparent.left;
+                if uncle.ptr != self.root.ptr && uncle.color == RBColor::Red {
+                    uncle.color = RBColor::Black;
+                    parent.color = RBColor::Black;
+                    gparent.color = RBColor::Red;
+                    node = gparent;
+                    continue;
+                }
+                if parent.left == node {
+                    self.right_rotate(parent);
+                    mem::swap(&mut parent, &mut node);
+                }
+                parent.color = RBColor::Black;
+                gparent.color = RBColor::Red;
+                self.left_rotate(gparent);
+            }
+        }
+        self.root.parent.color = RBColor::Black;
+    }
+    fn left_rotate(&mut self, mut node: StdBox<StdMapNode<K, V>>) {
+        let mut temp = node.right;
+        node.right = temp.left;
+        if temp.left.ptr != self.root.ptr {
+            temp.left.parent = node;
+        }
+        temp.parent = node.parent;
+        if node == self.root.parent {
+            self.root.parent = temp;
+        } else if node == node.parent.left {
+            node.parent.left = temp;
+        } else {
+            node.parent.right = temp;
+        }
+        temp.left = node;
+        node.parent = temp;
+    }
+    fn right_rotate(&mut self, mut node: StdBox<StdMapNode<K, V>>) {
+        let mut temp = node.left;
+        node.left = temp.right;
+        if temp.right.ptr != self.root.ptr {
+            temp.right.parent = node;
+        }
+        temp.parent = node.parent;
+        if node == self.root.parent {
+            self.root.parent = temp;
+        } else if node == node.parent.right {
+            node.parent.right = temp;
+        } else {
+            node.parent.left = temp;
+        }
+        temp.right = node;
+        node.parent = temp;
+    }
 }
 #[repr(C)]
 #[derive(Default)]
@@ -38,7 +157,7 @@ struct UninitStdMapNode<K, V> {
     pub left: Option<StdBox<UninitStdMapNode<K, V>>>,
     pub parent: Option<StdBox<UninitStdMapNode<K, V>>>,
     pub right: Option<StdBox<UninitStdMapNode<K, V>>>,
-    pub color: bool,
+    pub color: RBColor,
     pub end: bool,
     pub key: K,
     pub value: V,
