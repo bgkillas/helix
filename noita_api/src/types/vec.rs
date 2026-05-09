@@ -12,7 +12,7 @@ pub struct StdVec<T> {
 impl<T: Debug> Debug for StdVec<T> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", &**self)
+        f.debug_list().entries(self.iter()).finish()
     }
 }
 impl<T> Default for StdVec<T> {

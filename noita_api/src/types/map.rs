@@ -29,7 +29,6 @@ pub struct StdMapNode<K, V> {
     pub right: StdBox<StdMapNode<K, V>>,
     pub color: bool,
     pub end: bool,
-    unk: [u8; 2],
     pub key: K,
     pub value: V,
 }
@@ -41,16 +40,13 @@ struct UninitStdMapNode<K, V> {
     pub right: Option<StdBox<UninitStdMapNode<K, V>>>,
     pub color: bool,
     pub end: bool,
-    unk: [u8; 2],
     pub key: K,
     pub value: V,
 }
 impl<K: Debug, V: Debug> Debug for StdMap<K, V> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("StdMap")
-            .field(&self.iter().collect::<Vec<_>>())
-            .finish()
+        f.debug_map().entries(self.iter()).finish()
     }
 }
 #[derive(Debug)]
@@ -112,7 +108,7 @@ impl<L: ?Sized + Ord, K: Deref<Target = L>, V> StdMap<K, V> {
             return None;
         }
         loop {
-            let next = match key.cmp(&*node.key) {
+            let next = match key.cmp(&node.key) {
                 Ordering::Less => node.left,
                 Ordering::Greater => node.right,
                 Ordering::Equal => return Some(&node.as_ref().value),

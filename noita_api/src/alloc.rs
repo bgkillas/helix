@@ -230,7 +230,7 @@ impl<T: Sized> DerefMut for StdPtr<T> {
 impl<T: Sized + Debug> Debug for StdBox<T> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", **self)
+        write!(f, "{:?}", self.as_ref())
     }
 }
 impl<T> From<&mut T> for StdBox<T> {
