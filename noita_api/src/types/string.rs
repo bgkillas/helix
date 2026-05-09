@@ -68,7 +68,7 @@ impl From<&str> for StdStringRef<'static> {
 impl<'a> StdStringRef<'a> {
     #[must_use]
     #[inline]
-    pub fn as_str(&self) -> &'a str {
+    pub fn as_str(&self) -> &str {
         let ptr = if self.capacity > 16 {
             unsafe { self.buffer.buffer.as_ptr() }
         } else {
