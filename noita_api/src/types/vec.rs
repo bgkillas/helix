@@ -57,6 +57,23 @@ impl<T> StdVec<T> {
             self.end = self.end.add(1);
         }
     }
+    #[inline]
+    pub fn pop(&mut self) -> T {
+        unsafe {
+            self.end = self.end.sub(1);
+            self.end.read()
+        }
+    }
+    #[inline]
+    pub fn swap_remove(&mut self, index: usize) -> T {
+        unsafe {
+            let value = ptr::read(self.as_ptr().add(index));
+            let base_ptr = self.as_mut_ptr();
+            ptr::copy(base_ptr.add(self.len() - 1), base_ptr.add(index), 1);
+            self.end = self.end.sub(1);
+            value
+        }
+    }
     fn alloc(&mut self, n: usize) {
         if self.capacity() < self.len() + n {
             let old_len = self.len();
