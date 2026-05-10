@@ -73,14 +73,14 @@ static_detour! {
 }
 fn item_pickup(this: StdBox<c_void>, entity: StdBox<Entity>, component: StdBox<c_void>) {
     if !DISABLE_ITEM_PICKUP.load(Ordering::Relaxed)
-        || !DeathMatch::global().entities.contains(&entity)
+        || !DeathMatch::global().entities.contains(&Some(entity))
     {
         ITEM_PICKUP.call(this, entity, component);
     }
 }
 #[inline]
 pub fn disable_item_pickup() {
-    if INVENTORY.is_enabled() {
+    if ITEM_PICKUP.is_enabled() {
         return;
     }
     unsafe {

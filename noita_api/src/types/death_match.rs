@@ -12,6 +12,6 @@ pub struct DeathMatch {
     pub simple_ui_listener_vtable: *const usize,
     pub event_listener_vtable: *const usize,
     unk1: [*const usize; 15],
-    pub entities: StdVec<StdBox<Entity>>,
+    pub entities: StdVec<Option<StdBox<Entity>>>,
     unk2: [*const usize; 25],
 }

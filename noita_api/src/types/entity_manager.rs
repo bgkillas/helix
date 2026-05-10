@@ -31,13 +31,23 @@ impl EntityManager {
     #[inline]
     pub fn get_id_with_tag(&self, id: usize, tag: &str) -> Option<StdBox<Entity>> {
         if let Some(n) = TagManager::<u16>::global().tag_indices.get(tag).copied() {
-            self.entity_buckets[usize::from(n)]
-                .iter()
-                .find(|e| e.id == id)
-                .copied()
+            self.get_id_with_tag_id(id, n)
         } else {
             None
         }
+    }
+    #[must_use]
+    #[inline]
+    pub fn iter_with_tag_id(&self, tag_id: u16) -> impl DoubleEndedIterator<Item = StdBox<Entity>> {
+        self.entity_buckets[usize::from(tag_id)].iter().copied()
+    }
+    #[must_use]
+    #[inline]
+    pub fn get_id_with_tag_id(&self, id: usize, tag_id: u16) -> Option<StdBox<Entity>> {
+        self.entity_buckets[usize::from(tag_id)]
+            .iter()
+            .find(|e| e.id == id)
+            .copied()
     }
     #[must_use]
     #[inline]
