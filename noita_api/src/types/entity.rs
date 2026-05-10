@@ -26,10 +26,9 @@ impl StdBox<Entity> {
             true
         } else {
             let stdstring = StdString::from(tag);
-            tag_manager.insert(stdstring);
-            let mut vec = StdVec::default();
-            vec.push(*self);
-            em.entity_buckets.push(vec);
+            let n = tag_manager.insert_new(stdstring);
+            self.tags.set(n, true);
+            em.entity_buckets[usize::from(n)].push(*self);
             false
         }
     }

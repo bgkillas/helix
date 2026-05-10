@@ -17,14 +17,20 @@ where
     pub fn insert(&mut self, tag: StdString) -> T {
         if let Some(n) = self.tag_indices.get(&tag) {
             *n
-        } else if self.tags.capacity() > self.tags.len() {
+        } else {
+            self.insert_new(tag)
+        }
+    }
+    #[inline]
+    pub fn insert_new(&mut self, tag: StdString) -> T {
+        if self.max_tag_count == self.tags.len() {
+            panic!()
+        } else {
             let index = T::try_from(self.tags.len()).unwrap();
             let tag_copy = unsafe { ptr::from_ref(&tag).read() };
             self.tags.push(tag_copy);
             self.tag_indices.insert(tag, index);
             index
-        } else {
-            panic!()
         }
     }
 }

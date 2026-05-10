@@ -9,33 +9,34 @@ pub struct EntityManager {
     pub free_ids: StdVec<usize>,
     pub entities: StdVec<Option<StdBox<Entity>>>,
     pub entity_buckets: StdVec<StdVec<StdBox<Entity>>>,
-    pub component_buffers: StdVec<Option<StdBox<ComponentBuffer<()>>>>,
+    pub component_buffers: StdVec<StdBox<ComponentBuffer<()>>>,
     pub event_manager: StdBox<EventManager>,
 }
 impl EntityManager {
     #[must_use]
     #[inline]
-    pub fn iter_with_tag(&self, tag: &str) -> impl DoubleEndedIterator<Item = &StdBox<Entity>> {
-        if let Some(n) = TagManager::<u16>::global().tag_indices.get(tag).copied()
-            && let Some(vec) = self.entity_buckets.get(usize::from(n))
-        {
-            vec.iter()
+    pub fn iter_with_tag(&self, tag: &str) -> impl DoubleEndedIterator<Item = StdBox<Entity>> {
+        if let Some(n) = TagManager::<u16>::global().tag_indices.get(tag).copied() {
+            self.entity_buckets[usize::from(n)].iter().copied()
         } else {
-            [].iter()
+            [].iter().copied()
         }
     }
     #[must_use]
     #[inline]
-    pub fn iter_mut_with_tag(
-        &mut self,
-        tag: &str,
-    ) -> impl DoubleEndedIterator<Item = &mut StdBox<Entity>> {
-        if let Some(n) = TagManager::<u16>::global().tag_indices.get(tag).copied()
-            && let Some(vec) = self.entity_buckets.get_mut(usize::from(n))
-        {
-            vec.iter_mut()
+    pub fn get_id_with_tag(&mut self, id: usize, tag: &str) -> Option<StdBox<Entity>> {
+        if let Some(n) = TagManager::<u16>::global().tag_indices.get(tag).copied() {
+            self.entity_buckets[usize::from(n)]
+                .iter()
+                .find(|e| e.id == id)
+                .copied()
         } else {
-            [].iter_mut()
+            None
         }
+    }
+    #[must_use]
+    #[inline]
+    pub fn get_id(&mut self, id: usize) -> Option<StdBox<Entity>> {
+        self.entities.iter().flatten().find(|e| e.id == id).copied()
     }
 }
