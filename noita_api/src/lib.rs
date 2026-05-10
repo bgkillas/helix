@@ -20,6 +20,7 @@ pub use alloc::*;
 pub use damage::*;
 pub use fire_wand::*;
 pub use libloading;
+pub use lua::LuaRawFn;
 pub use lua_global::*;
 pub use new_game::*;
 use noita_api_macros::search_fun;

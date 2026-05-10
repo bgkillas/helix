@@ -1,10 +1,10 @@
-use crate::lua_bindings::lua_CFunction;
 use crate::lua_bindings::{
-    LUA_GLOBALSINDEX, lua_State, lua_createtable, lua_error, lua_getfield, lua_gettable,
-    lua_objlen, lua_pushboolean, lua_pushinteger, lua_pushlstring, lua_pushnil, lua_pushnumber,
-    lua_rawseti, lua_settop, lua_toboolean, lua_tocfunction, lua_tointeger, lua_tolstring,
-    lua_tonumber, lua_type,
+    LUA_GLOBALSINDEX, LUA_REGISTRYINDEX, lua_State, lua_createtable, lua_error, lua_getfield,
+    lua_gettable, lua_objlen, lua_pushboolean, lua_pushinteger, lua_pushlstring, lua_pushnil,
+    lua_pushnumber, lua_pushvalue, lua_rawgeti, lua_rawseti, lua_settop, lua_toboolean,
+    lua_tocfunction, lua_tointeger, lua_tolstring, lua_tonumber, lua_type,
 };
+use crate::lua_bindings::{lua_CFunction, luaL_ref};
 use noita_api_macros::{make_lua_get_tuples, make_lua_ret_tuples};
 use std::convert::Infallible;
 use std::error::Error;
@@ -26,6 +26,11 @@ pub enum LuaError {
     NullStr,
     WrongArrayLength,
     WrongSizedTypeForArray,
+}
+#[derive(Debug, Clone, Copy)]
+#[repr(transparent)]
+pub struct LuaRawFn {
+    fun: i32,
 }
 impl LuaState {
     #[inline]
@@ -66,6 +71,18 @@ impl LuaState {
     #[inline]
     pub fn to_cfunction(self, index: i32) -> lua_CFunction {
         unsafe { lua_tocfunction(self.lua, index) }
+    }
+    #[must_use]
+    #[inline]
+    pub fn to_ref(self, index: i32) -> i32 {
+        unsafe {
+            lua_pushvalue(self.lua, index);
+            luaL_ref(self.lua, LUA_REGISTRYINDEX)
+        }
+    }
+    #[inline]
+    pub fn push_ref(self, reference: i32) {
+        unsafe { lua_rawgeti(self.lua, LUA_REGISTRYINDEX, reference) }
     }
     #[inline]
     pub fn push_number(self, val: f64) {
@@ -235,6 +252,14 @@ impl<T: LuaFnRet> LuaFnRet for Option<T> {
     }
 }
 
+impl LuaFnRet for LuaRawFn {
+    #[inline]
+    fn do_return(self, lua: LuaState) -> c_int {
+        lua.push_ref(self.fun);
+        1
+    }
+}
+
 impl<T: LuaFnRet> LuaFnRet for Vec<T> {
     #[inline]
     fn do_return(self, lua: LuaState) -> c_int {
@@ -285,6 +310,18 @@ impl LuaGetValue for isize {
     #[inline]
     fn get(lua: LuaState, index: i32) -> Result<(i32, Self), LuaError> {
         Ok((index + 1, lua.to_integer(index)))
+    }
+}
+
+impl LuaGetValue for LuaRawFn {
+    #[inline]
+    fn get(lua: LuaState, index: i32) -> Result<(i32, Self), LuaError> {
+        Ok((
+            index + 1,
+            LuaRawFn {
+                fun: lua.to_ref(index),
+            },
+        ))
     }
 }
 

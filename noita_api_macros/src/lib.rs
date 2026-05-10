@@ -38,6 +38,7 @@ enum Type {
     Slice(Box<Type>),
     Array(Box<Type>, usize),
     LuaState,
+    LuaRawFn,
     Empty,
 }
 impl Type {
@@ -55,6 +56,7 @@ impl Display for Type {
             Type::Isize => write!(f, "integer"),
             Type::F64 => write!(f, "number"),
             Type::Str | Type::RawStr => write!(f, "string"),
+            Type::LuaRawFn => write!(f, "fun"),
             Type::NilOr(ty) => write!(f, "{ty}?"),
             Type::Tuple(tys) => write!(
                 f,
@@ -75,6 +77,9 @@ impl ToTokens for Type {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
             Type::Bool => tokens.append(TokenTree::Ident(Ident::new("bool", Span::call_site()))),
+            Type::LuaRawFn => {
+                tokens.append(TokenTree::Ident(Ident::new("LuaRawFn", Span::call_site())));
+            }
             Type::Isize => tokens.append(TokenTree::Ident(Ident::new("isize", Span::call_site()))),
             Type::F64 => tokens.append(TokenTree::Ident(Ident::new("f64", Span::call_site()))),
             Type::Str => {
@@ -124,6 +129,7 @@ impl TryFrom<&str> for Type {
             "& RawStr" => Self::RawStr,
             "LuaState" => Self::LuaState,
             "bool" => Self::Bool,
+            "LuaRawFn" => Self::LuaRawFn,
             "isize" => Self::Isize,
             "f64" => Self::F64,
             "self" => Self::Parent,

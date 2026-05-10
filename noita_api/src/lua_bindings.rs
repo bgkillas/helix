@@ -408,6 +408,8 @@ unsafe extern "C" {
     pub fn lua_getallocf(L: *mut lua_State, ud: *mut *mut std::os::raw::c_void) -> lua_Alloc;
     pub fn lua_setallocf(L: *mut lua_State, f: lua_Alloc, ud: *mut std::os::raw::c_void);
     pub fn luaL_newstate() -> *mut lua_State;
+    pub fn luaL_ref(L: *mut lua_State, t: i32) -> i32;
+    pub fn luaL_unref(L: *mut lua_State, t: i32, r: i32);
     pub fn lua_getstack(
         L: *mut lua_State,
         level: std::os::raw::c_int,
