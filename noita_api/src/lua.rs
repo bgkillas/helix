@@ -2,7 +2,7 @@ use crate::lua_bindings::{
     LUA_GLOBALSINDEX, LUA_REGISTRYINDEX, lua_State, lua_createtable, lua_error, lua_getfield,
     lua_gettable, lua_objlen, lua_pushboolean, lua_pushinteger, lua_pushlstring, lua_pushnil,
     lua_pushnumber, lua_pushvalue, lua_rawgeti, lua_rawseti, lua_settop, lua_toboolean,
-    lua_tocfunction, lua_tointeger, lua_tolstring, lua_tonumber, lua_type,
+    lua_tocfunction, lua_tointeger, lua_tolstring, lua_tonumber, lua_type, luaL_unref,
 };
 use crate::lua_bindings::{lua_CFunction, luaL_ref};
 use noita_api_macros::{make_lua_get_tuples, make_lua_ret_tuples};
@@ -71,6 +71,10 @@ impl LuaState {
     #[inline]
     pub fn to_cfunction(self, index: i32) -> lua_CFunction {
         unsafe { lua_tocfunction(self.lua, index) }
+    }
+    #[inline]
+    pub fn free_ref(self, reference: i32) {
+        unsafe { luaL_unref(self.lua, LUA_REGISTRYINDEX, reference) }
     }
     #[must_use]
     #[inline]
