@@ -26,3 +26,9 @@ pub struct Inventory {
     pub animation_state: usize,
     unk15: StdVec<[isize; 18]>,
 }
+impl Default for Inventory {
+    #[inline]
+    fn default() -> Self {
+        todo!()
+    }
+}

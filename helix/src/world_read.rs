@@ -258,6 +258,7 @@ impl PixelRunBuilder {
     }
 }
 impl Default for PixelRunBuilder {
+    #[inline]
     fn default() -> Self {
         Self {
             vec: Vec::with_capacity(AREA),

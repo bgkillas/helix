@@ -4,7 +4,7 @@ use std::ops::{Deref, DerefMut};
 #[repr(transparent)]
 #[assert_size_with(0x20, u8)]
 #[assert_size_with(0x40, u16)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct BitSet<T>(pub [T; 32]);
 macro_rules! define_bitset {
     ($ty:ty) => {

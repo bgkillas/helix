@@ -1,9 +1,11 @@
 use std::ops::{Deref, DerefMut};
 #[repr(transparent)]
+#[derive(Default)]
 pub struct LogFlush {
     pub flush: bool,
 }
 #[repr(transparent)]
+#[derive(Default)]
 pub struct LogLevel {
     pub level: isize,
 }

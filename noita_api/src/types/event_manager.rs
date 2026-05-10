@@ -13,3 +13,14 @@ pub struct Event {
     unk: usize,
     func: *const usize,
 }
+impl Default for EventManager {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            vtable: StdBox::new(EventManagerVTable {}),
+            unk1: 0,
+            unk2: 0,
+            functions: StdVec::default(),
+        }
+    }
+}

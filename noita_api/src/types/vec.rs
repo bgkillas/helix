@@ -57,6 +57,13 @@ impl<T> StdVec<T> {
             self.end = self.end.add(1);
         }
     }
+    #[must_use]
+    #[inline]
+    pub fn with_capacity(n: usize) -> Self {
+        let mut vec = StdVec::default();
+        vec.alloc(n);
+        vec
+    }
     #[inline]
     pub fn pop(&mut self) -> T {
         unsafe {

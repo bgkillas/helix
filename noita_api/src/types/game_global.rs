@@ -21,6 +21,12 @@ pub struct GameGlobal {
     pub inventory_open: usize,
     unk4: [isize; 79],
 }
+impl Default for GameGlobal {
+    #[inline]
+    fn default() -> Self {
+        todo!()
+    }
+}
 impl GameGlobal {
     #[inline]
     pub fn unpause(&mut self) {

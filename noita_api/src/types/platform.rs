@@ -39,6 +39,12 @@ pub struct Platform {
     pub joysticks_enabled: bool,
     padding5: [u8; 3],
 }
+impl Default for Platform {
+    #[inline]
+    fn default() -> Self {
+        todo!()
+    }
+}
 #[derive(Debug)]
 #[repr(C)]
 pub struct AppConfig {

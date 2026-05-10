@@ -13,7 +13,12 @@ pub struct TranslationManager {
     pub unknown_primitive_vec: StdVec<usize>,
     pub unknown_map: StdMap<StdString, StdString>,
 }
-
+impl Default for TranslationManager {
+    #[inline]
+    fn default() -> Self {
+        todo!()
+    }
+}
 #[derive(Debug)]
 #[repr(C)]
 pub struct Language {

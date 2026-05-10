@@ -13,6 +13,7 @@ pub struct WorldSync {
     chunks: Box<[[[Option<Box<ChunkVal>>; SECTIONS]; 512]; 512]>,
 }
 impl Default for WorldSync {
+    #[inline]
     fn default() -> Self {
         Self {
             chunks: unsafe { Box::new_zeroed().assume_init() },

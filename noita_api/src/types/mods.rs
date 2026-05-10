@@ -12,7 +12,7 @@ pub struct ModListEntry {
     unk2: u8,
     unk3: [u8; 4],
 }
-#[derive(Debug)]
+#[derive(Debug, Default)]
 #[repr(C)]
 pub struct Mods {
     pub names: StdVec<ModListEntry>,

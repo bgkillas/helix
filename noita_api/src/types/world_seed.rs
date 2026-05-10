@@ -1,5 +1,6 @@
 use std::ops::{Deref, DerefMut};
 #[repr(transparent)]
+#[derive(Default)]
 pub struct WorldSeed {
     pub seed: usize,
 }

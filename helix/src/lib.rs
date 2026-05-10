@@ -157,6 +157,7 @@ pub(crate) enum Message {
     ChunksWrite(Vec<ChunkWrite>),
 }
 impl Default for Context {
+    #[inline]
     fn default() -> Self {
         Self {
             world_seed: 0,

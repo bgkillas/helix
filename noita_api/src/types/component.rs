@@ -30,7 +30,14 @@ pub struct Component<T: ComponentTrait> {
     unk4: usize,
     data: T,
 }
+impl<T: ComponentTrait> Default for Component<T> {
+    #[inline]
+    fn default() -> Self {
+        todo!()
+    }
+}
 #[repr(transparent)]
+#[derive(Default)]
 pub struct MaxComponent {
     pub max: usize,
 }
@@ -53,6 +60,12 @@ pub struct ComponentTypeManager {
     pub next_id: usize,
     pub component_buffer_indices: StdMap<StdString, usize>,
 }
+impl Default for ComponentTypeManager {
+    #[inline]
+    fn default() -> Self {
+        todo!()
+    }
+}
 #[repr(C)]
 #[derive(Debug)]
 pub struct ComponentSystemManager {
@@ -62,6 +75,12 @@ pub struct ComponentSystemManager {
     pub unk: [*const usize; 8],
     pub unk2: StdVec<*const usize>,
     pub unk3: [*const usize; 6],
+}
+impl Default for ComponentSystemManager {
+    #[inline]
+    fn default() -> Self {
+        todo!()
+    }
 }
 #[repr(C)]
 #[derive(Debug)]

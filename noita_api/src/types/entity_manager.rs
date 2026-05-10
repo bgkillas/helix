@@ -12,6 +12,24 @@ pub struct EntityManager {
     pub component_buffers: StdVec<StdBox<ComponentBuffer<()>>>,
     pub event_manager: StdBox<EventManager>,
 }
+impl Default for EntityManager {
+    #[inline]
+    fn default() -> Self {
+        let mut entity_buckets = StdVec::with_capacity(512);
+        for _ in 0..512 {
+            entity_buckets.push(StdVec::default());
+        }
+        Self {
+            vtable: StdBox::new(EntityManagerVTable {}),
+            max_entity_id: 0,
+            free_ids: StdVec::default(),
+            entities: StdVec::default(),
+            entity_buckets,
+            component_buffers: StdVec::default(),
+            event_manager: StdBox::new(EventManager::default()),
+        }
+    }
+}
 impl EntityManager {
     #[must_use]
     #[inline]
@@ -53,5 +71,20 @@ impl EntityManager {
     #[inline]
     pub fn get_id(&self, id: usize) -> Option<StdBox<Entity>> {
         self.entities.iter().flatten().find(|e| e.id == id).copied()
+    }
+}
+#[test]
+fn test_iter() {
+    unsafe {
+        let em = EntityManager::global();
+        let mut ent1 = StdBox::<Entity>::new_entity();
+        ent1.set_tag("tag_a");
+        for mut ent in em.iter_with_tag("tag_a") {
+            ent.set_tag("tag_b");
+        }
+        for mut ent in em.iter_with_tag("tag_a") {
+            ent.unset_tag("tag_a");
+            ent.set_tag("tag_a");
+        }
     }
 }

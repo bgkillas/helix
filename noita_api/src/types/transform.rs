@@ -1,6 +1,6 @@
 use crate::Vec2;
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Transform {
     pub pos: Vec2<f32>,
     pub angle: Vec2<f32>,

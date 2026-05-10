@@ -12,6 +12,7 @@ pub struct WorldWrite {
 unsafe impl Send for WorldWrite {}
 unsafe impl Sync for WorldWrite {}
 impl Default for WorldWrite {
+    #[inline]
     fn default() -> Self {
         let construct_cell = get_construct_cell();
         Self { construct_cell }

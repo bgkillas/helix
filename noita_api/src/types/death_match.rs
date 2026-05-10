@@ -15,3 +15,9 @@ pub struct DeathMatch {
     pub entities: StdVec<Option<StdBox<Entity>>>,
     unk2: [*const usize; 25],
 }
+impl Default for DeathMatch {
+    #[inline]
+    fn default() -> Self {
+        todo!()
+    }
+}

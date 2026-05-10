@@ -17,6 +17,12 @@ pub struct GlobalStats {
     pub global: GameStats,
     pub prev_best: GameStats,
 }
+impl Default for GlobalStats {
+    #[inline]
+    fn default() -> Self {
+        todo!()
+    }
+}
 #[derive(Debug)]
 #[repr(C)]
 pub struct GameStats {

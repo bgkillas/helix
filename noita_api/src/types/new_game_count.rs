@@ -1,5 +1,6 @@
 use std::ops::{Deref, DerefMut};
 #[repr(transparent)]
+#[derive(Default)]
 pub struct NewGameCount {
     pub count: usize,
 }

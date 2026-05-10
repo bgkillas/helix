@@ -735,11 +735,29 @@ fn get_global_type(global_const: &Ident, type_name: &TokenStream, is_ptr_ptr: bo
     } else {
         quote! {#global_const}
     };
+    let mut type_static = Vec::new();
+    for token in type_name.clone() {
+        if let TokenTree::Punct(p) = &token
+            && p.as_char() == '<'
+        {
+            type_static.push(TokenTree::Punct(Punct::new(':', Spacing::Joint)));
+            type_static.push(TokenTree::Punct(Punct::new(':', Spacing::Joint)));
+        }
+        type_static.push(token);
+    }
+    let type_static = TokenStream::from_iter(type_static);
     quote! {
         impl #type_name {
             #[inline]
+            #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
             pub fn global() -> StdBox<Self> {
                 StdBox::from(#ptr_read)
+            }
+            #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+            pub fn global() -> StdBox<Self> {
+                _ = #global_const;
+                static GLOBAL: std::sync::LazyLock<StdBox<#type_name>> = std::sync::LazyLock::new(||StdBox::new(#type_static::default()));
+                *GLOBAL
             }
         }
     }
