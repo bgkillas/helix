@@ -15,6 +15,11 @@ pub struct EntityManager {
 impl EntityManager {
     #[must_use]
     #[inline]
+    pub fn iter(&self) -> impl DoubleEndedIterator<Item = StdBox<Entity>> {
+        self.entities.iter().flatten().copied()
+    }
+    #[must_use]
+    #[inline]
     pub fn iter_with_tag(&self, tag: &str) -> impl DoubleEndedIterator<Item = StdBox<Entity>> {
         if let Some(n) = TagManager::<u16>::global().tag_indices.get(tag).copied() {
             self.entity_buckets[usize::from(n)].iter().copied()
@@ -24,7 +29,7 @@ impl EntityManager {
     }
     #[must_use]
     #[inline]
-    pub fn get_id_with_tag(&mut self, id: usize, tag: &str) -> Option<StdBox<Entity>> {
+    pub fn get_id_with_tag(&self, id: usize, tag: &str) -> Option<StdBox<Entity>> {
         if let Some(n) = TagManager::<u16>::global().tag_indices.get(tag).copied() {
             self.entity_buckets[usize::from(n)]
                 .iter()
@@ -36,7 +41,7 @@ impl EntityManager {
     }
     #[must_use]
     #[inline]
-    pub fn get_id(&mut self, id: usize) -> Option<StdBox<Entity>> {
+    pub fn get_id(&self, id: usize) -> Option<StdBox<Entity>> {
         self.entities.iter().flatten().find(|e| e.id == id).copied()
     }
 }
