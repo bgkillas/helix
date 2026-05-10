@@ -5,10 +5,10 @@ use std::sync::OnceLock;
 static RAW: OnceLock<RawDetour> = OnceLock::new();
 pub type FireWandFun = fast_call!(
     fn(
-        Option<StdBox<Entity>>,
-        Option<StdBox<Entity>>,
+        Option<Entity>,
+        Option<Entity>,
         StdBox<Vec2<f32>>,
-        Option<StdBox<Entity>>,
+        Option<Entity>,
         isize,
         isize,
         u8,
@@ -29,10 +29,10 @@ pub fn install_fire_wand_manual(fire_fun_hook: FireWandFun) {
         let fun = get_fast_call!(
             fun_addr as usize,
             fn(
-                Option<StdBox<Entity>>,
-                Option<StdBox<Entity>>,
+                Option<Entity>,
+                Option<Entity>,
                 StdBox<Vec2<f32>>,
-                Option<StdBox<Entity>>,
+                Option<Entity>,
                 isize,
                 isize,
                 u8,
@@ -53,10 +53,10 @@ fn get_ptr() -> *const () {
 #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 #[unsafe(naked)]
 pub extern "fastcall" fn call_orig(
-    _entity: Option<StdBox<Entity>>,
-    _varlet_parent: Option<StdBox<Entity>>,
+    _entity: Option<Entity>,
+    _varlet_parent: Option<Entity>,
     _position: StdBox<Vec2<f32>>,
-    _projectile: Option<StdBox<Entity>>,
+    _projectile: Option<Entity>,
     _unk1: isize,
     _unk2: isize,
     _unk3: u8,
@@ -89,10 +89,10 @@ macro_rules! install_fire_wand {
         #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
         #[allow(clippy::too_many_arguments)]
         extern "fastcall" fn on_fire_inner(
-            entity: Option<$crate::StdBox<$crate::Entity>>,
-            verlet_parent: Option<$crate::StdBox<$crate::Entity>>,
+            entity: Option<$crate::Entity>,
+            verlet_parent: Option<$crate::Entity>,
             position: $crate::StdBox<$crate::Vec2<f32>>,
-            projectile: Option<$crate::StdBox<$crate::Entity>>,
+            projectile: Option<$crate::Entity>,
             unk1: isize,
             unk2: isize,
             unk3: u8,
@@ -117,10 +117,10 @@ macro_rules! install_fire_wand {
         #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
         #[unsafe(naked)]
         pub extern "fastcall" fn fire_fun_hook(
-            _entity: Option<$crate::StdBox<$crate::Entity>>,
-            _verlet_parent: Option<$crate::StdBox<$crate::Entity>>,
+            _entity: Option<$crate::Entity>,
+            _verlet_parent: Option<$crate::Entity>,
             _position: $crate::StdBox<$crate::Vec2<f32>>,
-            _projectile: Option<$crate::StdBox<$crate::Entity>>,
+            _projectile: Option<$crate::Entity>,
             _unk1: isize,
             _unk2: isize,
             _unk3: u8,

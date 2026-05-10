@@ -102,10 +102,10 @@ mod lua {
     #[fire_hook]
     fn on_fire(
         orig: FireWandFun,
-        entity: Option<StdBox<Entity>>,
-        varlet_parent: Option<StdBox<Entity>>,
+        entity: Option<Entity>,
+        varlet_parent: Option<Entity>,
         position: StdBox<Vec2<f32>>,
-        projectile: Option<StdBox<Entity>>,
+        projectile: Option<Entity>,
         unk1: isize,
         unk2: isize,
         unk3: u8,
@@ -129,7 +129,7 @@ mod lua {
     #[damage_hook]
     fn on_damage(
         orig: DamageFun,
-        entity: Option<StdBox<Entity>>,
+        entity: Option<Entity>,
         damage_model: Option<StdBox<DamageModel>>,
         description: StdBox<StdString>,
         damage_types: usize,

@@ -8,7 +8,7 @@ pub struct DamageModel {}
 #[repr(C)]
 #[derive(Debug)]
 pub struct DamageThing {
-    pub entity: Option<StdBox<Entity>>,
+    pub entity: Option<Entity>,
     pub damage_by_type: [u8; 0x40],
     pub impulse: Vec2<f32>,
     pub world_pos: Vec2<f32>,
@@ -27,7 +27,7 @@ pub struct DamageThing {
 }
 pub type DamageFun = fast_call!(
     fn(
-        Option<StdBox<Entity>>,
+        Option<Entity>,
         Option<StdBox<DamageModel>>,
         StdBox<StdString>,
         usize,
@@ -41,7 +41,7 @@ static RAW: OnceLock<RawDetour> = OnceLock::new();
 pub fn install_damage_function_manual(
     damage_fun_hook: fast_call!(
         fn(
-            Option<StdBox<Entity>>,
+            Option<Entity>,
             Option<StdBox<DamageModel>>,
             StdBox<StdString>,
             usize,
@@ -59,7 +59,7 @@ pub fn install_damage_function_manual(
         let fun = get_fast_call!(
             fun_addr as usize,
             fn(
-                Option<StdBox<Entity>>,
+                Option<Entity>,
                 Option<StdBox<DamageModel>>,
                 StdBox<StdString>,
                 usize,
@@ -78,7 +78,7 @@ fn get_ptr() -> *const () {
 #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 #[unsafe(naked)]
 pub extern "fastcall" fn call_orig_damage(
-    _entity: Option<StdBox<Entity>>,
+    _entity: Option<Entity>,
     _damage_model: Option<StdBox<DamageModel>>,
     _description: StdBox<StdString>,
     _damage_types: usize,
@@ -106,7 +106,7 @@ macro_rules! install_damage_function {
         #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
         #[allow(clippy::too_many_arguments)]
         extern "fastcall" fn on_damage_inner(
-            entity: Option<$crate::StdBox<$crate::Entity>>,
+            entity: Option<$crate::Entity>,
             damage_model: Option<$crate::StdBox<$crate::DamageModel>>,
             description: $crate::StdBox<$crate::StdString>,
             damage_types: usize,
@@ -126,7 +126,7 @@ macro_rules! install_damage_function {
         #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
         #[unsafe(naked)]
         pub extern "fastcall" fn damage_fun_hook(
-            _entity: Option<$crate::StdBox<$crate::Entity>>,
+            _entity: Option<$crate::Entity>,
             _damage_model: Option<$crate::StdBox<$crate::DamageModel>>,
             _description: $crate::StdBox<$crate::StdString>,
             _damage_types: usize,

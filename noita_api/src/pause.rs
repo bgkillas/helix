@@ -65,13 +65,13 @@ pub fn disable_inventory() {
 pub static DISABLE_ITEM_PICKUP: AtomicBool = AtomicBool::new(false);
 #[cfg(target_os = "windows")]
 static_detour! {
-    static ITEM_PICKUP: extern "thiscall" fn(StdBox<c_void>, StdBox<Entity>, StdBox<c_void>);
+    static ITEM_PICKUP: extern "thiscall" fn(StdBox<c_void>, Entity, StdBox<c_void>);
 }
 #[cfg(not(target_os = "windows"))]
 static_detour! {
-    static ITEM_PICKUP: extern "C" fn(StdBox<c_void>, StdBox<Entity>, StdBox<c_void>);
+    static ITEM_PICKUP: extern "C" fn(StdBox<c_void>, Entity, StdBox<c_void>);
 }
-fn item_pickup(this: StdBox<c_void>, entity: StdBox<Entity>, component: StdBox<c_void>) {
+fn item_pickup(this: StdBox<c_void>, entity: Entity, component: StdBox<c_void>) {
     if !DISABLE_ITEM_PICKUP.load(Ordering::Relaxed)
         || !DeathMatch::global().entities.contains(&Some(entity))
     {
@@ -84,10 +84,7 @@ pub fn disable_item_pickup() {
         return;
     }
     unsafe {
-        let old_item = get_this_call!(
-            0x00b9_0480,
-            fn(StdBox<c_void>, StdBox<Entity>, StdBox<c_void>)
-        );
+        let old_item = get_this_call!(0x00b9_0480, fn(StdBox<c_void>, Entity, StdBox<c_void>));
         ITEM_PICKUP.initialize(old_item, item_pickup).unwrap();
         ITEM_PICKUP.enable().unwrap();
     }

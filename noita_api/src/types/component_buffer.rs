@@ -9,7 +9,7 @@ pub struct ComponentBuffer<T: ComponentTrait> {
     pub end: usize,
     unk: [isize; 2],
     pub entity_entry: StdVec<usize>,
-    pub entities: StdVec<Option<StdBox<Entity>>>,
+    pub entities: StdVec<Option<Entity>>,
     pub prev: StdVec<usize>,
     pub next: StdVec<usize>,
     pub component_list: StdVec<Option<StdBox<Component<T>>>>,

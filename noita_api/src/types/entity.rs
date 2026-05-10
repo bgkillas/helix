@@ -1,7 +1,8 @@
 use crate::{BitSet, EntityManager, StdBox, StdString, StdVec, TagManager, Transform};
+use std::ops::{Deref, DerefMut};
 #[repr(C)]
 #[derive(Debug)]
-pub struct Entity {
+pub struct EntityInner {
     pub id: usize,
     pub entry: usize,
     pub filename_index: usize,
@@ -12,16 +13,70 @@ pub struct Entity {
     unknown2: isize,
     pub tags: BitSet<u16>,
     pub transform: Transform,
-    pub children: Option<StdBox<StdVec<StdBox<Entity>>>>,
-    pub parent: Option<StdBox<Entity>>,
+    pub children: Option<StdBox<StdVec<Entity>>>,
+    pub parent: Option<Entity>,
 }
-impl Default for Entity {
+impl Default for EntityInner {
     #[inline]
     fn default() -> Self {
         todo!()
     }
 }
-impl StdBox<Entity> {
+#[repr(transparent)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Entity {
+    pub ptr: StdBox<EntityInner>,
+}
+impl Default for Entity {
+    #[inline]
+    fn default() -> Self {
+        fn new(id: usize, entry: usize) -> EntityInner {
+            EntityInner {
+                id,
+                entry,
+                filename_index: 0,
+                kill_flag: false,
+                padding: [0; 3],
+                unknown1: 0,
+                name: StdString::default(),
+                unknown2: 0,
+                tags: BitSet::default(),
+                transform: Transform::default(),
+                children: None,
+                parent: None,
+            }
+        }
+        let mut em = EntityManager::global();
+        if em.free_ids.is_empty() {
+            let entry = em.entities.len();
+            let ent = new(em.max_entity_id, entry);
+            em.max_entity_id += 1;
+            let ent_box = StdBox::new(ent);
+            let ret = Self { ptr: ent_box };
+            em.entities.push(Some(ret));
+            ret
+        } else {
+            let entry = em.free_ids.pop();
+            let ent = new(em.max_entity_id, entry);
+            em.max_entity_id += 1;
+            let ent_box = StdBox::new(ent);
+            let ret = Self { ptr: ent_box };
+            em.entities[entry] = Some(ret);
+            ret
+        }
+    }
+}
+impl Entity {
+    #[inline]
+    #[must_use]
+    pub fn has_tag(&self, tag: &str) -> bool {
+        let tag_manager = TagManager::<u16>::global();
+        if let Some(n) = tag_manager.tag_indices.get(tag).copied() {
+            self.tags.get(n)
+        } else {
+            false
+        }
+    }
     #[inline]
     pub unsafe fn set_tag(&mut self, tag: &str) -> bool {
         let mut tag_manager = TagManager::<u16>::global();
@@ -52,40 +107,17 @@ impl StdBox<Entity> {
             false
         }
     }
+}
+impl Deref for Entity {
+    type Target = EntityInner;
     #[inline]
-    #[must_use]
-    pub fn new_entity() -> Self {
-        fn new(id: usize, entry: usize) -> Entity {
-            Entity {
-                id,
-                entry,
-                filename_index: 0,
-                kill_flag: false,
-                padding: [0; 3],
-                unknown1: 0,
-                name: StdString::default(),
-                unknown2: 0,
-                tags: BitSet::default(),
-                transform: Transform::default(),
-                children: None,
-                parent: None,
-            }
-        }
-        let mut em = EntityManager::global();
-        if em.free_ids.is_empty() {
-            let entry = em.entities.len();
-            let ent = new(em.max_entity_id, entry);
-            em.max_entity_id += 1;
-            let ent_box = StdBox::new(ent);
-            em.entities.push(Some(ent_box));
-            ent_box
-        } else {
-            let entry = em.free_ids.pop();
-            let ent = new(em.max_entity_id, entry);
-            em.max_entity_id += 1;
-            let ent_box = StdBox::new(ent);
-            em.entities[entry] = Some(ent_box);
-            ent_box
-        }
+    fn deref(&self) -> &Self::Target {
+        &self.ptr
+    }
+}
+impl DerefMut for Entity {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ptr
     }
 }
