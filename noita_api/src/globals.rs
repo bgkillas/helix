@@ -1,17 +1,17 @@
 #[noita_api_macros::generate_globals]
 mod inner {
     use crate::{
-        Component, ComponentSystemManager, ComponentTypeManager, DeathMatch, DebugSettings,
-        EntityInner, EntityManager, EventManager, GameGlobal, GameMode, GlobalStats, Inventory,
-        LogFlush, LogLevel, MaxComponent, Mods, NewGameCount, Platform, StdBox, StdPtr, StdString,
-        StdVec, TagManager, TranslationManager, WorldSeed, WorldState,
+        Component, ComponentSystemManager, ComponentTypeManager, DeathMatch, DebugSettings, Entity,
+        EntityManager, EventManager, GameGlobal, GameMode, GlobalStats, Inventory, LogFlush,
+        LogLevel, MaxComponent, Mods, NewGameCount, Platform, StdBox, StdPtr, StdString, StdVec,
+        TagManager, TranslationManager, WorldSeed, WorldState,
     };
     const GAME_GLOBAL: StdPtr<StdPtr<GameGlobal>> = StdPtr::new(0x0122_374c);
     const DEATH_MATCH: StdPtr<StdPtr<DeathMatch>> = StdPtr::new(0x0120_4bc0);
     const ENTITY_MANAGER: StdPtr<StdPtr<EntityManager>> = StdPtr::new(0x0120_4b98);
     const ENTITY_TAG_MANAGER: StdPtr<StdPtr<TagManager<u16>>> = StdPtr::new(0x0120_6fac);
     const COMPONENT_TAG_MANAGER: StdPtr<StdPtr<TagManager<u8>>> = StdPtr::new(0x0120_4b30);
-    const WORLD_STATE: StdPtr<StdPtr<EntityInner>> = StdPtr::new(0x0120_4bd0);
+    const WORLD_STATE: StdPtr<Entity> = StdPtr::new(0x0120_4bd0);
     const WORLD_STATE_COMPONENT: StdPtr<StdPtr<Component<WorldState>>> = StdPtr::new(0x0120_5010);
     const EVENT_MANAGER: StdPtr<StdPtr<EventManager>> = StdPtr::new(0x0120_4b34);
     const WORLD_SEED: StdPtr<WorldSeed> = StdPtr::new(0x0120_5004);
