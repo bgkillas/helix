@@ -107,6 +107,54 @@ impl Entity {
             false
         }
     }
+    #[must_use]
+    #[inline]
+    pub fn iter() -> impl DoubleEndedIterator<Item = Entity> {
+        let em = EntityManager::global();
+        em.as_ref().entities.iter().flatten().copied()
+    }
+    #[must_use]
+    #[inline]
+    pub fn iter_with_tag(tag: &str) -> impl DoubleEndedIterator<Item = Entity> {
+        if let Some(n) = TagManager::<u16>::global().tag_indices.get(tag).copied() {
+            let em = EntityManager::global();
+            em.as_ref().entity_buckets[usize::from(n)].iter().copied()
+        } else {
+            [].iter().copied()
+        }
+    }
+    #[must_use]
+    #[inline]
+    pub fn get_id_with_tag(id: usize, tag: &str) -> Option<Entity> {
+        if let Some(n) = TagManager::<u16>::global().tag_indices.get(tag).copied() {
+            Entity::get_id_with_tag_id(id, n)
+        } else {
+            None
+        }
+    }
+    #[must_use]
+    #[inline]
+    pub fn iter_with_tag_id(tag_id: u16) -> impl DoubleEndedIterator<Item = Entity> {
+        let em = EntityManager::global();
+        em.as_ref().entity_buckets[usize::from(tag_id)]
+            .iter()
+            .copied()
+    }
+    #[must_use]
+    #[inline]
+    pub fn get_id_with_tag_id(id: usize, tag_id: u16) -> Option<Entity> {
+        let em = EntityManager::global();
+        em.entity_buckets[usize::from(tag_id)]
+            .iter()
+            .find(|e| e.id == id)
+            .copied()
+    }
+    #[must_use]
+    #[inline]
+    pub fn get_id(id: usize) -> Option<Entity> {
+        let em = EntityManager::global();
+        em.entities.iter().flatten().find(|e| e.id == id).copied()
+    }
 }
 impl Deref for Entity {
     type Target = EntityInner;
