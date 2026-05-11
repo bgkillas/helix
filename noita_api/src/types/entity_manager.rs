@@ -31,16 +31,16 @@ impl Default for EntityManager {
 #[test]
 fn test_iter() {
     unsafe {
-        let mut ent1 = Entity::default();
+        let ent1 = Entity::default();
         ent1.set_tag("tag_a");
         assert!(ent1.has_tag("tag_a"));
         assert!(!ent1.has_tag("tag_b"));
-        for mut ent in Entity::iter_with_tag("tag_a") {
+        for ent in Entity::iter_with_tag("tag_a") {
             ent.set_tag("tag_b");
         }
         assert!(ent1.has_tag("tag_a"));
         assert!(ent1.has_tag("tag_b"));
-        for mut ent in Entity::iter_with_tag("tag_a") {
+        for ent in Entity::iter_with_tag("tag_a") {
             ent.unset_tag("tag_a");
             assert!(!ent1.has_tag("tag_a"));
             ent.set_tag("tag_a");

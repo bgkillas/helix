@@ -590,9 +590,9 @@ pub fn assert_size_com(
     let struct_name = struct_name.unwrap();
     let assert = quote! {
         #[cfg(target_arch = "x86")]
-        const _: () = assert!(size_of::<crate::Component<#struct_name>>() == #arg);
+        const _: () = assert!(size_of::<crate::ComponentInner<#struct_name>>() == #arg);
         #[cfg(target_arch = "x86_64")]
-        const _: () = assert!(size_of::<crate::Component<#struct_name>>() >= #arg);
+        const _: () = assert!(size_of::<crate::ComponentInner<#struct_name>>() >= #arg);
     };
     quote! {
         #tokens

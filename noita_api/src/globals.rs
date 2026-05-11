@@ -12,7 +12,7 @@ mod inner {
     const ENTITY_TAG_MANAGER: StdPtr<StdPtr<TagManager<u16>>> = StdPtr::new(0x0120_6fac);
     const COMPONENT_TAG_MANAGER: StdPtr<StdPtr<TagManager<u8>>> = StdPtr::new(0x0120_4b30);
     const WORLD_STATE: StdPtr<Entity> = StdPtr::new(0x0120_4bd0);
-    const WORLD_STATE_COMPONENT: StdPtr<StdPtr<Component<WorldState>>> = StdPtr::new(0x0120_5010);
+    const WORLD_STATE_COMPONENT: StdPtr<Component<WorldState>> = StdPtr::new(0x0120_5010);
     const EVENT_MANAGER: StdPtr<StdPtr<EventManager>> = StdPtr::new(0x0120_4b34);
     const WORLD_SEED: StdPtr<WorldSeed> = StdPtr::new(0x0120_5004);
     const GAME_MODE: StdPtr<GameMode> = StdPtr::new(0x0120_761c);

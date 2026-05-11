@@ -1,4 +1,7 @@
-use crate::{BitSet, EntityManager, StdBox, StdString, StdVec, TagManager, Transform};
+use crate::{
+    BitSet, ComponentBuffer, ComponentTrait, ComponentTypeManager, EntityManager, StdBox,
+    StdString, StdVec, TagManager, Transform,
+};
 use std::ops::{Deref, DerefMut};
 #[repr(C)]
 #[derive(Debug)]
@@ -63,7 +66,7 @@ impl Default for Entity {
 impl Entity {
     #[inline]
     #[must_use]
-    pub fn has_tag(&self, tag: &str) -> bool {
+    pub fn has_tag(self, tag: &str) -> bool {
         let tag_manager = TagManager::<u16>::global();
         if let Some(n) = tag_manager.tag_indices.get(tag).copied() {
             self.tags.get(n)
@@ -72,23 +75,25 @@ impl Entity {
         }
     }
     #[inline]
-    pub unsafe fn set_tag(&mut self, tag: &str) -> bool {
+    #[allow(clippy::must_use_candidate)]
+    pub unsafe fn set_tag(mut self, tag: &str) -> bool {
         let mut tag_manager = TagManager::<u16>::global();
         let mut em = EntityManager::global();
         if let Some(n) = tag_manager.tag_indices.get(tag).copied() {
             self.tags.set(n, true);
-            em.entity_buckets[usize::from(n)].push(*self);
+            em.entity_buckets[usize::from(n)].push(self);
             true
         } else {
             let stdstring = StdString::from(tag);
             let n = tag_manager.insert_new(stdstring);
             self.tags.set(n, true);
-            em.entity_buckets[usize::from(n)].push(*self);
+            em.entity_buckets[usize::from(n)].push(self);
             false
         }
     }
     #[inline]
-    pub unsafe fn unset_tag(&mut self, tag: &str) -> bool {
+    #[allow(clippy::must_use_candidate)]
+    pub unsafe fn unset_tag(mut self, tag: &str) -> bool {
         let tag_manager = TagManager::<u16>::global();
         if let Some(n) = tag_manager.tag_indices.get(tag).copied() {
             self.tags.set(n, false);
@@ -148,6 +153,31 @@ impl Entity {
     pub fn get_id(id: usize) -> Option<Self> {
         let em = EntityManager::global();
         em.entities.iter().flatten().find(|e| e.id == id).copied()
+    }
+    #[must_use]
+    #[inline]
+    pub fn get_entry(entry: usize) -> Option<Self> {
+        let em = EntityManager::global();
+        em.entities[entry]
+    }
+    //#[must_use]
+    #[inline]
+    pub fn iter_components<T: ComponentTrait>(self) {
+        //-> impl Iterator<Item = Component<T>> {
+        let coms = ComponentTypeManager::global();
+        if let Some(index) = coms
+            .component_buffer_indices
+            .get(T::NAME.to_str().unwrap())
+            .copied()
+        {
+            let em = EntityManager::global();
+            let buffer = em.component_buffers[index].cast::<StdBox<ComponentBuffer<T>>>();
+            if let Some(start) = buffer.entity_entry.get(self.entry) {
+                _ = start;
+                todo!()
+            }
+        }
+        todo!()
     }
 }
 impl Deref for Entity {

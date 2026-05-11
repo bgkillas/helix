@@ -12,7 +12,7 @@ pub struct ComponentBuffer<T: ComponentTrait> {
     pub entities: StdVec<Option<Entity>>,
     pub prev: StdVec<usize>,
     pub next: StdVec<usize>,
-    pub component_list: StdVec<Option<StdBox<Component<T>>>>,
+    pub component_list: StdVec<Option<Component<T>>>,
     unk1r: *const u64,
     unk1: [*const usize; 4],
     unk1_vec: StdVec<*const usize>,

@@ -1,4 +1,4 @@
-use crate::{Component, Entity, StdBox, StdVec};
+use crate::{Component, Entity, StdVec};
 #[repr(C)]
 #[derive(Debug)]
 pub struct Inventory {
@@ -7,7 +7,7 @@ pub struct Inventory {
     pub inventory_full: Option<Entity>,
     pub held_item_id: usize,
     pub switch_item_id: isize,
-    pub inventory_component: Option<StdBox<Component<()>>>,
+    pub inventory_component: Option<Component<()>>,
     unk7b1: bool,
     pub item_placed: bool,
     unk7b3: bool,

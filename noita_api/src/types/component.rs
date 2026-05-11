@@ -17,7 +17,7 @@ impl ComponentTrait for () {
 #[repr(C)]
 #[assert_size_with(0x48, ())]
 #[derive(Debug)]
-pub struct Component<T: ComponentTrait> {
+pub struct ComponentInner<T: ComponentTrait> {
     pub vtable: StdBox<ComponentVTable<T>>,
     pub local_id: usize,
     pub type_name: *const c_char,
@@ -29,6 +29,23 @@ pub struct Component<T: ComponentTrait> {
     unk3: StdVec<usize>,
     unk4: usize,
     data: T,
+}
+#[derive(Debug)]
+pub struct Component<T: ComponentTrait> {
+    pub ptr: StdBox<ComponentInner<T>>,
+}
+impl<T: ComponentTrait> Deref for Component<T> {
+    type Target = ComponentInner<T>;
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.ptr
+    }
+}
+impl<T: ComponentTrait> DerefMut for Component<T> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ptr
+    }
 }
 impl<T: ComponentTrait> Default for Component<T> {
     #[inline]
