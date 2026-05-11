@@ -1,10 +1,10 @@
 pub mod world_state;
 use crate::{
-    BitSet, ComponentBufferInitVTable, ComponentSystemVTable, ComponentUpdaterVTable,
+    BitSet, CStrPtr, ComponentBufferInitVTable, ComponentSystemVTable, ComponentUpdaterVTable,
     ComponentVTable, StdBox, StdMap, StdString, StdVec,
 };
 use noita_api_macros::assert_size_with;
-use std::ffi::{CStr, c_char};
+use std::ffi::CStr;
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 pub use world_state::*;
@@ -20,19 +20,33 @@ impl ComponentTrait for () {
 pub struct ComponentInner<T: ComponentTrait> {
     pub vtable: StdBox<ComponentVTable<T>>,
     pub local_id: usize,
-    pub type_name: *const c_char,
+    pub type_name: CStrPtr,
     pub type_id: usize,
     pub id: usize,
     pub enabled: bool,
     unk2: [u8; 3],
     pub tags: BitSet<u8>,
-    unk3: StdVec<usize>,
+    unk3: StdVec<bool>,
     unk4: usize,
     data: T,
 }
+#[repr(transparent)]
 #[derive(Debug)]
 pub struct Component<T: ComponentTrait> {
     pub ptr: StdBox<ComponentInner<T>>,
+}
+impl<T: ComponentTrait> Clone for Component<T> {
+    #[inline]
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+impl<T: ComponentTrait> Copy for Component<T> {}
+impl<T: ComponentTrait> PartialEq for Component<T> {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.ptr == other.ptr
+    }
 }
 impl<T: ComponentTrait> Deref for Component<T> {
     type Target = ComponentInner<T>;

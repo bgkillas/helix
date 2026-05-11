@@ -1,6 +1,6 @@
 use crate::{
-    BitSet, ComponentBuffer, ComponentTrait, ComponentTypeManager, EntityManager, StdBox,
-    StdString, StdVec, TagManager, Transform,
+    BitSet, ComponentBuffer, ComponentIter, ComponentTrait, ComponentTypeManager, EntityManager,
+    StdBox, StdString, StdVec, TagManager, Transform,
 };
 use std::fmt;
 use std::fmt::{Debug, Formatter};
@@ -224,10 +224,9 @@ impl Entity {
         let em = EntityManager::global();
         em.entities[entry]
     }
-    //#[must_use]
+    #[must_use]
     #[inline]
-    pub fn iter_components<T: ComponentTrait>(self) {
-        //-> impl Iterator<Item = Component<T>> {
+    pub fn iter_components<'a, T: ComponentTrait>(self) -> ComponentIter<'a, T> {
         let coms = ComponentTypeManager::global();
         if let Some(index) = coms
             .component_buffer_indices
@@ -236,12 +235,20 @@ impl Entity {
         {
             let em = EntityManager::global();
             let buffer = em.component_buffers[index].cast::<StdBox<ComponentBuffer<T>>>();
-            if let Some(start) = buffer.entity_entry.get(self.entry) {
-                _ = start;
-                todo!()
+            if let Some(current) = buffer.entity_entry.get(self.entry).copied() {
+                let buffer_ref = buffer.as_ref();
+                return ComponentIter {
+                    current,
+                    next: &buffer_ref.next,
+                    components: &buffer_ref.component_list,
+                };
             }
         }
-        todo!()
+        ComponentIter {
+            current: usize::MAX,
+            next: &[],
+            components: &[],
+        }
     }
 }
 impl Deref for Entity {

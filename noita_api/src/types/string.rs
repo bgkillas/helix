@@ -1,5 +1,6 @@
 use crate::StdPtr;
 use noita_api_macros::assert_size;
+use std::ffi::{CStr, c_char};
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 use std::ops::Deref;
@@ -114,5 +115,18 @@ fn test_stdstring() {
         let str = "abcdef";
         let std = StdStringRef::no_alloc(str);
         assert_eq!(str, std.as_str());
+    }
+}
+pub struct CStrPtr {
+    pub ptr: *const c_char,
+}
+impl Debug for CStrPtr {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{:?}",
+            unsafe { CStr::from_ptr(self.ptr) }.to_str().unwrap()
+        )
     }
 }

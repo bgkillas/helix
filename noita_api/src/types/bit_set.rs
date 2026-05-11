@@ -64,10 +64,6 @@ macro_rules! define_bitset {
                 }
             }
             #[inline]
-            pub fn iter_indices(&self) -> impl Iterator<Item = $ty> {
-                (0..<$ty>::try_from(32 * <$ty>::BITS).unwrap()).filter(|i| self.get(*i))
-            }
-            #[inline]
             pub fn iter_tags(&self) -> impl Iterator<Item = &str> {
                 let tag_manager = TagManager::<$ty>::global().as_ref();
                 self.iter_indices()
@@ -81,6 +77,18 @@ macro_rules! define_bitset {
             }
         }
     };
+}
+impl BitSet<u8> {
+    #[inline]
+    pub fn iter_indices(&self) -> impl Iterator<Item = u8> {
+        (0..=255).filter(|i| self.get(*i))
+    }
+}
+impl BitSet<u16> {
+    #[inline]
+    pub fn iter_indices(&self) -> impl Iterator<Item = u16> {
+        (0..512).filter(|i| self.get(*i))
+    }
 }
 define_bitset!(u8);
 define_bitset!(u16);
