@@ -1,8 +1,9 @@
 use crate::lua_bindings::{
-    LUA_GLOBALSINDEX, LUA_REGISTRYINDEX, lua_State, lua_createtable, lua_error, lua_getfield,
-    lua_gettable, lua_objlen, lua_pushboolean, lua_pushinteger, lua_pushlstring, lua_pushnil,
-    lua_pushnumber, lua_pushvalue, lua_rawgeti, lua_rawseti, lua_settop, lua_toboolean,
-    lua_tocfunction, lua_tointeger, lua_tolstring, lua_tonumber, lua_type, luaL_unref,
+    LUA_GLOBALSINDEX, LUA_MULTRET, LUA_REGISTRYINDEX, lua_State, lua_call, lua_createtable,
+    lua_error, lua_getfield, lua_gettable, lua_objlen, lua_pushboolean, lua_pushinteger,
+    lua_pushlstring, lua_pushnil, lua_pushnumber, lua_pushvalue, lua_rawgeti, lua_rawseti,
+    lua_settop, lua_toboolean, lua_tocfunction, lua_tointeger, lua_tolstring, lua_tonumber,
+    lua_type, luaL_unref,
 };
 use crate::lua_bindings::{lua_CFunction, luaL_ref};
 use noita_api_macros::{make_lua_get_tuples, make_lua_ret_tuples};
@@ -30,9 +31,33 @@ pub enum LuaError {
 #[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
 pub struct LuaRawFn {
-    fun: i32,
+    pub fun: i32,
 }
 impl LuaState {
+    #[inline]
+    pub fn call<T: LuaFnRet, K: LuaGetValue>(self, fun: LuaRawFn, arg: T) -> Result<K, LuaError> {
+        self.push_ref(fun.fun);
+        let args = arg.do_return(self);
+        self.call_raw(args);
+        K::get(self, 0).map(|(_, v)| v)
+    }
+    #[inline]
+    pub fn call_raw(self, args: c_int) {
+        unsafe {
+            lua_call(self.lua, args, LUA_MULTRET);
+        }
+    }
+    #[inline]
+    pub fn call_global<T: LuaFnRet, K: LuaGetValue>(
+        self,
+        name: &CStr,
+        arg: T,
+    ) -> Result<K, LuaError> {
+        self.get_global(name);
+        let args = arg.do_return(self);
+        self.call_raw(args);
+        K::get(self, 0).map(|(_, v)| v)
+    }
     #[inline]
     pub fn new(lua: *mut lua_State) -> Self {
         Self { lua }
@@ -326,6 +351,13 @@ impl LuaGetValue for LuaRawFn {
                 fun: lua.to_ref(index),
             },
         ))
+    }
+}
+
+impl LuaGetValue for () {
+    #[inline]
+    fn get(_: LuaState, index: i32) -> Result<(i32, Self), LuaError> {
+        Ok((index, ()))
     }
 }
 
