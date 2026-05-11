@@ -5,7 +5,7 @@ use std::alloc::Global;
 use std::alloc::{Allocator as _, Layout};
 #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 use std::ffi::{c_uint, c_void};
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Formatter, Pointer};
 use std::ops::{Deref, DerefMut};
 use std::ptr;
 use std::ptr::NonNull;
@@ -233,6 +233,18 @@ impl<T: Sized + Debug> Debug for StdBox<T> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.as_ref())
+    }
+}
+impl<T> Pointer for StdBox<T> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:p}", self.ptr)
+    }
+}
+impl<T> Pointer for StdPtr<T> {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:p}", self.ptr)
     }
 }
 impl<T> From<&mut T> for StdBox<T> {

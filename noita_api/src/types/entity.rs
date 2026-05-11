@@ -16,12 +16,6 @@ pub struct EntityInner {
     pub children: Option<StdBox<StdVec<Entity>>>,
     pub parent: Option<Entity>,
 }
-impl Default for EntityInner {
-    #[inline]
-    fn default() -> Self {
-        todo!()
-    }
-}
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Entity {
@@ -109,13 +103,13 @@ impl Entity {
     }
     #[must_use]
     #[inline]
-    pub fn iter() -> impl DoubleEndedIterator<Item = Entity> {
+    pub fn iter() -> impl DoubleEndedIterator<Item = Self> {
         let em = EntityManager::global();
         em.as_ref().entities.iter().flatten().copied()
     }
     #[must_use]
     #[inline]
-    pub fn iter_with_tag(tag: &str) -> impl DoubleEndedIterator<Item = Entity> {
+    pub fn iter_with_tag(tag: &str) -> impl DoubleEndedIterator<Item = Self> {
         if let Some(n) = TagManager::<u16>::global().tag_indices.get(tag).copied() {
             let em = EntityManager::global();
             em.as_ref().entity_buckets[usize::from(n)].iter().copied()
@@ -125,7 +119,7 @@ impl Entity {
     }
     #[must_use]
     #[inline]
-    pub fn get_id_with_tag(id: usize, tag: &str) -> Option<Entity> {
+    pub fn get_id_with_tag(id: usize, tag: &str) -> Option<Self> {
         if let Some(n) = TagManager::<u16>::global().tag_indices.get(tag).copied() {
             Entity::get_id_with_tag_id(id, n)
         } else {
@@ -134,7 +128,7 @@ impl Entity {
     }
     #[must_use]
     #[inline]
-    pub fn iter_with_tag_id(tag_id: u16) -> impl DoubleEndedIterator<Item = Entity> {
+    pub fn iter_with_tag_id(tag_id: u16) -> impl DoubleEndedIterator<Item = Self> {
         let em = EntityManager::global();
         em.as_ref().entity_buckets[usize::from(tag_id)]
             .iter()
@@ -142,7 +136,7 @@ impl Entity {
     }
     #[must_use]
     #[inline]
-    pub fn get_id_with_tag_id(id: usize, tag_id: u16) -> Option<Entity> {
+    pub fn get_id_with_tag_id(id: usize, tag_id: u16) -> Option<Self> {
         let em = EntityManager::global();
         em.entity_buckets[usize::from(tag_id)]
             .iter()
@@ -151,7 +145,7 @@ impl Entity {
     }
     #[must_use]
     #[inline]
-    pub fn get_id(id: usize) -> Option<Entity> {
+    pub fn get_id(id: usize) -> Option<Self> {
         let em = EntityManager::global();
         em.entities.iter().flatten().find(|e| e.id == id).copied()
     }
