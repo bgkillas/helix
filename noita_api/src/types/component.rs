@@ -1,7 +1,8 @@
 pub mod world_state;
 use crate::{
-    BitSet, CStrPtr, ComponentBufferInitVTable, ComponentSystemVTable, ComponentUpdaterVTable,
-    ComponentVTable, StdBox, StdMap, StdString, StdVec,
+    BitSet, CStrPtr, ComponentBuffer, ComponentBufferInitVTable, ComponentSystemVTable,
+    ComponentUpdaterVTable, ComponentVTable, Entity, EntityManager, StdBox, StdMap, StdString,
+    StdVec,
 };
 use noita_api_macros::assert_size_with;
 use std::ffi::CStr;
@@ -34,6 +35,49 @@ pub struct ComponentInner<T: ComponentTrait> {
 #[derive(Debug)]
 pub struct Component<T: ComponentTrait> {
     pub ptr: StdBox<ComponentInner<T>>,
+}
+impl<T: ComponentTrait + 'static> Component<T> {
+    #[inline]
+    #[must_use]
+    pub fn iter() -> impl DoubleEndedIterator<Item = Self> {
+        let coms = ComponentTypeManager::global();
+        if let Some(index) = coms
+            .component_buffer_indices
+            .get(T::NAME.to_str().unwrap())
+            .copied()
+        {
+            let em = EntityManager::global();
+            let buffer = em.component_buffers[index]
+                .cast::<StdBox<ComponentBuffer<T>>>()
+                .as_ref();
+            buffer.component_list.iter().flatten().copied()
+        } else {
+            [].iter().flatten().copied()
+        }
+    }
+    #[inline]
+    #[must_use]
+    pub fn iter_with_entities() -> impl DoubleEndedIterator<Item = (Entity, Self)> {
+        let coms = ComponentTypeManager::global();
+        let c = |(a, b): (&Option<Entity>, &Option<Component<_>>)| a.zip(*b);
+        if let Some(index) = coms
+            .component_buffer_indices
+            .get(T::NAME.to_str().unwrap())
+            .copied()
+        {
+            let em = EntityManager::global();
+            let buffer = em.component_buffers[index]
+                .cast::<StdBox<ComponentBuffer<T>>>()
+                .as_ref();
+            buffer
+                .entities
+                .iter()
+                .zip(buffer.component_list.iter())
+                .filter_map(c)
+        } else {
+            [].iter().zip([].iter()).filter_map(c)
+        }
+    }
 }
 impl<T: ComponentTrait> Clone for Component<T> {
     #[inline]
