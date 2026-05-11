@@ -65,10 +65,14 @@ impl<T> StdVec<T> {
         vec
     }
     #[inline]
-    pub fn pop(&mut self) -> T {
-        unsafe {
-            self.end = self.end.sub(1);
-            self.end.read()
+    pub fn pop(&mut self) -> Option<T> {
+        if self.is_empty() {
+            None
+        } else {
+            unsafe {
+                self.end = self.end.sub(1);
+                Some(self.end.read())
+            }
         }
     }
     #[inline]

@@ -1,13 +1,20 @@
 use crate::TagManager;
 use noita_api_macros::assert_size_with;
+use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, DerefMut};
 #[repr(transparent)]
 #[assert_size_with(0x20, u8)]
 #[assert_size_with(0x40, u16)]
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct BitSet<T>(pub [T; 32]);
 macro_rules! define_bitset {
     ($ty:ty) => {
+        impl Debug for BitSet<$ty> {
+            #[inline]
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                f.debug_map().entries(self.iter_tags_indices()).finish()
+            }
+        }
         impl BitSet<$ty> {
             #[must_use]
             #[inline]
@@ -57,26 +64,20 @@ macro_rules! define_bitset {
                 }
             }
             #[inline]
+            pub fn iter_indices(&self) -> impl Iterator<Item = $ty> {
+                (0..<$ty>::try_from(32 * <$ty>::BITS).unwrap()).filter(|i| self.get(*i))
+            }
+            #[inline]
             pub fn iter_tags(&self) -> impl Iterator<Item = &str> {
                 let tag_manager = TagManager::<$ty>::global().as_ref();
-                (0..<$ty>::try_from(32 * <$ty>::BITS).unwrap()).filter_map(|i| {
-                    if self.get(i) {
-                        Some(tag_manager.tags[usize::from(i)].as_str())
-                    } else {
-                        None
-                    }
-                })
+                self.iter_indices()
+                    .map(|i| tag_manager.tags[usize::from(i)].as_str())
             }
             #[inline]
             pub fn iter_tags_indices(&self) -> impl Iterator<Item = ($ty, &str)> {
                 let tag_manager = TagManager::<$ty>::global().as_ref();
-                (0..<$ty>::try_from(32 * <$ty>::BITS).unwrap()).filter_map(|i| {
-                    if self.get(i) {
-                        Some((i, tag_manager.tags[usize::from(i)].as_str()))
-                    } else {
-                        None
-                    }
-                })
+                self.iter_indices()
+                    .map(|i| (i, tag_manager.tags[usize::from(i)].as_str()))
             }
         }
     };

@@ -2,15 +2,16 @@ use crate::{
     BitSet, ComponentBuffer, ComponentTrait, ComponentTypeManager, EntityManager, StdBox,
     StdString, StdVec, TagManager, Transform,
 };
+use std::fmt;
+use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, DerefMut};
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Default)]
 pub struct EntityInner {
     pub id: usize,
     pub entry: usize,
     pub filename_index: usize,
     pub kill_flag: bool,
-    padding: [u8; 3],
     unknown1: isize,
     pub name: StdString,
     unknown2: isize,
@@ -18,6 +19,86 @@ pub struct EntityInner {
     pub transform: Transform,
     pub children: Option<StdBox<StdVec<Entity>>>,
     pub parent: Option<Entity>,
+}
+impl EntityInner {
+    fn debug_children(&self) -> impl Debug {
+        fmt::from_fn(|f| {
+            if let Some(ents) = self.children {
+                let mut dl = f.debug_list();
+                for ent in ents.iter() {
+                    dl.entry_with(|fs| {
+                        fs.debug_struct("EntityInner")
+                            .field("ptr", &ent.ptr.ptr)
+                            .field("id", &ent.id)
+                            .field("entry", &ent.entry)
+                            .field("filename_index", &ent.filename_index)
+                            .field(
+                                "filename",
+                                &StdVec::<StdString>::global().get(ent.filename_index),
+                            )
+                            .field("kill_flag", &ent.kill_flag)
+                            .field("unknown1", &ent.unknown1)
+                            .field("name", &ent.name)
+                            .field("unknown2", &ent.unknown2)
+                            .field("tags", &ent.tags)
+                            .field("transform", &ent.transform)
+                            .field_with("children", |fi| Debug::fmt(&ent.debug_children(), fi))
+                            .finish()
+                    });
+                }
+                dl.finish()
+            } else {
+                write!(f, "None")
+            }
+        })
+    }
+    fn debug_parent(&self) -> impl Debug {
+        fmt::from_fn(|f| {
+            if let Some(ent) = self.parent {
+                f.debug_struct("EntityInner")
+                    .field("ptr", &ent.ptr.ptr)
+                    .field("id", &ent.id)
+                    .field("entry", &ent.entry)
+                    .field("filename_index", &ent.filename_index)
+                    .field(
+                        "filename",
+                        &StdVec::<StdString>::global().get(ent.filename_index),
+                    )
+                    .field("kill_flag", &ent.kill_flag)
+                    .field("unknown1", &ent.unknown1)
+                    .field("name", &ent.name)
+                    .field("unknown2", &ent.unknown2)
+                    .field("tags", &ent.tags)
+                    .field("transform", &ent.transform)
+                    .field_with("parent", |fi| Debug::fmt(&ent.debug_parent(), fi))
+                    .finish()
+            } else {
+                write!(f, "None")
+            }
+        })
+    }
+}
+impl Debug for EntityInner {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("EntityInner")
+            .field("id", &self.id)
+            .field("entry", &self.entry)
+            .field("filename_index", &self.filename_index)
+            .field(
+                "filename",
+                &StdVec::<StdString>::global().get(self.filename_index),
+            )
+            .field("kill_flag", &self.kill_flag)
+            .field("unknown1", &self.unknown1)
+            .field("name", &self.name)
+            .field("unknown2", &self.unknown2)
+            .field("tags", &self.tags)
+            .field("transform", &self.transform)
+            .field_with("children", |fi| Debug::fmt(&self.debug_children(), fi))
+            .field_with("parent", |fi| Debug::fmt(&self.debug_parent(), fi))
+            .finish()
+    }
 }
 #[repr(transparent)]
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -27,38 +108,21 @@ pub struct Entity {
 impl Default for Entity {
     #[inline]
     fn default() -> Self {
-        fn new(id: usize, entry: usize) -> EntityInner {
-            EntityInner {
-                id,
-                entry,
-                filename_index: 0,
-                kill_flag: false,
-                padding: [0; 3],
-                unknown1: 0,
-                name: StdString::default(),
-                unknown2: 0,
-                tags: BitSet::default(),
-                transform: Transform::default(),
-                children: None,
-                parent: None,
-            }
-        }
         let mut em = EntityManager::global();
-        if em.free_ids.is_empty() {
-            let entry = em.entities.len();
-            let ent = new(em.max_entity_id, entry);
-            em.max_entity_id += 1;
-            let ent_box = StdBox::new(ent);
-            let ret = Self { ptr: ent_box };
-            em.entities.push(Some(ret));
-            ret
-        } else {
-            let entry = em.free_ids.pop();
-            let ent = new(em.max_entity_id, entry);
-            em.max_entity_id += 1;
+        let mut ent = EntityInner::default();
+        em.max_entity_id += 1;
+        ent.id = em.max_entity_id;
+        if let Some(entry) = em.free_ids.pop() {
+            ent.entry = entry;
             let ent_box = StdBox::new(ent);
             let ret = Self { ptr: ent_box };
             em.entities[entry] = Some(ret);
+            ret
+        } else {
+            ent.entry = em.entities.len();
+            let ent_box = StdBox::new(ent);
+            let ret = Self { ptr: ent_box };
+            em.entities.push(Some(ret));
             ret
         }
     }

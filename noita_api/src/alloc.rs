@@ -155,7 +155,7 @@ impl<T> PartialEq for StdPtr<T> {
 impl<T> Debug for StdPtr<T> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.ptr)
+        write!(f, "{:p}", self.ptr)
     }
 }
 impl<T: Sized> From<StdPtr<T>> for StdBox<T> {
@@ -232,7 +232,7 @@ impl<T: Sized> DerefMut for StdPtr<T> {
 impl<T: Sized + Debug> Debug for StdBox<T> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self.as_ref())
+        f.debug_map().entry(&self.ptr, self.as_ref()).finish()
     }
 }
 impl<T> Pointer for StdBox<T> {
