@@ -161,6 +161,41 @@ impl Entity {
             false
         }
     }
+    #[inline]
+    pub fn push_child(self, child: Self) {
+        let mut vec = if let Some(children) = self.children {
+            children
+        } else {
+            StdBox::new(StdVec::with_capacity(8))
+        };
+        vec.push(child);
+    }
+    #[inline]
+    pub fn remove_child(self, child: Self) {
+        if let Some(mut children) = self.children {
+            if let Some(pos) = children.iter().position(|e| e.ptr == child.ptr) {
+                children.swap_remove(pos);
+            } else {
+                panic!()
+            }
+        } else {
+            panic!()
+        }
+    }
+    #[inline]
+    pub fn set_parent(mut self, new_parent: Self) {
+        if let Some(parent) = self.parent {
+            parent.remove_child(self);
+        }
+        self.parent = Some(new_parent);
+    }
+    #[inline]
+    pub fn remove_parent(mut self) {
+        if let Some(parent) = self.parent {
+            parent.remove_child(self);
+        }
+        self.parent = None;
+    }
     #[must_use]
     #[inline]
     pub fn iter() -> impl DoubleEndedIterator<Item = Self> {
@@ -249,6 +284,21 @@ impl Entity {
             current: usize::MAX,
             next: &[],
             components: &[],
+        }
+    }
+    #[must_use]
+    #[inline]
+    pub fn add_component<T: ComponentTrait>(self) -> Component<T> {
+        let coms = ComponentTypeManager::global();
+        if let Some(index) = coms
+            .component_buffer_indices
+            .get(T::NAME.to_str().unwrap())
+            .copied()
+        {
+            _ = index;
+            todo!()
+        } else {
+            todo!()
         }
     }
 }
