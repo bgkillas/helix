@@ -1,10 +1,10 @@
 #[noita_api_macros::generate_globals]
 mod inner {
     use crate::{
-        Component, ComponentSystemManager, ComponentTypeManager, DeathMatch, DebugSettings, Entity,
-        EntityManager, EventManager, GameGlobal, GameMode, GlobalStats, Inventory, LogFlush,
-        LogLevel, MaxComponent, Mods, NewGameCount, Platform, StdBox, StdPtr, StdString, StdVec,
-        TagManager, TranslationManager, WorldSeed, WorldState,
+        Component, ComponentIdMap, ComponentSystemManager, ComponentTypeManager, DeathMatch,
+        DebugSettings, Entity, EntityManager, EventManager, FileNames, GameGlobal, GameMode,
+        GlobalStats, Inventory, LogFlush, LogLevel, MaxComponent, Mods, NewGameCount, Platform,
+        StdBox, StdPtr, TagManager, TranslationManager, WorldSeed, WorldState,
     };
     const GAME_GLOBAL: StdPtr<StdPtr<GameGlobal>> = StdPtr::new(0x0122_374c);
     const DEATH_MATCH: StdPtr<StdPtr<DeathMatch>> = StdPtr::new(0x0120_4bc0);
@@ -23,10 +23,11 @@ mod inner {
     const GLOBAL_STATS: StdPtr<GlobalStats> = StdPtr::new(0x0120_8940);
     const COMPONENT_TYPE_MANAGER: StdPtr<ComponentTypeManager> = StdPtr::new(0x0122_3c88);
     const TRANSLATION_MANAGER: StdPtr<TranslationManager> = StdPtr::new(0x0120_7c28);
-    const FILENAMES: StdPtr<StdVec<StdString>> = StdPtr::new(0x0120_7bd4);
+    const FILENAMES: StdPtr<FileNames> = StdPtr::new(0x0120_7bd4);
     const INVENTORY: StdPtr<Inventory> = StdPtr::new(0x0122_24f0);
     const MODS: StdPtr<Mods> = StdPtr::new(0x0120_7e90);
     const MAX_COMPONENT: StdPtr<MaxComponent> = StdPtr::new(0x0115_2ff0);
     const COMPONENT_MANAGER: StdPtr<ComponentSystemManager> = StdPtr::new(0x0122_36e8);
     const DEBUG_SETTINGS: StdPtr<DebugSettings> = StdPtr::new(0x0120_7e20);
+    const COMPONENT_MAP: StdPtr<ComponentIdMap> = StdPtr::new(0x0120_8018);
 }

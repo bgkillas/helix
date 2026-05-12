@@ -1,8 +1,9 @@
 use crate::{
     Component, ComponentBufferVTable, ComponentTrait, Entity, EntityManager, EventManager, StdBox,
-    StdPtr, StdVec,
+    StdMap, StdPtr, StdVec,
 };
 use noita_api_macros::assert_size_with;
+use std::ops::{Deref, DerefMut};
 #[repr(C)]
 #[derive(Debug)]
 #[assert_size_with(0xc4, ())]
@@ -44,5 +45,23 @@ impl<T: ComponentTrait> Iterator for ComponentIter<'_, T> {
         let com = self.components[self.current];
         self.current = self.next[self.current];
         com
+    }
+}
+#[repr(transparent)]
+#[derive(Default, Debug)]
+pub struct ComponentIdMap {
+    map: StdMap<usize, Component<()>>,
+}
+impl Deref for ComponentIdMap {
+    type Target = StdMap<usize, Component<()>>;
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.map
+    }
+}
+impl DerefMut for ComponentIdMap {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.map
     }
 }

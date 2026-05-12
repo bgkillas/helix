@@ -1,6 +1,6 @@
 use crate::{
     BitSet, Component, ComponentBuffer, ComponentIter, ComponentTrait, ComponentTypeManager,
-    EntityManager, StdBox, StdString, StdVec, TagManager, Transform,
+    EntityManager, FileNames, StdBox, StdString, StdVec, TagManager, Transform,
 };
 use std::fmt;
 use std::fmt::{Debug, Formatter};
@@ -32,10 +32,7 @@ impl EntityInner {
                             .field("id", &ent.id)
                             .field("entry", &ent.entry)
                             .field("filename_index", &ent.filename_index)
-                            .field(
-                                "filename",
-                                &StdVec::<StdString>::global().get(ent.filename_index),
-                            )
+                            .field("filename", &FileNames::global().get(ent.filename_index))
                             .field("kill_flag", &ent.kill_flag)
                             .field("unknown1", &ent.unknown1)
                             .field("name", &ent.name)
@@ -60,10 +57,7 @@ impl EntityInner {
                     .field("id", &ent.id)
                     .field("entry", &ent.entry)
                     .field("filename_index", &ent.filename_index)
-                    .field(
-                        "filename",
-                        &StdVec::<StdString>::global().get(ent.filename_index),
-                    )
+                    .field("filename", &FileNames::global().get(ent.filename_index))
                     .field("kill_flag", &ent.kill_flag)
                     .field("unknown1", &ent.unknown1)
                     .field("name", &ent.name)
@@ -85,10 +79,7 @@ impl Debug for EntityInner {
             .field("id", &self.id)
             .field("entry", &self.entry)
             .field("filename_index", &self.filename_index)
-            .field(
-                "filename",
-                &StdVec::<StdString>::global().get(self.filename_index),
-            )
+            .field("filename", &FileNames::global().get(self.filename_index))
             .field("kill_flag", &self.kill_flag)
             .field("unknown1", &self.unknown1)
             .field("name", &self.name)
@@ -226,12 +217,12 @@ impl Entity {
     }
     #[must_use]
     #[inline]
-    pub fn get_component<'a, T: ComponentTrait>(self, id: usize) -> Option<Component<T>> {
+    pub fn get_component<T: ComponentTrait>(self, id: usize) -> Option<Component<T>> {
         self.iter_components().find(|c| c.id == id)
     }
     #[must_use]
     #[inline]
-    pub fn get_component_entry<'a, T: ComponentTrait>(self, entry: usize) -> Option<Component<T>> {
+    pub fn get_component_entry<T: ComponentTrait>(self, entry: usize) -> Option<Component<T>> {
         self.iter_components().find(|c| c.entry == entry)
     }
     #[must_use]

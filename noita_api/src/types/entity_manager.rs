@@ -1,6 +1,8 @@
 use crate::{ComponentBuffer, Entity, EntityManagerVTable, EventManager, StdBox, StdVec};
+use noita_api_macros::assert_size;
 #[repr(C)]
 #[derive(Debug)]
+#[assert_size(0x3c)]
 pub struct EntityManager {
     pub vtable: StdBox<EntityManagerVTable>,
     pub max_entity_id: usize,
