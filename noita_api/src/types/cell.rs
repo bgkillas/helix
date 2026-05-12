@@ -1,12 +1,14 @@
 pub mod fire;
 pub mod gas;
 pub mod liquid;
+pub mod solid;
 use crate::{
     CellVTable, ConfigExplosion, ConfigGridCosmeticParticle, StdBox, StdString, StdVec, TextureInfo,
 };
 pub use fire::*;
 pub use gas::*;
 pub use liquid::*;
+pub use solid::*;
 use std::ffi::c_void;
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
@@ -15,7 +17,7 @@ impl CellTrait for () {}
 #[repr(C)]
 #[derive(Debug)]
 pub struct CellInner<T: CellTrait> {
-    pub vtable: StdBox<CellVTable>,
+    pub vtable: StdBox<CellVTable<T>>,
     pub hp: isize,
     unknown1: [isize; 2],
     pub is_burning: bool,
@@ -37,6 +39,26 @@ impl<T: CellTrait> Cell<T> {
             ptr: self.ptr.cast(),
         }
     }
+}
+impl Cell<()> {
+    #[inline]
+    #[must_use]
+    pub fn full_cell(self) -> FullCell {
+        match self.material.cell_type {
+            CellType::None => FullCell::None(self),
+            CellType::Liquid => FullCell::LiquidCell(self.cast()),
+            CellType::Gas => FullCell::GasCell(self.cast()),
+            CellType::Solid => FullCell::SolidCell(self.cast()),
+            CellType::Fire => FullCell::FireCell(self.cast()),
+        }
+    }
+}
+pub enum FullCell {
+    None(Cell<()>),
+    LiquidCell(Cell<Liquid>),
+    GasCell(Cell<Gas>),
+    SolidCell(Cell<Solid>),
+    FireCell(Cell<Gas>),
 }
 impl<T: CellTrait> Clone for Cell<T> {
     #[inline]

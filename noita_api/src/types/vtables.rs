@@ -1,10 +1,13 @@
+use crate::CellTrait;
 use std::marker::PhantomData;
 #[repr(C)]
 #[derive(Debug)]
 pub struct ComponentBufferVTable {}
 #[repr(C)]
 #[derive(Debug)]
-pub struct CellVTable {}
+pub struct CellVTable<T: CellTrait> {
+    phantom: PhantomData<T>,
+}
 #[repr(C)]
 #[derive(Debug)]
 pub struct ConfigExplosionVTable {}
