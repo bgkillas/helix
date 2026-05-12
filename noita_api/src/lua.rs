@@ -39,7 +39,7 @@ impl LuaState {
         self.push_ref(fun.fun);
         let args = arg.do_return(self);
         self.call_raw(args);
-        K::get(self, 0).map(|(_, v)| v)
+        K::get(self, -1).map(|(_, v)| v)
     }
     #[inline]
     pub fn call_raw(self, args: c_int) {
@@ -56,7 +56,7 @@ impl LuaState {
         self.get_global(name);
         let args = arg.do_return(self);
         self.call_raw(args);
-        K::get(self, 0).map(|(_, v)| v)
+        K::get(self, -1).map(|(_, v)| v)
     }
     #[inline]
     pub fn new(lua: *mut lua_State) -> Self {

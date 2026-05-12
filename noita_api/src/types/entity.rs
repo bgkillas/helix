@@ -325,6 +325,9 @@ impl Entity {
                 buffer.entities.push(Some(self));
                 buffer.next.push(usize::MAX);
                 buffer.prev.push(usize::MAX);
+                buffer.unk_entries1.push(usize::MAX);
+                buffer.unk_entries2.push(false);
+                buffer.unk_entries3.push(usize::MAX);
             }
             buffer.entity_entry.resize(self.entry, usize::MAX);
             if buffer.entity_entry[self.entry] == usize::MAX {
