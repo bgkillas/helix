@@ -1,5 +1,6 @@
 pub mod aabb;
 pub mod bit_set;
+pub mod cell;
 pub mod cell_factory;
 pub mod chunk_map;
 pub mod component;
@@ -35,6 +36,7 @@ pub mod vtables;
 pub mod world_seed;
 pub use aabb::*;
 pub use bit_set::*;
+pub use cell::*;
 pub use cell_factory::*;
 pub use chunk_map::*;
 pub use component::*;

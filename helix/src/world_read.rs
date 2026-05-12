@@ -1,7 +1,7 @@
 use crate::world_sync::SendType;
 use crate::{Context, Message};
 use bevy_tangled::{ClientTrait as _, Compression, Reliability};
-use noita_api::{AABB, Cell, CellType, GameGlobal, StdBox, Vec2, game_print};
+use noita_api::{AABB, Cell, CellType, GameGlobal, Vec2, game_print};
 pub const COLS: usize = 16;
 pub const SECTIONS: usize = COLS * COLS;
 pub const WIDTH: usize = 512 / COLS;
@@ -108,8 +108,8 @@ pub fn get_sections(
     inner_aabb: AABB<usize>,
     x: usize,
     y: usize,
-    arr: &[[Option<StdBox<Cell<()>>>; 512]; 512],
-) -> impl Iterator<Item = (u8, Priority, impl Iterator<Item = Option<StdBox<Cell<()>>>>)> + '_ {
+    arr: &[[Option<Cell<()>>; 512]; 512],
+) -> impl Iterator<Item = (u8, Priority, impl Iterator<Item = Option<Cell<()>>>)> + '_ {
     (0..SECTIONS).filter_map(move |s| {
         section_in(aabb, inner_aabb, x, y, s)
             .map(|p| (u8::try_from(s).unwrap(), p, get_section(s, arr)))
@@ -147,8 +147,8 @@ fn section_in(
 }
 pub fn get_section(
     section: usize,
-    arr: &[[Option<StdBox<Cell<()>>>; 512]; 512],
-) -> impl Iterator<Item = Option<StdBox<Cell<()>>>> + '_ {
+    arr: &[[Option<Cell<()>>; 512]; 512],
+) -> impl Iterator<Item = Option<Cell<()>>> + '_ {
     let sx = (section % COLS) * WIDTH;
     let sy = (section / COLS) * WIDTH;
     arr[sy..sy + WIDTH]
@@ -158,8 +158,8 @@ pub fn get_section(
 }
 pub fn get_section_mut_enumerate(
     section: usize,
-    arr: &mut [[Option<StdBox<Cell<()>>>; 512]; 512],
-) -> impl Iterator<Item = (usize, usize, &mut Option<StdBox<Cell<()>>>)> + '_ {
+    arr: &mut [[Option<Cell<()>>; 512]; 512],
+) -> impl Iterator<Item = (usize, usize, &mut Option<Cell<()>>)> + '_ {
     let sx = (section % COLS) * WIDTH;
     let sy = (section / COLS) * WIDTH;
     arr[sy..sy + WIDTH]
@@ -224,8 +224,8 @@ pub struct PixelRunBuilder {
     current: Pixel,
     len: u16,
 }
-impl Extend<Option<StdBox<Cell<()>>>> for PixelRunBuilder {
-    fn extend<T: IntoIterator<Item = Option<StdBox<Cell<()>>>>>(&mut self, iter: T) {
+impl Extend<Option<Cell<()>>> for PixelRunBuilder {
+    fn extend<T: IntoIterator<Item = Option<Cell<()>>>>(&mut self, iter: T) {
         for p in iter {
             self.push(p.map_or(Pixel::default(), |c| {
                 if matches!(c.material.cell_type, CellType::Solid) {

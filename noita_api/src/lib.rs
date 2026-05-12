@@ -45,20 +45,13 @@ pub fn dump_mem(s: &str) {
 #[inline]
 #[must_use]
 #[allow(clippy::as_conversions)]
-pub fn get_construct_cell() -> this_call!(
-    fn(StdBox<GridWorld>, isize, isize, StdBox<CellData>, *mut ()) -> Option<StdBox<Cell<()>>>
-) {
+pub fn get_construct_cell()
+-> this_call!(fn(StdBox<GridWorld>, isize, isize, StdBox<CellData>, *mut ()) -> Option<Cell<()>>) {
     let ptr = search_fun![0x8b, 0x46, 0x38, 0x33, 0xc9, 0x83, 0xf8, 0x01];
     unsafe {
         get_this_call!(
             ptr as usize,
-            fn(
-                StdBox<GridWorld>,
-                isize,
-                isize,
-                StdBox<CellData>,
-                *mut (),
-            ) -> Option<StdBox<Cell<()>>>
+            fn(StdBox<GridWorld>, isize, isize, StdBox<CellData>, *mut ()) -> Option<Cell<()>>
         )
     }
 }
