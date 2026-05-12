@@ -13,15 +13,36 @@ pub use variable_storage::*;
 pub use world_state::*;
 pub trait ComponentTrait: Debug + Default {
     const NAME: &'static CStr;
+    fn vtable() -> StdBox<ComponentVTable<Self>>;
 }
 impl ComponentTrait for () {
     const NAME: &'static CStr = c"ERROR";
+    #[inline]
+    fn vtable() -> StdBox<ComponentVTable<Self>> {
+        todo!()
+    }
 }
 #[repr(C)]
 #[assert_size_with(0x48, ())]
 #[derive(Debug)]
 pub struct ComponentInner<T: ComponentTrait> {
     pub vtable: StdBox<ComponentVTable<T>>,
+    pub entry: usize,
+    pub type_name: CStrPtr,
+    pub type_id: usize,
+    pub id: usize,
+    pub enabled: bool,
+    unk2: [u8; 3],
+    pub tags: BitSet<u8>,
+    unk3: StdVec<bool>,
+    unk4: usize,
+    data: T,
+}
+#[repr(C)]
+#[assert_size_with(0x48, ())]
+#[derive(Debug, Default)]
+pub struct MaybeUninitComponentInner<T: ComponentTrait> {
+    pub vtable: Option<StdBox<ComponentVTable<T>>>,
     pub entry: usize,
     pub type_name: CStrPtr,
     pub type_id: usize,

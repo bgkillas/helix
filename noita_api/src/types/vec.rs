@@ -65,6 +65,25 @@ impl<T> StdVec<T> {
         vec
     }
     #[inline]
+    pub fn reserve(&mut self, n: usize) {
+        self.alloc(n);
+    }
+    #[inline]
+    pub fn resize(&mut self, len: usize, value: T)
+    where
+        T: Clone,
+    {
+        if len > self.len() {
+            self.alloc(len - self.len());
+            for _ in self.len()..len {
+                unsafe {
+                    self.end.write(value.clone());
+                    self.end = self.end.add(1);
+                }
+            }
+        }
+    }
+    #[inline]
     pub fn pop(&mut self) -> Option<T> {
         if self.is_empty() {
             None

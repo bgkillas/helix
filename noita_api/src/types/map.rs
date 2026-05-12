@@ -40,7 +40,7 @@ pub struct StdMapNode<K, V> {
     pub key: K,
     pub value: V,
 }
-impl<L: ?Sized + Ord, K: Deref<Target = L>, V> StdMap<K, V> {
+impl<K: Ord, V> StdMap<K, V> {
     #[inline]
     pub fn insert(&mut self, k: K, v: V) {
         self.len += 1;
@@ -57,7 +57,7 @@ impl<L: ?Sized + Ord, K: Deref<Target = L>, V> StdMap<K, V> {
         let mut x = self.root.parent;
         while x.ptr != self.root.ptr {
             y = x;
-            x = if *node.key < *x.key { x.left } else { x.right };
+            x = if node.key < x.key { x.left } else { x.right };
         }
         node.parent = y;
         if y.ptr == self.root.ptr {
@@ -65,7 +65,7 @@ impl<L: ?Sized + Ord, K: Deref<Target = L>, V> StdMap<K, V> {
             self.insert_fixup(self.root.parent);
         } else {
             node.color = RBColor::Red;
-            if *node.key < *y.key {
+            if node.key < y.key {
                 y.left = StdBox::new(node);
                 self.insert_fixup(y.left);
             } else {

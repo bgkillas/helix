@@ -1,6 +1,7 @@
 use crate::{
-    BitSet, Component, ComponentBuffer, ComponentIter, ComponentTrait, ComponentTypeManager,
-    EntityManager, FileNames, StdBox, StdString, StdVec, TagManager, Transform,
+    BitSet, Component, ComponentBuffer, ComponentIdMap, ComponentIter, ComponentTrait,
+    ComponentTypeManager, EntityManager, FileNames, MaxComponent, MaybeUninitComponentInner,
+    StdBox, StdString, StdVec, TagManager, Transform,
 };
 use std::fmt;
 use std::fmt::{Debug, Formatter};
@@ -295,8 +296,43 @@ impl Entity {
             .get(T::NAME.to_str().unwrap())
             .copied()
         {
-            _ = index;
-            todo!()
+            let em = EntityManager::global();
+            let mut buffer: StdBox<ComponentBuffer<T>> = em.component_buffers[index].cast();
+            let mut maybe_com_inner = MaybeUninitComponentInner::<T>::default();
+            maybe_com_inner.vtable = Some(T::vtable());
+            let mut max = MaxComponent::global();
+            maybe_com_inner.id = max.max;
+            maybe_com_inner.type_id = index;
+            maybe_com_inner.type_name = T::NAME.as_ptr().into();
+            let maybe_com = StdBox::new(maybe_com_inner);
+            let mut com: Component<T> = Component {
+                ptr: maybe_com.cast(),
+            };
+            ComponentIdMap::global().insert(
+                max.max,
+                Component {
+                    ptr: com.ptr.cast(),
+                },
+            );
+            max.max += 1;
+            if let Some(entry) = buffer.component_list.iter().position(Option::is_none) {
+                com.entry = entry;
+                buffer.component_list[com.entry] = Some(com);
+                buffer.entities[com.entry] = Some(self);
+            } else {
+                com.entry = buffer.component_list.len();
+                buffer.component_list.push(Some(com));
+                buffer.entities.push(Some(self));
+                buffer.next.push(usize::MAX);
+                buffer.prev.push(usize::MAX);
+            }
+            buffer.entity_entry.resize(self.entry, usize::MAX);
+            if buffer.entity_entry[self.entry] == usize::MAX {
+                buffer.entity_entry[self.entry] = com.entry;
+            } else {
+                todo!()
+            }
+            com
         } else {
             todo!()
         }

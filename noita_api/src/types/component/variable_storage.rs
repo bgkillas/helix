@@ -1,8 +1,12 @@
-use crate::{ComponentTrait, StdString};
+use crate::{ComponentTrait, ComponentVTable, StdBox, StdPtr, StdString};
 use noita_api_macros::assert_size_com;
 use std::ffi::CStr;
 impl ComponentTrait for VariableStorage {
     const NAME: &'static CStr = c"VariableStorageComponent";
+    #[inline]
+    fn vtable() -> StdBox<ComponentVTable<Self>> {
+        StdBox::from(StdPtr::new(0x0104_6b70))
+    }
 }
 #[derive(Debug, Default)]
 #[repr(C)]

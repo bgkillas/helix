@@ -1,5 +1,6 @@
 use crate::StdPtr;
 use noita_api_macros::assert_size;
+use std::cmp::Ordering;
 use std::ffi::{CStr, c_char};
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
@@ -18,6 +19,25 @@ pub struct StdStringRef<'a> {
     size: usize,
     capacity: usize,
     lifetime: PhantomData<&'a u8>,
+}
+impl Eq for StdStringRef<'_> {}
+impl PartialEq<Self> for StdStringRef<'_> {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.as_str() == other.as_str()
+    }
+}
+impl PartialOrd<Self> for StdStringRef<'_> {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for StdStringRef<'_> {
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.as_str().cmp(other.as_str())
+    }
 }
 impl Default for StdString {
     #[inline]
@@ -117,6 +137,7 @@ fn test_stdstring() {
         assert_eq!(str, std.as_str());
     }
 }
+#[derive(Default)]
 pub struct CStrPtr {
     pub ptr: *const c_char,
 }
@@ -128,5 +149,11 @@ impl Debug for CStrPtr {
             "{:?}",
             unsafe { CStr::from_ptr(self.ptr) }.to_str().unwrap()
         )
+    }
+}
+impl From<*const c_char> for CStrPtr {
+    #[inline]
+    fn from(value: *const c_char) -> Self {
+        Self { ptr: value }
     }
 }
