@@ -1,6 +1,6 @@
 use crate::{
-    BitSet, ComponentBuffer, ComponentIter, ComponentTrait, ComponentTypeManager, EntityManager,
-    StdBox, StdString, StdVec, TagManager, Transform,
+    BitSet, Component, ComponentBuffer, ComponentIter, ComponentTrait, ComponentTypeManager,
+    EntityManager, StdBox, StdString, StdVec, TagManager, Transform,
 };
 use std::fmt;
 use std::fmt::{Debug, Formatter};
@@ -188,9 +188,9 @@ impl Entity {
     }
     #[must_use]
     #[inline]
-    pub fn get_id_with_tag(id: usize, tag: &str) -> Option<Self> {
+    pub fn get_with_tag(id: usize, tag: &str) -> Option<Self> {
         if let Some(n) = TagManager::<u16>::global().tag_indices.get(tag).copied() {
-            Entity::get_id_with_tag_id(id, n)
+            Entity::get_with_tag_id(id, n)
         } else {
             None
         }
@@ -205,7 +205,7 @@ impl Entity {
     }
     #[must_use]
     #[inline]
-    pub fn get_id_with_tag_id(id: usize, tag_id: u16) -> Option<Self> {
+    pub fn get_with_tag_id(id: usize, tag_id: u16) -> Option<Self> {
         let em = EntityManager::global();
         em.entity_buckets[usize::from(tag_id)]
             .iter()
@@ -214,7 +214,7 @@ impl Entity {
     }
     #[must_use]
     #[inline]
-    pub fn get_id(id: usize) -> Option<Self> {
+    pub fn get(id: usize) -> Option<Self> {
         let em = EntityManager::global();
         em.entities.iter().flatten().find(|e| e.id == id).copied()
     }
@@ -226,6 +226,16 @@ impl Entity {
     }
     #[must_use]
     #[inline]
+    pub fn get_component<'a, T: ComponentTrait>(self, id: usize) -> Option<Component<T>> {
+        self.iter_components().find(|c| c.id == id)
+    }
+    #[must_use]
+    #[inline]
+    pub fn get_component_entry<'a, T: ComponentTrait>(self, entry: usize) -> Option<Component<T>> {
+        self.iter_components().find(|c| c.entry == entry)
+    }
+    #[must_use]
+    #[inline]
     pub fn iter_components<'a, T: ComponentTrait>(self) -> ComponentIter<'a, T> {
         let coms = ComponentTypeManager::global();
         if let Some(index) = coms
@@ -234,7 +244,7 @@ impl Entity {
             .copied()
         {
             let em = EntityManager::global();
-            let buffer = em.component_buffers[index].cast::<StdBox<ComponentBuffer<T>>>();
+            let buffer = em.component_buffers[index].cast::<ComponentBuffer<T>>();
             if let Some(current) = buffer.entity_entry.get(self.entry).copied() {
                 let buffer_ref = buffer.as_ref();
                 return ComponentIter {

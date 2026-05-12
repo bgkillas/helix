@@ -1,3 +1,4 @@
+pub mod variable_storage;
 pub mod world_state;
 use crate::{
     BitSet, CStrPtr, ComponentBuffer, ComponentBufferInitVTable, ComponentSystemVTable,
@@ -8,6 +9,7 @@ use noita_api_macros::assert_size_with;
 use std::ffi::CStr;
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
+pub use variable_storage::*;
 pub use world_state::*;
 pub trait ComponentTrait: Debug + Default {
     const NAME: &'static CStr;
@@ -20,7 +22,7 @@ impl ComponentTrait for () {
 #[derive(Debug)]
 pub struct ComponentInner<T: ComponentTrait> {
     pub vtable: StdBox<ComponentVTable<T>>,
-    pub local_id: usize,
+    pub entry: usize,
     pub type_name: CStrPtr,
     pub type_id: usize,
     pub id: usize,
