@@ -6,7 +6,7 @@ use std::ptr;
 #[derive(Clone, Copy)]
 pub struct WorldWrite {
     construct_cell: this_call!(
-        fn(StdBox<GridWorld>, isize, isize, StdBox<CellData>, *mut ()) -> Option<StdBox<Cell>>
+        fn(StdBox<GridWorld>, isize, isize, StdBox<CellData>, *mut ()) -> Option<StdBox<Cell<()>>>
     ),
 }
 unsafe impl Send for WorldWrite {}

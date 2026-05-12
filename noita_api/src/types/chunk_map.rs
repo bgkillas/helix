@@ -3,6 +3,7 @@ use crate::{
     TextureInfo, Vec2,
 };
 use std::ffi::c_void;
+use std::fmt::Debug;
 #[repr(C)]
 #[derive(Debug)]
 pub struct ChunkMap {
@@ -15,14 +16,17 @@ pub struct ChunkMap {
     pub min_pixel: Vec2<isize>,
     pub max_pixel: Vec2<isize>,
 }
+#[allow(clippy::type_complexity)]
 #[repr(C)]
 #[derive(Debug)]
 pub struct Chunk {
-    pub data: StdBox<[[Option<StdBox<Cell>>; 512]; 512]>,
+    pub data: StdBox<[[Option<StdBox<Cell<()>>>; 512]; 512]>,
 }
+pub trait CellTrait: Debug {}
+impl CellTrait for () {}
 #[repr(C)]
 #[derive(Debug)]
-pub struct Cell {
+pub struct Cell<T: CellTrait> {
     pub vtable: StdBox<CellVTable>,
     pub hp: isize,
     unknown1: [isize; 2],
@@ -30,6 +34,7 @@ pub struct Cell {
     pub temperature_of_fire: u8,
     unknown2: [u8; 2],
     pub material: StdBox<CellData>,
+    pub data: T,
 }
 #[repr(usize)]
 #[derive(Debug)]
