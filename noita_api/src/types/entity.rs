@@ -300,21 +300,12 @@ impl Entity {
             let mut buffer: StdBox<ComponentBuffer<T>> = em.component_buffers[index].cast();
             let mut maybe_com_inner = MaybeUninitComponentInner::<T>::default();
             maybe_com_inner.vtable = Some(T::vtable());
-            let mut max = MaxComponent::global();
-            maybe_com_inner.id = max.max;
             maybe_com_inner.type_id = index;
             maybe_com_inner.type_name = T::NAME.as_ptr().into();
             let maybe_com = StdBox::new(maybe_com_inner);
             let mut com: Component<T> = Component {
                 ptr: maybe_com.cast(),
             };
-            ComponentIdMap::global().insert(
-                max.max,
-                Component {
-                    ptr: com.ptr.cast(),
-                },
-            );
-            max.max += 1;
             if let Some(entry) = buffer.component_list.iter().position(Option::is_none) {
                 com.entry = entry;
                 buffer.component_list[com.entry] = Some(com);

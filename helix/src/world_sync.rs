@@ -3,6 +3,7 @@ use crate::world_read::{Chunk, ChunkPos, PixelRun, Priority, SECTIONS};
 use crate::world_write::{ChunkWrite, WorldWrite};
 use bevy_tangled::{ClientTrait as _, ClientTypeRef, Compression, PeerId, Reliability};
 use noita_api::game_print;
+use std::mem;
 pub struct ChunkVal {
     pixel_run: PixelRun,
     priority: Priority,
@@ -34,6 +35,12 @@ impl WorldSync {
                     prev.pixel_run = chunk.pixel_run;
                     prev.priority = chunk.priority;
                 } else if chunk.priority > prev.priority {
+                    if prev.priority == Priority::None {
+                        send_back.push(ChunkWrite {
+                            pixel_run: mem::take(&mut prev.pixel_run),
+                            pos: chunk.pos,
+                        });
+                    }
                     prev.pixel_run = chunk.pixel_run;
                     prev.priority = chunk.priority;
                     prev.peer = peer;

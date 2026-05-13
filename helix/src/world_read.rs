@@ -13,7 +13,7 @@ impl Context {
         if !self.world_init
             || map.len == 0
             || map.min_chunk.x > map.max_chunk.x
-            || game_global.frame_num.is_multiple_of(6)
+            || game_global.frame_num.is_multiple_of(10)
         {
             return;
         }
@@ -30,11 +30,11 @@ impl Context {
         };
         let inner_aabb = AABB {
             top_left: Vec2 {
-                x: aabb.top_left.x + (aabb.bottom_right.x - aabb.top_left.x) / 4,
+                x: aabb.top_left.x + 3 * (aabb.bottom_right.x - aabb.top_left.x) / 8,
                 y: aabb.top_left.y + (aabb.bottom_right.y - aabb.top_left.y) / 4,
             },
             bottom_right: Vec2 {
-                x: aabb.bottom_right.x - (aabb.bottom_right.x - aabb.top_left.x) / 4,
+                x: aabb.bottom_right.x - 3 * (aabb.bottom_right.x - aabb.top_left.x) / 8,
                 y: aabb.bottom_right.y - (aabb.bottom_right.y - aabb.top_left.y) / 4,
             },
         };
@@ -184,7 +184,7 @@ pub struct Chunk {
     pub pos: ChunkPos,
     pub priority: Priority,
 }
-#[derive(bitcode::Encode, bitcode::Decode, Clone)]
+#[derive(bitcode::Encode, bitcode::Decode, Clone, Default)]
 pub struct PixelRun {
     pub vec: Vec<(u16, Pixel)>,
 }
