@@ -40,9 +40,10 @@ impl WorldSync {
                             pixel_run: mem::take(&mut prev.pixel_run),
                             pos: chunk.pos,
                         });
+                    } else {
+                        prev.pixel_run = chunk.pixel_run;
+                        prev.priority = chunk.priority;
                     }
-                    prev.pixel_run = chunk.pixel_run;
-                    prev.priority = chunk.priority;
                     prev.peer = peer;
                 } else {
                     send_back.push(ChunkWrite {
