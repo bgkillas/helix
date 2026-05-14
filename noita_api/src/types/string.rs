@@ -137,9 +137,16 @@ fn test_stdstring() {
         assert_eq!(str, std.as_str());
     }
 }
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct CStrPtr {
     pub ptr: *const c_char,
+}
+impl CStrPtr {
+    #[inline]
+    #[must_use]
+    pub fn as_cstr<'a>(self) -> &'a CStr {
+        unsafe { CStr::from_ptr(self.ptr) }
+    }
 }
 impl Debug for CStrPtr {
     #[inline]

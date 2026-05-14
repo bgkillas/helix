@@ -40,7 +40,7 @@ pub struct ComponentInner<T: ComponentTrait> {
 }
 #[repr(C)]
 #[assert_size_with(0x48, ())]
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct MaybeUninitComponentInner<T: ComponentTrait> {
     pub vtable: Option<StdBox<ComponentVTable<T>>>,
     pub entry: usize,
@@ -53,6 +53,24 @@ pub struct MaybeUninitComponentInner<T: ComponentTrait> {
     unk3: StdVec<bool>,
     unk4: usize,
     data: T,
+}
+impl<T: ComponentTrait> Default for MaybeUninitComponentInner<T> {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            vtable: None,
+            entry: 0,
+            type_name: CStrPtr::default(),
+            type_id: 0,
+            id: 0,
+            enabled: true,
+            unk2: [0; 3],
+            tags: BitSet::default(),
+            unk3: StdVec::default(),
+            unk4: 0,
+            data: T::default(),
+        }
+    }
 }
 #[repr(transparent)]
 #[derive(Debug)]
@@ -101,6 +119,28 @@ impl<T: ComponentTrait + 'static> Component<T> {
             [].iter().zip([].iter()).filter_map(c)
         }
     }
+}
+impl Component<()> {
+    #[inline]
+    #[must_use]
+    pub fn full_component(self) -> FullComponent {
+        match self.type_name.as_cstr().to_str().unwrap() {
+            "VariableStorageComponent" => FullComponent::VariableStorage(self.cast()),
+            "WorldStateComponent" => FullComponent::WorldState(self.cast()),
+            _ => unreachable!(),
+        }
+    }
+    #[inline]
+    #[must_use]
+    pub fn cast<T: ComponentTrait>(self) -> Component<T> {
+        Component {
+            ptr: self.ptr.cast(),
+        }
+    }
+}
+pub enum FullComponent {
+    VariableStorage(Component<VariableStorage>),
+    WorldState(Component<WorldState>),
 }
 impl<T: ComponentTrait> Clone for Component<T> {
     #[inline]

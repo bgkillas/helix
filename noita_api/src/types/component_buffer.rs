@@ -18,13 +18,16 @@ pub struct ComponentBuffer<T: ComponentTrait> {
     pub component_list: StdVec<Option<Component<T>>>,
     unk1r: *const u64,
     unk4: *const [*const [usize; 4]; 8],
-    unk1: [usize; 3],
-    pub unk_entries1: StdVec<usize>,
-    pub unk_entries2: StdVec<bool>,
-    pub unk_entries3: StdVec<usize>,
+    unk1: [usize; 2],
+    pub free_ids: usize,
+    pub entry_to_local_id: StdVec<usize>, //0 means entry is unoccupied
+    pub is_local_id_killed: StdVec<bool>, //len of this determines next local id
+    pub local_id_to_entry: StdVec<usize>, //-1 means local id died
     unk2r: *const u64,
     unk3r: *const [*const [usize; 4]; 8],
-    unk2: [usize; 6],
+    unk2: [usize; 3],
+    pub len: usize,
+    unk4r: [usize; 2],
     pub entity_manager: StdPtr<EntityManager>,
     pub event_manager: StdPtr<EventManager>,
     unk3: [usize; 6],
