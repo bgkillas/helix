@@ -54,7 +54,7 @@ impl<T: ComponentTrait> Debug for ComponentBuffer<T> {
                     .finish()
             })
             .field("prev", &self.prev)
-            .field("next", &self.prev)
+            .field("next", &self.next)
             .field_with("component_list", |fi| {
                 fi.debug_list()
                     .entries(
