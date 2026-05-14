@@ -115,7 +115,7 @@ impl<T> StdVec<T> {
                 }
             }
             if let Some(ptr) = NonNull::new(self.start) {
-                StdPtr::from(ptr).free();
+                StdPtr::from(ptr).free_array(self.capacity());
             }
             self.start = new_ptr;
             self.end = unsafe { new_ptr.add(old_len) };

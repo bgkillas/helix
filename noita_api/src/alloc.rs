@@ -94,7 +94,7 @@ impl<T: Sized> StdPtr<T> {
     #[must_use]
     #[inline]
     pub const fn new(value: usize) -> Self {
-        let ptr = NonNull::new(ptr::with_exposed_provenance_mut(value)).unwrap();
+        let ptr = NonNull::new(ptr::without_provenance_mut(value)).unwrap();
         Self { ptr }
     }
     #[inline]

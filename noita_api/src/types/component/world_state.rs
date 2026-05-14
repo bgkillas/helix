@@ -1,6 +1,6 @@
 use crate::{
-    ComponentTrait, ComponentVTable, CutThroughWorld, LensValue, NpcParty, PendingPortal, StdBox,
-    StdMap, StdPtr, StdString, StdVec, Vec2,
+    ComponentBufferVTable, ComponentTrait, ComponentVTable, CutThroughWorld, LensValue, NpcParty,
+    PendingPortal, StdBox, StdMap, StdPtr, StdString, StdVec, Vec2,
 };
 use noita_api_macros::assert_size_com;
 use std::ffi::CStr;
@@ -9,6 +9,10 @@ impl ComponentTrait for WorldState {
     #[inline]
     fn vtable() -> StdBox<ComponentVTable<Self>> {
         StdBox::from(StdPtr::new(0x00ff_3ffc))
+    }
+    #[inline]
+    fn buffer_vtable() -> StdBox<ComponentBufferVTable<Self>> {
+        StdBox::from(StdPtr::new(0x00fe_c770))
     }
     #[inline]
     fn free(&mut self) {

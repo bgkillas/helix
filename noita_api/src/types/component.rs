@@ -1,9 +1,9 @@
 pub mod variable_storage;
 pub mod world_state;
 use crate::{
-    BitSet, CStrPtr, ComponentBuffer, ComponentBufferInitVTable, ComponentSystemVTable,
-    ComponentUpdaterVTable, ComponentVTable, Entity, EntityManager, StdBox, StdMap, StdString,
-    StdVec,
+    BitSet, CStrPtr, ComponentBuffer, ComponentBufferInitVTable, ComponentBufferVTable,
+    ComponentSystemVTable, ComponentUpdaterVTable, ComponentVTable, Entity, EntityManager, StdBox,
+    StdMap, StdString, StdVec,
 };
 use noita_api_macros::assert_size_with;
 use std::ffi::CStr;
@@ -14,12 +14,17 @@ pub use world_state::*;
 pub trait ComponentTrait: Debug + Default {
     const NAME: &'static CStr;
     fn vtable() -> StdBox<ComponentVTable<Self>>;
+    fn buffer_vtable() -> StdBox<ComponentBufferVTable<Self>>;
     fn free(&mut self);
 }
 impl ComponentTrait for () {
     const NAME: &'static CStr = c"ERROR";
     #[inline]
     fn vtable() -> StdBox<ComponentVTable<Self>> {
+        unreachable!()
+    }
+    #[inline]
+    fn buffer_vtable() -> StdBox<ComponentBufferVTable<Self>> {
         unreachable!()
     }
     #[inline]
@@ -62,6 +67,7 @@ impl<T: ComponentTrait> Component<T> {
     pub fn free(mut self) {
         self.unk3.free();
         self.data.free();
+        self.ptr.free();
     }
 }
 impl<T: ComponentTrait> Default for Component<T> {
@@ -235,7 +241,10 @@ pub struct ComponentTypeManager {
 impl Default for ComponentTypeManager {
     #[inline]
     fn default() -> Self {
-        todo!()
+        Self {
+            next_id: 0,
+            component_buffer_indices: StdMap::default(),
+        }
     }
 }
 #[repr(C)]

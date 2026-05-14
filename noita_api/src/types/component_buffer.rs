@@ -1,14 +1,15 @@
 use crate::{
     Component, ComponentBufferVTable, ComponentTrait, ComponentTypeManager, Entity, EntityManager,
-    EventManager, StdBox, StdMap, StdPtr, StdVec,
+    EventManager, StdBox, StdMap, StdPtr, StdString, StdVec,
 };
 use noita_api_macros::assert_size_with;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, DerefMut};
+use std::ptr;
 #[repr(C)]
 #[assert_size_with(0xc4, ())]
 pub struct ComponentBuffer<T: ComponentTrait> {
-    pub vtable: StdBox<ComponentBufferVTable>,
+    pub vtable: StdBox<ComponentBufferVTable<T>>,
     pub end: usize,
     unk: [usize; 2],
     pub entity_entry: StdVec<usize>,
@@ -91,6 +92,47 @@ impl<T: ComponentTrait> ComponentBuffer<T> {
             None
         }
     }
+    #[must_use]
+    #[inline]
+    pub fn new_global() -> (usize, StdBox<ComponentBuffer<T>>) {
+        if let Some((type_id, buffer)) = ComponentBuffer::<T>::global() {
+            (type_id, buffer)
+        } else {
+            let mut coms = ComponentTypeManager::global();
+            let type_id = coms.next_id;
+            coms.next_id += 1;
+            coms.component_buffer_indices
+                .insert(StdString::from(T::NAME.to_str().unwrap()), type_id);
+            let mut em = EntityManager::global();
+            let buffer = StdBox::new(Self {
+                vtable: T::buffer_vtable(),
+                end: usize::MAX,
+                unk: [0; 2],
+                entity_entry: StdVec::default(),
+                entities: StdVec::default(),
+                prev: StdVec::default(),
+                next: StdVec::default(),
+                component_list: StdVec::default(),
+                unk1r: ptr::null_mut(),
+                unk4: ptr::null_mut(),
+                unk1: [0; 2],
+                free_ids: 0,
+                entry_to_local_id: StdVec::default(),
+                is_local_id_killed: StdVec::default(),
+                local_id_to_entry: StdVec::default(),
+                unk2r: ptr::null_mut(),
+                unk3r: ptr::null_mut(),
+                unk2: [0; 3],
+                len: 0,
+                unk4r: [0; 2],
+                entity_manager: em.ptr,
+                event_manager: em.event_manager.ptr,
+                unk3: [0; 6],
+            });
+            em.component_buffers.push(buffer.cast());
+            (type_id, buffer)
+        }
+    }
 }
 #[derive(Debug)]
 pub struct ComponentIter<'a, T: ComponentTrait> {
@@ -107,6 +149,7 @@ impl<T: ComponentTrait> Iterator for ComponentIter<'_, T> {
         }
         let com = self.components[self.current];
         self.current = self.next[self.current];
+        debug_assert!(com.is_some());
         com
     }
 }

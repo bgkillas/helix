@@ -120,6 +120,53 @@ impl Default for Entity {
 }
 impl Entity {
     #[inline]
+    pub fn kill_now(mut self) {
+        if let Some(children) = self.children {
+            for ent in children.iter() {
+                ent.kill_children_now();
+            }
+        }
+        if let Some(parent) = self.parent {
+            parent.kill_parent_now(self);
+        }
+        let mut em = EntityManager::global();
+        em.entities[self.entry] = None;
+        em.free_ids.push(self.entry);
+        self.name.free();
+        self.ptr.free();
+    }
+    #[inline]
+    pub fn kill_parent_now(mut self, not: Self) {
+        if let Some(children) = self.children {
+            for ent in children.iter().copied() {
+                if not != ent {
+                    ent.kill_children_now();
+                }
+            }
+        }
+        if let Some(parent) = self.parent {
+            parent.kill_parent_now(self);
+        }
+        let mut em = EntityManager::global();
+        em.entities[self.entry] = None;
+        em.free_ids.push(self.entry);
+        self.name.free();
+        self.ptr.free();
+    }
+    #[inline]
+    pub fn kill_children_now(mut self) {
+        if let Some(children) = self.children {
+            for ent in children.iter() {
+                ent.kill_now();
+            }
+        }
+        let mut em = EntityManager::global();
+        em.entities[self.entry] = None;
+        em.free_ids.push(self.entry);
+        self.name.free();
+        self.ptr.free();
+    }
+    #[inline]
     #[must_use]
     pub fn has_tag(self, tag: &str) -> bool {
         let tag_manager = TagManager::<u16>::global();
@@ -287,8 +334,27 @@ impl Entity {
         }
     }
     #[inline]
+    pub fn retain_components<T: ComponentTrait>(self, mut f: impl FnMut(Component<T>) -> bool) {
+        let (_, buffer) = ComponentBuffer::<T>::global().unwrap();
+        let mut start = buffer.entity_entry[self.entry];
+        while start != usize::MAX {
+            let com = buffer.component_list[start].unwrap();
+            if !f(com) {
+                self.remove_component_inner(com, buffer);
+            }
+            start = buffer.next[start];
+        }
+    }
+    #[inline]
     pub fn remove_component<T: ComponentTrait>(self, com: Component<T>) {
-        let (_, mut buffer) = ComponentBuffer::<T>::global().unwrap();
+        let (_, buffer) = ComponentBuffer::<T>::global().unwrap();
+        self.remove_component_inner(com, buffer);
+    }
+    fn remove_component_inner<T: ComponentTrait>(
+        self,
+        com: Component<T>,
+        mut buffer: StdBox<ComponentBuffer<T>>,
+    ) {
         buffer.free_ids += 1;
         buffer.len -= 1;
         if buffer.entity_entry[self.entry] == com.entry {
@@ -313,13 +379,7 @@ impl Entity {
     #[must_use]
     #[inline]
     pub fn add_component<T: ComponentTrait>(self) -> Component<T> {
-        #[allow(clippy::manual_let_else)]
-        let (type_id, mut buffer) = if let Some((type_id, buffer)) = ComponentBuffer::<T>::global()
-        {
-            (type_id, buffer)
-        } else {
-            todo!()
-        };
+        let (type_id, mut buffer) = ComponentBuffer::<T>::new_global();
         let mut com = Component::<T>::new(type_id);
         if buffer.free_ids == 0 {
             com.entry = buffer.len;
@@ -351,7 +411,7 @@ impl Entity {
             buffer.free_ids -= 1;
         }
         buffer.len += 1;
-        buffer.entity_entry.resize(self.entry, usize::MAX);
+        buffer.entity_entry.resize(self.entry + 1, usize::MAX);
         if buffer.entity_entry[self.entry] == usize::MAX {
             buffer.entity_entry[self.entry] = com.entry;
         } else {
@@ -377,4 +437,55 @@ impl DerefMut for Entity {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.ptr
     }
+}
+#[test]
+fn test_coms() {
+    use crate::VariableStorage;
+    let ent0 = Entity::default();
+    let ent1 = Entity::default();
+    let ent2 = Entity::default();
+    let com0 = ent0.add_component::<VariableStorage>();
+    let com1 = ent1.add_component::<VariableStorage>();
+    let com2 = ent1.add_component::<VariableStorage>();
+    let com3 = ent0.add_component::<VariableStorage>();
+    let com4 = ent0.add_component::<VariableStorage>();
+    let com5 = ent2.add_component::<VariableStorage>();
+    let com6 = ent0.add_component::<VariableStorage>();
+    assert_eq!(
+        ent0.iter_components::<VariableStorage>()
+            .collect::<Vec<_>>(),
+        vec![com0, com3, com4, com6]
+    );
+    assert_eq!(
+        ent1.iter_components::<VariableStorage>()
+            .collect::<Vec<_>>(),
+        vec![com1, com2]
+    );
+    assert_eq!(
+        ent2.iter_components::<VariableStorage>()
+            .collect::<Vec<_>>(),
+        vec![com5]
+    );
+    ent0.retain_components(|c| c != com3);
+    assert_eq!(
+        ent0.iter_components::<VariableStorage>()
+            .collect::<Vec<_>>(),
+        vec![com0, com4, com6]
+    );
+    ent0.remove_component(com4);
+    assert_eq!(
+        ent0.iter_components::<VariableStorage>()
+            .collect::<Vec<_>>(),
+        vec![com0, com6]
+    );
+    ent0.retain_components::<VariableStorage>(|_| false);
+    ent1.retain_components::<VariableStorage>(|_| false);
+    ent2.retain_components::<VariableStorage>(|_| false);
+    assert_eq!(Entity::iter().collect::<Vec<_>>(), vec![ent0, ent1, ent2]);
+    ent0.kill_now();
+    assert_eq!(Entity::iter().collect::<Vec<_>>(), vec![ent1, ent2]);
+    ent1.kill_now();
+    assert_eq!(Entity::iter().collect::<Vec<_>>(), vec![ent2]);
+    ent2.kill_now();
+    assert_eq!(Entity::iter().collect::<Vec<_>>(), vec![]);
 }
