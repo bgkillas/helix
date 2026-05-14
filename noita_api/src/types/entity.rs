@@ -1,7 +1,6 @@
 use crate::{
-    BitSet, Component, ComponentBuffer, ComponentIter, ComponentTrait, ComponentTypeManager,
-    EntityManager, FileNames, MaybeUninitComponentInner, StdBox, StdString, StdVec, TagManager,
-    Transform,
+    BitSet, Component, ComponentBuffer, ComponentIter, ComponentTrait, EntityManager, FileNames,
+    StdBox, StdString, StdVec, TagManager, Transform,
 };
 use std::fmt;
 use std::fmt::{Debug, Formatter};
@@ -264,64 +263,68 @@ impl Entity {
     #[must_use]
     #[inline]
     pub fn iter_components<'a, T: ComponentTrait>(self) -> ComponentIter<'a, T> {
-        let coms = ComponentTypeManager::global();
-        if let Some(index) = coms
-            .component_buffer_indices
-            .get(T::NAME.to_str().unwrap())
-            .copied()
+        if let Some((_, buffer)) = ComponentBuffer::<T>::global()
+            && let Some(current) = buffer.entity_entry.get(self.entry).copied()
         {
-            let em = EntityManager::global();
-            let buffer = em.component_buffers[index].cast::<ComponentBuffer<T>>();
-            if let Some(current) = buffer.entity_entry.get(self.entry).copied() {
-                let buffer_ref = buffer.as_ref();
-                return ComponentIter {
-                    current,
-                    next: &buffer_ref.next,
-                    components: &buffer_ref.component_list,
-                };
+            let buffer_ref = buffer.as_ref();
+            ComponentIter {
+                current,
+                next: &buffer_ref.next,
+                components: &buffer_ref.component_list,
             }
-        }
-        ComponentIter {
-            current: usize::MAX,
-            next: &[],
-            components: &[],
+        } else {
+            ComponentIter {
+                current: usize::MAX,
+                next: &[],
+                components: &[],
+            }
         }
     }
     #[must_use]
     #[inline]
     pub fn add_component<T: ComponentTrait>(self) -> Component<T> {
-        let coms = ComponentTypeManager::global();
-        if let Some(index) = coms
-            .component_buffer_indices
-            .get(T::NAME.to_str().unwrap())
-            .copied()
-        {
-            let em = EntityManager::global();
-            let mut buffer: StdBox<ComponentBuffer<T>> = em.component_buffers[index].cast();
-            let mut maybe_com_inner = MaybeUninitComponentInner::<T>::default();
-            maybe_com_inner.vtable = Some(T::vtable());
-            maybe_com_inner.type_id = index;
-            maybe_com_inner.type_name = T::NAME.as_ptr().into();
-            let maybe_com = StdBox::new(maybe_com_inner);
-            let mut com: Component<T> = Component {
-                ptr: maybe_com.cast(),
-            };
-            if let Some(entry) = buffer.component_list.iter().position(Option::is_none) {
+        if let Some((type_id, mut buffer)) = ComponentBuffer::<T>::global() {
+            let mut com = Component::<T>::new(type_id);
+            if buffer.free_ids == 0 {
+                com.entry = buffer.len;
+                buffer.component_list.push(Some(com));
+                buffer.entities.push(Some(self));
+                let local_id = buffer.is_local_id_killed.len();
+                if buffer.next.len() <= buffer.len {
+                    buffer.next.push(usize::MAX);
+                    buffer.prev.push(usize::MAX);
+                    buffer.entry_to_local_id.push(local_id);
+                } else {
+                    buffer.entry_to_local_id[com.entry] = local_id;
+                }
+                buffer.is_local_id_killed.push(false);
+                buffer.local_id_to_entry.push(com.entry);
+            } else {
+                let entry = buffer
+                    .component_list
+                    .iter()
+                    .position(Option::is_none)
+                    .unwrap();
                 com.entry = entry;
                 buffer.component_list[com.entry] = Some(com);
                 buffer.entities[com.entry] = Some(self);
-            } else {
-                com.entry = buffer.component_list.len();
-                buffer.component_list.push(Some(com));
-                buffer.entities.push(Some(self));
-                buffer.next.push(usize::MAX);
-                buffer.prev.push(usize::MAX);
+                let local_id = buffer.is_local_id_killed.len();
+                buffer.entry_to_local_id[com.entry] = local_id;
+                buffer.is_local_id_killed.push(false);
+                buffer.local_id_to_entry.push(com.entry);
+                buffer.free_ids -= 1;
             }
+            buffer.len += 1;
             buffer.entity_entry.resize(self.entry, usize::MAX);
             if buffer.entity_entry[self.entry] == usize::MAX {
                 buffer.entity_entry[self.entry] = com.entry;
             } else {
-                todo!()
+                let mut end = buffer.entity_entry[self.entry];
+                while buffer.next[end] != usize::MAX {
+                    end = buffer.next[end];
+                }
+                buffer.next[end] = com.entry;
+                buffer.prev[com.entry] = end;
             }
             com
         } else {

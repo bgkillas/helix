@@ -19,7 +19,7 @@ impl ComponentTrait for () {
     const NAME: &'static CStr = c"ERROR";
     #[inline]
     fn vtable() -> StdBox<ComponentVTable<Self>> {
-        todo!()
+        unreachable!()
     }
 }
 #[repr(C)]
@@ -37,6 +37,36 @@ pub struct ComponentInner<T: ComponentTrait> {
     unk3: StdVec<bool>,
     unk4: usize,
     data: T,
+}
+impl<T: ComponentTrait> Component<T> {
+    #[inline]
+    #[must_use]
+    pub fn new(type_id: usize) -> Self {
+        let maybe = MaybeUninitComponentInner::<T> {
+            vtable: Some(T::vtable()),
+            type_name: T::NAME.as_ptr().into(),
+            type_id,
+            ..MaybeUninitComponentInner::default()
+        };
+        let maybe_com = StdBox::new(maybe);
+        Self {
+            ptr: maybe_com.cast(),
+        }
+    }
+}
+impl<T: ComponentTrait> Default for Component<T> {
+    #[inline]
+    fn default() -> Self {
+        let maybe = MaybeUninitComponentInner::<T> {
+            vtable: Some(T::vtable()),
+            type_name: T::NAME.as_ptr().into(),
+            ..MaybeUninitComponentInner::default()
+        };
+        let maybe_com = StdBox::new(maybe);
+        Self {
+            ptr: maybe_com.cast(),
+        }
+    }
 }
 #[repr(C)]
 #[assert_size_with(0x48, ())]
@@ -166,12 +196,6 @@ impl<T: ComponentTrait> DerefMut for Component<T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.ptr
-    }
-}
-impl<T: ComponentTrait> Default for Component<T> {
-    #[inline]
-    fn default() -> Self {
-        todo!()
     }
 }
 #[repr(transparent)]
