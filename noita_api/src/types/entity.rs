@@ -1,7 +1,7 @@
 use crate::{
-    BitSet, Component, ComponentBuffer, ComponentIdMap, ComponentIter, ComponentTrait,
-    ComponentTypeManager, EntityManager, FileNames, MaxComponent, MaybeUninitComponentInner,
-    StdBox, StdString, StdVec, TagManager, Transform,
+    BitSet, Component, ComponentBuffer, ComponentIter, ComponentTrait, ComponentTypeManager,
+    EntityManager, FileNames, MaybeUninitComponentInner, StdBox, StdString, StdVec, TagManager,
+    Transform,
 };
 use std::fmt;
 use std::fmt::{Debug, Formatter};
