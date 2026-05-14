@@ -10,6 +10,10 @@ impl ComponentTrait for WorldState {
     fn vtable() -> StdBox<ComponentVTable<Self>> {
         StdBox::from(StdPtr::new(0x00ff_3ffc))
     }
+    #[inline]
+    fn free(&mut self) {
+        todo!()
+    }
 }
 #[derive(Debug, Default)]
 #[assert_size_com(0x1c8)]

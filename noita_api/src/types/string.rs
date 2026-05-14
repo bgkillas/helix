@@ -60,9 +60,7 @@ impl Debug for StdStringRef<'_> {
 impl Drop for StdStringRef<'_> {
     #[inline]
     fn drop(&mut self) {
-        if self.capacity > 16 && self.capacity != usize::MAX {
-            unsafe { self.buffer.buffer }.free_array(self.capacity);
-        }
+        self.free();
     }
 }
 impl From<&str> for StdStringRef<'static> {
@@ -87,6 +85,12 @@ impl From<&str> for StdStringRef<'static> {
     }
 }
 impl<'a> StdStringRef<'a> {
+    #[inline]
+    pub fn free(&mut self) {
+        if self.capacity > 16 && self.capacity != usize::MAX {
+            unsafe { self.buffer.buffer }.free_array(self.capacity);
+        }
+    }
     #[must_use]
     #[inline]
     pub fn as_str(&self) -> &str {

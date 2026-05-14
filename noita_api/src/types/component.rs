@@ -14,11 +14,16 @@ pub use world_state::*;
 pub trait ComponentTrait: Debug + Default {
     const NAME: &'static CStr;
     fn vtable() -> StdBox<ComponentVTable<Self>>;
+    fn free(&mut self);
 }
 impl ComponentTrait for () {
     const NAME: &'static CStr = c"ERROR";
     #[inline]
     fn vtable() -> StdBox<ComponentVTable<Self>> {
+        unreachable!()
+    }
+    #[inline]
+    fn free(&mut self) {
         unreachable!()
     }
 }
@@ -52,6 +57,11 @@ impl<T: ComponentTrait> Component<T> {
         Self {
             ptr: maybe_com.cast(),
         }
+    }
+    #[inline]
+    pub fn free(mut self) {
+        self.unk3.free();
+        self.data.free();
     }
 }
 impl<T: ComponentTrait> Default for Component<T> {

@@ -7,6 +7,11 @@ impl ComponentTrait for VariableStorage {
     fn vtable() -> StdBox<ComponentVTable<Self>> {
         StdBox::from(StdPtr::new(0x0104_6b70))
     }
+    #[inline]
+    fn free(&mut self) {
+        self.name.free();
+        self.value_string.free();
+    }
 }
 #[derive(Debug, Default)]
 #[repr(C)]

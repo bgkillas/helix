@@ -122,6 +122,12 @@ impl<T> StdVec<T> {
             self.cap = unsafe { new_ptr.add(new_cap) };
         }
     }
+    #[inline]
+    pub fn free(&mut self) {
+        if let Some(ptr) = NonNull::new(self.start) {
+            StdPtr::from(ptr).free();
+        }
+    }
 }
 impl<T> Deref for StdVec<T> {
     type Target = [T];

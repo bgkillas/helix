@@ -258,7 +258,13 @@ impl Entity {
     #[must_use]
     #[inline]
     pub fn get_component_entry<T: ComponentTrait>(self, entry: usize) -> Option<Component<T>> {
-        self.iter_components().find(|c| c.entry == entry)
+        if let Some((_, buffer)) = ComponentBuffer::<T>::global()
+            && buffer.entities[entry].is_some_and(|e| e == self)
+        {
+            buffer.component_list[entry]
+        } else {
+            None
+        }
     }
     #[must_use]
     #[inline]
@@ -280,56 +286,83 @@ impl Entity {
             }
         }
     }
+    #[inline]
+    pub fn remove_component<T: ComponentTrait>(self, com: Component<T>) {
+        let (_, mut buffer) = ComponentBuffer::<T>::global().unwrap();
+        buffer.free_ids += 1;
+        buffer.len -= 1;
+        if buffer.entity_entry[self.entry] == com.entry {
+            buffer.entity_entry[self.entry] = buffer.next[com.entry];
+        }
+        buffer.entities[com.entry] = None;
+        if buffer.prev[com.entry] != usize::MAX {
+            let prev = buffer.prev[com.entry];
+            buffer.next[prev] = buffer.next[com.entry];
+        }
+        if buffer.next[com.entry] != usize::MAX {
+            let next = buffer.next[com.entry];
+            buffer.prev[next] = buffer.prev[com.entry];
+        }
+        buffer.component_list[com.entry] = None;
+        let local_id = buffer.entry_to_local_id[com.entry];
+        buffer.entry_to_local_id[com.entry] = 0;
+        buffer.is_local_id_killed[local_id] = true;
+        buffer.local_id_to_entry[local_id] = usize::MAX;
+        com.free();
+    }
     #[must_use]
     #[inline]
     pub fn add_component<T: ComponentTrait>(self) -> Component<T> {
-        if let Some((type_id, mut buffer)) = ComponentBuffer::<T>::global() {
-            let mut com = Component::<T>::new(type_id);
-            if buffer.free_ids == 0 {
-                com.entry = buffer.len;
-                buffer.component_list.push(Some(com));
-                buffer.entities.push(Some(self));
-                let local_id = buffer.is_local_id_killed.len();
-                if buffer.next.len() <= buffer.len {
-                    buffer.next.push(usize::MAX);
-                    buffer.prev.push(usize::MAX);
-                    buffer.entry_to_local_id.push(local_id);
-                } else {
-                    buffer.entry_to_local_id[com.entry] = local_id;
-                }
-                buffer.is_local_id_killed.push(false);
-                buffer.local_id_to_entry.push(com.entry);
-            } else {
-                let entry = buffer
-                    .component_list
-                    .iter()
-                    .position(Option::is_none)
-                    .unwrap();
-                com.entry = entry;
-                buffer.component_list[com.entry] = Some(com);
-                buffer.entities[com.entry] = Some(self);
-                let local_id = buffer.is_local_id_killed.len();
-                buffer.entry_to_local_id[com.entry] = local_id;
-                buffer.is_local_id_killed.push(false);
-                buffer.local_id_to_entry.push(com.entry);
-                buffer.free_ids -= 1;
-            }
-            buffer.len += 1;
-            buffer.entity_entry.resize(self.entry, usize::MAX);
-            if buffer.entity_entry[self.entry] == usize::MAX {
-                buffer.entity_entry[self.entry] = com.entry;
-            } else {
-                let mut end = buffer.entity_entry[self.entry];
-                while buffer.next[end] != usize::MAX {
-                    end = buffer.next[end];
-                }
-                buffer.next[end] = com.entry;
-                buffer.prev[com.entry] = end;
-            }
-            com
+        #[allow(clippy::manual_let_else)]
+        let (type_id, mut buffer) = if let Some((type_id, buffer)) = ComponentBuffer::<T>::global()
+        {
+            (type_id, buffer)
         } else {
             todo!()
+        };
+        let mut com = Component::<T>::new(type_id);
+        if buffer.free_ids == 0 {
+            com.entry = buffer.len;
+            buffer.component_list.push(Some(com));
+            buffer.entities.push(Some(self));
+            let local_id = buffer.is_local_id_killed.len();
+            if buffer.next.len() <= buffer.len {
+                buffer.next.push(usize::MAX);
+                buffer.prev.push(usize::MAX);
+                buffer.entry_to_local_id.push(local_id);
+            } else {
+                buffer.entry_to_local_id[com.entry] = local_id;
+            }
+            buffer.is_local_id_killed.push(false);
+            buffer.local_id_to_entry.push(com.entry);
+        } else {
+            let entry = buffer
+                .component_list
+                .iter()
+                .position(Option::is_none)
+                .unwrap();
+            com.entry = entry;
+            buffer.component_list[com.entry] = Some(com);
+            buffer.entities[com.entry] = Some(self);
+            let local_id = buffer.is_local_id_killed.len();
+            buffer.entry_to_local_id[com.entry] = local_id;
+            buffer.is_local_id_killed.push(false);
+            buffer.local_id_to_entry.push(com.entry);
+            buffer.free_ids -= 1;
         }
+        buffer.len += 1;
+        buffer.entity_entry.resize(self.entry, usize::MAX);
+        if buffer.entity_entry[self.entry] == usize::MAX {
+            buffer.entity_entry[self.entry] = com.entry;
+        } else {
+            let mut end = buffer.entity_entry[self.entry];
+            while buffer.next[end] != usize::MAX {
+                end = buffer.next[end];
+            }
+            buffer.next[end] = com.entry;
+            buffer.prev[com.entry] = end;
+        }
+        com
     }
 }
 impl Deref for Entity {
