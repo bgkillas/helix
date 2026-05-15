@@ -49,5 +49,6 @@ fn test_iter() {
         }
         assert!(ent1.has_tag("tag_a"));
         assert!(ent1.has_tag("tag_b"));
+        ent1.kill_now();
     }
 }

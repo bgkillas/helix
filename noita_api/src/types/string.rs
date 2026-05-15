@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 use std::ffi::{CStr, c_char};
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::slice;
 #[repr(C)]
 #[assert_size(0x10)]
@@ -45,7 +45,7 @@ impl Default for StdString {
         Self {
             buffer: Buffer { sso_array: [0; 16] },
             size: 0,
-            capacity: 0,
+            capacity: 16,
             lifetime: PhantomData,
         }
     }
@@ -60,7 +60,9 @@ impl Debug for StdStringRef<'_> {
 impl Drop for StdStringRef<'_> {
     #[inline]
     fn drop(&mut self) {
-        self.free();
+        if self.capacity != usize::MAX {
+            self.free();
+        }
     }
 }
 impl From<&str> for StdStringRef<'static> {
@@ -78,7 +80,7 @@ impl From<&str> for StdStringRef<'static> {
         };
         Self {
             buffer,
-            capacity: value.len(),
+            capacity: value.len().max(16),
             size: value.len(),
             lifetime: PhantomData,
         }
@@ -86,8 +88,33 @@ impl From<&str> for StdStringRef<'static> {
 }
 impl<'a> StdStringRef<'a> {
     #[inline]
+    pub fn clear(&mut self) {
+        self.size = 0;
+    }
+    #[inline]
+    pub fn push_str(&mut self, s: &str) {
+        let new = s.len() + self.size;
+        if new > self.capacity {
+            let new_buffer = StdPtr::malloc_array(new);
+            let slice = unsafe { slice::from_raw_parts_mut(new_buffer.as_ptr(), self.size) };
+            slice.copy_from_slice(self.as_bytes());
+            let slice_s =
+                unsafe { slice::from_raw_parts_mut(new_buffer.as_ptr().add(self.size), s.len()) };
+            slice_s.copy_from_slice(s.as_bytes());
+            if self.capacity > 16 {
+                self.free();
+            }
+            self.capacity = new;
+            self.buffer.buffer = new_buffer;
+        } else {
+            unsafe { &mut self.buffer.sso_array[self.size..self.size + s.len()] }
+                .copy_from_slice(s.as_bytes());
+        }
+        self.size = new;
+    }
+    #[inline]
     pub fn free(&mut self) {
-        if self.capacity > 16 && self.capacity != usize::MAX {
+        if self.capacity > 16 {
             unsafe { self.buffer.buffer }.free_array(self.capacity);
         }
     }
@@ -100,6 +127,16 @@ impl<'a> StdStringRef<'a> {
             unsafe { self.buffer.sso_array.as_ptr() }
         };
         unsafe { str::from_utf8(slice::from_raw_parts(ptr, self.size)).unwrap() }
+    }
+    #[must_use]
+    #[inline]
+    pub fn as_str_mut(&mut self) -> &mut str {
+        let ptr = if self.capacity > 16 {
+            unsafe { self.buffer.buffer.as_ptr() }
+        } else {
+            unsafe { self.buffer.sso_array.as_mut_ptr() }
+        };
+        unsafe { str::from_utf8_mut(slice::from_raw_parts_mut(ptr, self.size)).unwrap() }
     }
     #[must_use]
     #[inline]
@@ -124,14 +161,33 @@ impl Deref for StdStringRef<'_> {
         self.as_str()
     }
 }
+impl DerefMut for StdStringRef<'_> {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.as_str_mut()
+    }
+}
 #[test]
 fn test_stdstring() {
     let str = "abcdefghijklmnopqrstuvwxyz";
     let std = StdString::from(str);
     assert_eq!(str, std.as_str());
     let str = "abcdef";
-    let std = StdString::from(str);
+    let mut std = StdString::from(str);
     assert_eq!(str, std.as_str());
+    std.push_str("ghijklmnopqrstuvwxyz");
+    assert_eq!("abcdefghijklmnopqrstuvwxyz", std.as_str());
+    let str = "abcdef";
+    let mut std = StdString::from(str);
+    std.push_str("ghi");
+    assert_eq!("abcdefghi", std.as_str());
+    let str = "abcdefghijklmnopqrstuvwxyz";
+    let mut std = StdString::from(str);
+    std.push_str("abcdefghijklmnopqrstuvwxyz");
+    assert_eq!(
+        "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz",
+        std.as_str()
+    );
     unsafe {
         let str = "abcdefghijklmnopqrstuvwxyz";
         let std = StdStringRef::no_alloc(str);

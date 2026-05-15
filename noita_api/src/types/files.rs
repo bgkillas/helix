@@ -8,7 +8,9 @@ pub struct FileNames {
 impl Default for FileNames {
     #[inline]
     fn default() -> Self {
-        todo!()
+        Self {
+            file_names: StdVec::default(),
+        }
     }
 }
 impl Deref for FileNames {
