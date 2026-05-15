@@ -69,9 +69,8 @@ impl From<&str> for StdStringRef<'static> {
     #[inline]
     fn from(value: &str) -> Self {
         let buffer = if value.len() > 16 {
-            let buffer = StdPtr::malloc_array(value.len());
-            let slice = unsafe { slice::from_raw_parts_mut(buffer.as_ptr(), value.len()) };
-            slice.copy_from_slice(value.as_bytes());
+            let buffer: StdPtr<u8> = StdPtr::malloc_array(value.len());
+            unsafe { buffer.as_ptr().copy_from(value.as_ptr(), value.len()) };
             Buffer { buffer }
         } else {
             let mut iter = value.as_bytes().iter().copied();
@@ -95,20 +94,36 @@ impl<'a> StdStringRef<'a> {
     pub fn push_str(&mut self, s: &str) {
         let new = s.len() + self.size;
         if new > self.capacity {
-            let new_buffer = StdPtr::malloc_array(new);
-            let slice = unsafe { slice::from_raw_parts_mut(new_buffer.as_ptr(), self.size) };
-            slice.copy_from_slice(self.as_bytes());
-            let slice_s =
-                unsafe { slice::from_raw_parts_mut(new_buffer.as_ptr().add(self.size), s.len()) };
-            slice_s.copy_from_slice(s.as_bytes());
+            let new_buffer: StdPtr<u8> = StdPtr::malloc_array(new);
+            unsafe {
+                new_buffer.as_ptr().copy_from(
+                    if self.capacity > 16 {
+                        self.buffer.buffer.as_ptr()
+                    } else {
+                        self.buffer.sso_array.as_ptr()
+                    },
+                    self.size,
+                );
+            };
+            unsafe {
+                new_buffer
+                    .as_ptr()
+                    .add(self.size)
+                    .copy_from(s.as_ptr(), s.len());
+            };
             if self.capacity > 16 {
                 self.free();
             }
             self.capacity = new;
             self.buffer.buffer = new_buffer;
         } else {
-            unsafe { &mut self.buffer.sso_array[self.size..self.size + s.len()] }
-                .copy_from_slice(s.as_bytes());
+            unsafe {
+                self.buffer
+                    .sso_array
+                    .as_mut_ptr()
+                    .add(self.size)
+                    .copy_from(s.as_ptr(), s.len());
+            };
         }
         self.size = new;
     }
