@@ -5,7 +5,7 @@ use std::ptr;
 pub fn log_print(value: &CStr) {
     let orig = LogFlush::global().flush;
     LogFlush::global().flush = true;
-    let ptr = ptr::with_exposed_provenance_mut(0x0115_5538);
+    let ptr = ptr::without_provenance_mut(0x0115_5538);
     let print = unsafe { get_this_call!(0x0090_3930, fn(*mut c_void, *const c_char)) };
     print(ptr, value.as_ptr());
     LogFlush::global().flush = orig;

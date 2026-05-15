@@ -73,8 +73,12 @@ impl From<&str> for StdStringRef<'static> {
             unsafe { buffer.as_ptr().copy_from(value.as_ptr(), value.len()) };
             Buffer { buffer }
         } else {
-            let mut iter = value.as_bytes().iter().copied();
-            let sso_array = std::array::from_fn(|_| iter.next().unwrap_or(0));
+            let mut sso_array = [0; 16];
+            unsafe {
+                sso_array
+                    .as_mut_ptr()
+                    .copy_from(value.as_ptr(), value.len());
+            };
             Buffer { sso_array }
         };
         Self {

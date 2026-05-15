@@ -10,12 +10,16 @@ use std::ops::{Deref, DerefMut};
 use std::ptr;
 use std::ptr::NonNull;
 #[link(name = "msvcr120")]
-#[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+#[cfg(all(
+    target_os = "windows",
+    target_pointer_width = "32",
+    not(feature = "log")
+))]
 unsafe extern "C" {
     #[link_name = "??2@YAPAXI@Z"]
-    fn operator_new(size: c_uint) -> *mut c_void;
+    fn operator_new(size: c_uint) -> *mut c_void; //0x00f0_7500
     #[link_name = "??3@YAXPAX@Z"]
-    fn operator_delete(ptr: *mut c_void);
+    fn operator_delete(ptr: *mut c_void); //0x00f0_7504
 }
 #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
 const ALLOC: Global = Global;
@@ -37,12 +41,44 @@ pub struct MaybeStdBox<T: Sized> {
     pub ptr: Option<StdBox<T>>,
 }
 impl<T: Sized> StdPtr<T> {
-    #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+    #[cfg(all(target_os = "windows", target_pointer_width = "32", feature = "log"))]
+    pub fn malloc() -> Self {
+        let operator_new = unsafe {
+            crate::get_cdecl!(
+                ptr::without_provenance::<usize>(0x00f0_7500)
+                    .cast::<usize>()
+                    .read(),
+                fn(c_uint) -> *mut c_void
+            )
+        };
+        let ptr = NonNull::new(operator_new(size_of::<T>() as c_uint).cast()).unwrap();
+        Self { ptr }
+    }
+    #[cfg(all(target_os = "windows", target_pointer_width = "32", feature = "log"))]
+    pub fn malloc_array(n: usize) -> Self {
+        let operator_new = unsafe {
+            crate::get_cdecl!(
+                ptr::without_provenance::<usize>(0x00f0_7500).read(),
+                fn(c_uint) -> *mut c_void
+            )
+        };
+        let ptr = NonNull::new(operator_new((size_of::<T>() * n) as c_uint).cast()).unwrap();
+        Self { ptr }
+    }
+    #[cfg(all(
+        target_os = "windows",
+        target_pointer_width = "32",
+        not(feature = "log")
+    ))]
     pub fn malloc() -> Self {
         let ptr = NonNull::new(unsafe { operator_new(size_of::<T>() as c_uint).cast() }).unwrap();
         Self { ptr }
     }
-    #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+    #[cfg(all(
+        target_os = "windows",
+        target_pointer_width = "32",
+        not(feature = "log")
+    ))]
     pub fn malloc_array(n: usize) -> Self {
         let ptr =
             NonNull::new(unsafe { operator_new((size_of::<T>() * n) as c_uint).cast() }).unwrap();
@@ -71,13 +107,27 @@ impl<T: Sized> StdPtr<T> {
         let ptr = ALLOC.allocate(layout).unwrap().cast();
         Self { ptr }
     }
-    #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+    #[cfg(all(target_os = "windows", target_pointer_width = "32", feature = "log"))]
+    pub fn free(&mut self) {
+        let operator_delete = unsafe {
+            crate::get_cdecl!(
+                ptr::without_provenance::<usize>(0x00f0_7504).read(),
+                fn(*mut c_void)
+            )
+        };
+        operator_delete(self.ptr.as_ptr().cast())
+    }
+    #[cfg(all(
+        target_os = "windows",
+        target_pointer_width = "32",
+        not(feature = "log")
+    ))]
     pub fn free(&mut self) {
         unsafe { operator_delete(self.ptr.as_ptr().cast()) }
     }
     #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
     pub fn free_array(&mut self, _: usize) {
-        unsafe { operator_delete(self.ptr.as_ptr().cast()) }
+        self.free();
     }
     #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
     #[inline]

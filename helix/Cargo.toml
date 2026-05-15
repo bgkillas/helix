@@ -8,6 +8,10 @@ repository.workspace = true
 [lib]
 crate-type = ["cdylib"]
 
+[features]
+default = []
+log = []
+
 [dependencies]
 noita_api = {workspace = true}
 bevy_tangled = {git = "https://github.com/bgkillas/bevy_tangled", version = "0.2.0", default-features = false, features = ["tangled", "compress"]}
