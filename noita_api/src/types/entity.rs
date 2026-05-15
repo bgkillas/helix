@@ -10,7 +10,7 @@ use std::ops::{Deref, DerefMut};
 pub struct EntityInner {
     pub id: usize,
     pub entry: usize,
-    pub filename_index: usize,
+    pub filename_index: FileNameIndex,
     pub kill_flag: bool,
     unknown1: isize,
     pub name: StdString,
@@ -20,8 +20,36 @@ pub struct EntityInner {
     pub children: Option<StdBox<StdVec<Entity>>>,
     pub parent: Option<Entity>,
 }
+#[repr(transparent)]
+#[derive(Clone, Copy, PartialEq, Default)]
+pub struct FileNameIndex {
+    pub index: usize,
+}
+impl Debug for FileNameIndex {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("FileNameIndex")
+            .field(&self.index)
+            .field(&self.get_file_name())
+            .finish()
+    }
+}
+impl FileNameIndex {
+    #[inline]
+    #[must_use]
+    pub fn get_file_name<'a>(self) -> Option<&'a str> {
+        if self.index != 0 {
+            let filenames = FileNames::global().as_ref();
+            Some(filenames[self.index - 1].as_str())
+        } else {
+            None
+        }
+    }
+}
 impl EntityInner {
-    fn debug_children(&self) -> impl Debug {
+    #[inline]
+    #[must_use]
+    pub fn debug_children(&self) -> impl Debug {
         fmt::from_fn(|f| {
             if let Some(ents) = self.children {
                 let mut dl = f.debug_list();
@@ -32,7 +60,6 @@ impl EntityInner {
                             .field("id", &ent.id)
                             .field("entry", &ent.entry)
                             .field("filename_index", &ent.filename_index)
-                            .field("filename", &FileNames::global().get(ent.filename_index))
                             .field("kill_flag", &ent.kill_flag)
                             .field("unknown1", &ent.unknown1)
                             .field("name", &ent.name)
@@ -49,7 +76,9 @@ impl EntityInner {
             }
         })
     }
-    fn debug_parent(&self) -> impl Debug {
+    #[inline]
+    #[must_use]
+    pub fn debug_parent(&self) -> impl Debug {
         fmt::from_fn(|f| {
             if let Some(ent) = self.parent {
                 f.debug_struct("EntityInner")
@@ -57,7 +86,6 @@ impl EntityInner {
                     .field("id", &ent.id)
                     .field("entry", &ent.entry)
                     .field("filename_index", &ent.filename_index)
-                    .field("filename", &FileNames::global().get(ent.filename_index))
                     .field("kill_flag", &ent.kill_flag)
                     .field("unknown1", &ent.unknown1)
                     .field("name", &ent.name)
@@ -71,6 +99,23 @@ impl EntityInner {
             }
         })
     }
+    #[inline]
+    #[must_use]
+    pub fn debug_self(&self) -> impl Debug {
+        fmt::from_fn(|f| {
+            f.debug_struct("EntityInner")
+                .field("id", &self.id)
+                .field("entry", &self.entry)
+                .field("filename_index", &self.filename_index)
+                .field("kill_flag", &self.kill_flag)
+                .field("unknown1", &self.unknown1)
+                .field("name", &self.name)
+                .field("unknown2", &self.unknown2)
+                .field("tags", &self.tags)
+                .field("transform", &self.transform)
+                .finish()
+        })
+    }
 }
 impl Debug for EntityInner {
     #[inline]
@@ -79,7 +124,6 @@ impl Debug for EntityInner {
             .field("id", &self.id)
             .field("entry", &self.entry)
             .field("filename_index", &self.filename_index)
-            .field("filename", &FileNames::global().get(self.filename_index))
             .field("kill_flag", &self.kill_flag)
             .field("unknown1", &self.unknown1)
             .field("name", &self.name)
