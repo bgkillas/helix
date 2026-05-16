@@ -22,7 +22,7 @@ pub struct GridWorld {
     pub world_update_count: isize,
     pub chunk_map: ChunkMap,
     pub unknown2: [isize; 40],
-    pub m_thread_impl: StdBox<GridWorldThreadImpl>,
+    pub m_thread_impl: *mut GridWorldThreadImpl,
 }
 #[repr(C)]
 #[derive(Debug)]

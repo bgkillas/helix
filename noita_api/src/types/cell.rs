@@ -8,6 +8,7 @@ use crate::{
 pub use fire::*;
 pub use gas::*;
 pub use liquid::*;
+use noita_api_macros::assert_size_with;
 pub use solid::*;
 use std::ffi::c_void;
 use std::fmt::Debug;
@@ -16,6 +17,7 @@ pub trait CellTrait: Debug {}
 impl CellTrait for () {}
 #[repr(C)]
 #[derive(Debug)]
+#[assert_size_with(0x18, ())]
 pub struct CellInner<T: CellTrait> {
     pub vtable: StdBox<CellVTable<T>>,
     pub hp: isize,
