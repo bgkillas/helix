@@ -32,8 +32,8 @@ mod lua {
     use crate::{Context, Message};
     use bevy_tangled::ClientTrait as _;
     use noita_api::{
-        DamageFun, DamageModel, DamageThing, Entity, FireWandFun, PAUSE_SIMULATE, StdBox,
-        StdString, Vec2, WorldSeed, disable_inventory, disable_item_pickup, disable_pause,
+        DamageFun, DamageModel, DamageThing, Entity, FireWandFun, GameGlobal, PAUSE_SIMULATE,
+        StdBox, StdString, Vec2, WorldSeed, disable_inventory, disable_item_pickup, disable_pause,
         game_print, new_game_pause_update, set_pause_no_inventory,
     };
     use std::sync::atomic::Ordering;
@@ -43,7 +43,7 @@ mod lua {
             if let Err(e) = self.net.update() {
                 game_print!("{e:?}");
             }
-            if self.is_connected() {
+            if self.is_connected() && GameGlobal::global().frame_num.is_multiple_of(10) {
                 self.sync_world();
             }
             self.net.recv(|client, msg| match msg.data {

@@ -2,19 +2,16 @@ use crate::world_sync::SendType;
 use crate::{Context, Message};
 use bevy_tangled::{ClientTrait as _, Compression, Reliability};
 use noita_api::{AABB, Cell, CellType, GameGlobal, Vec2, game_print};
-pub const COLS: usize = 16;
+pub const COLS: usize = 32;
 pub const SECTIONS: usize = COLS * COLS;
+pub type Section = u16;
 pub const WIDTH: usize = 512 / COLS;
 pub const AREA: usize = WIDTH * WIDTH;
 impl Context {
     pub fn sync_world(&mut self) {
         let game_global = GameGlobal::global();
         let map = &game_global.m_grid_world.chunk_map;
-        if !self.world_init
-            || map.len == 0
-            || map.min_chunk.x > map.max_chunk.x
-            || game_global.frame_num.is_multiple_of(10)
-        {
+        if !self.world_init || map.len == 0 || map.min_chunk.x > map.max_chunk.x {
             return;
         }
         let aabb_cam = game_global.m_grid_world.cam;
@@ -109,10 +106,10 @@ pub fn get_sections(
     x: usize,
     y: usize,
     arr: &[[Option<Cell<()>>; 512]; 512],
-) -> impl Iterator<Item = (u8, Priority, impl Iterator<Item = Option<Cell<()>>>)> + '_ {
+) -> impl Iterator<Item = (Section, Priority, impl Iterator<Item = Option<Cell<()>>>)> + '_ {
     (0..SECTIONS).filter_map(move |s| {
         section_in(aabb, inner_aabb, x, y, s)
-            .map(|p| (u8::try_from(s).unwrap(), p, get_section(s, arr)))
+            .map(|p| (Section::try_from(s).unwrap(), p, get_section(s, arr)))
     })
 }
 fn section_in(
@@ -176,7 +173,7 @@ pub fn get_section_mut_enumerate(
 pub struct ChunkPos {
     pub x: usize,
     pub y: usize,
-    pub section: u8,
+    pub section: Section,
 }
 #[derive(bitcode::Encode, bitcode::Decode)]
 pub struct Chunk {
