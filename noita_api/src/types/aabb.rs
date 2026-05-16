@@ -32,7 +32,7 @@ pub struct LensValue<T> {
 }
 impl<T: PartialOrd> Vec2<T> {
     fn intersects(self, other: &Vec2<T>) -> bool {
-        self.x <= other.x && other.x < self.y
+        (self.x <= other.x && other.x < self.y) || (self.x <= other.y && other.y < self.y)
     }
     fn contains(self, other: &Vec2<T>) -> bool {
         self.x <= other.x && other.x < self.y && self.x <= other.y && other.y < self.y

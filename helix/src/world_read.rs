@@ -235,16 +235,18 @@ impl Extend<Option<Cell<()>>> for PixelRunBuilder {
     }
 }
 impl PixelRunBuilder {
-    fn build(mut self) -> PixelRun {
+    pub fn build(mut self) -> PixelRun {
         self.write();
         PixelRun { vec: self.vec }
     }
-    fn write(&mut self) {
+    pub fn write(&mut self) {
         if self.len != 0 {
             self.vec.push((self.len, self.current));
+            self.current = Pixel::default();
+            self.len = 0;
         }
     }
-    fn push(&mut self, pixel: Pixel) {
+    pub fn push(&mut self, pixel: Pixel) {
         if self.current == pixel {
             self.len += 1;
         } else {
