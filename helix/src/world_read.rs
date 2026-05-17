@@ -129,12 +129,8 @@ fn section_in(
         },
     };
     if aabb.intersects(rect) {
-        if aabb.contains(rect) {
-            if inner_aabb.intersects(rect) {
-                Some(Priority::High)
-            } else {
-                Some(Priority::Medium)
-            }
+        if inner_aabb.intersects(rect) {
+            Some(Priority::High)
         } else {
             Some(Priority::Low)
         }
@@ -284,6 +280,6 @@ impl Pixel {
 pub enum Priority {
     None,
     Low,
-    Medium,
+    //Medium,
     High,
 }
