@@ -11,10 +11,10 @@ use std::convert::Infallible;
 use std::error::Error;
 use std::fmt::Debug;
 use std::mem::MaybeUninit;
-use std::ops::{ControlFlow, Deref, DerefMut, Try};
+use std::ops::{ControlFlow, Try};
 use std::{
     ffi::{CStr, c_char, c_int},
-    ptr, slice,
+    slice,
 };
 #[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
@@ -90,7 +90,7 @@ impl LuaState {
             return Err(LuaError::NullStr);
         }
         let slice = unsafe { slice::from_raw_parts(buf.cast::<u8>(), size) };
-        Ok(slice.into())
+        Ok(slice)
     }
     #[must_use]
     #[inline]
@@ -190,30 +190,7 @@ impl LuaState {
     }
 }
 
-#[repr(transparent)]
-pub struct RawStr([u8]);
-impl From<&[u8]> for &RawStr {
-    #[inline]
-    fn from(value: &[u8]) -> Self {
-        #[allow(clippy::as_conversions)]
-        unsafe {
-            (ptr::from_ref(value) as *const RawStr).as_ref().unwrap()
-        }
-    }
-}
-impl Deref for RawStr {
-    type Target = [u8];
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl DerefMut for RawStr {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
+pub type RawStr = [u8];
 
 /// Used for types that can be returned from functions that were defined in rust to lua.
 pub trait LuaFnRet {
