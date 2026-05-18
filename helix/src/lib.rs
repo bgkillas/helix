@@ -33,8 +33,8 @@ mod lua {
     use bevy_tangled::ClientTrait as _;
     use noita_api::{
         ConfigExplosion, DamageFun, DamageModel, DamageThing, Entity, ExplosionFun, FireWandFun,
-        GameGlobal, PAUSE_SIMULATE, StdBox, StdString, Transform, Vec2, WorldSeed,
-        disable_inventory, disable_item_pickup, disable_pause, game_print, new_game_pause_update,
+        GameGlobal, PAUSE_SIMULATE, StdBox, StdString, Vec2, WorldSeed, disable_inventory,
+        disable_item_pickup, disable_pause, game_print, new_game_pause_update,
         set_pause_no_inventory,
     };
     use std::sync::atomic::Ordering;
@@ -131,7 +131,7 @@ mod lua {
     fn on_explosion(
         orig: ExplosionFun,
         config: StdBox<ConfigExplosion>,
-        transform: StdBox<Transform>,
+        transform: StdBox<Vec2<f32>>,
         unk: isize,
     ) {
         orig(config, transform, unk);

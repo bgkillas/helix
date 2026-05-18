@@ -1,11 +1,11 @@
-use crate::{ConfigExplosion, StdBox, Transform, fast_call};
+use crate::{ConfigExplosion, StdBox, Vec2, fast_call};
 use noita_api_macros::fake_fast_call;
 use retour::RawDetour;
 use std::sync::OnceLock;
 static RAW: OnceLock<RawDetour> = OnceLock::new();
 fake_fast_call!(
     explosion,
-    fn(StdBox<ConfigExplosion>, StdBox<Transform>, isize)
+    fn(StdBox<ConfigExplosion>, StdBox<Vec2<f32>>, isize)
 );
 #[allow(clippy::as_conversions)]
 #[inline]
