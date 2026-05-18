@@ -1,6 +1,5 @@
 use crate::lua_bindings::{lua_State, luaL_newstate};
-use retour::static_detour;
-static_detour! {
+retour::static_detour! {
     pub static NEW_STATE: unsafe extern "C" fn() -> *mut lua_State;
 }
 #[inline]

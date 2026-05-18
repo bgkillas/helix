@@ -1,15 +1,9 @@
-use crate::{DeathMatch, Entity, GameGlobal, StdBox, get_this_call};
-use retour::static_detour;
+use crate::{DeathMatch, Entity, GameGlobal, StdBox, get_this_call, static_detour_this_call};
 use std::ffi::c_void;
 use std::sync::atomic::{AtomicBool, Ordering};
 pub static PAUSE_SIMULATE: AtomicBool = AtomicBool::new(true);
-#[cfg(target_os = "windows")]
-static_detour! {
-    static PAUSE: extern "thiscall" fn(StdBox<DeathMatch>, f32);
-}
-#[cfg(not(target_os = "windows"))]
-static_detour! {
-    static PAUSE: extern "C" fn(StdBox<DeathMatch>, f32);
+static_detour_this_call! {
+    static PAUSE: fn(StdBox<DeathMatch>, f32);
 }
 fn pause(this: StdBox<DeathMatch>, dt: f32) {
     PAUSE.call(this, dt);
@@ -35,13 +29,8 @@ pub fn disable_pause() {
     }
 }
 pub static DISABLE_INVENTORY: AtomicBool = AtomicBool::new(false);
-#[cfg(target_os = "windows")]
-static_detour! {
-    static INVENTORY: extern "thiscall" fn(StdBox<c_void>, StdBox<c_void>, StdBox<c_void>);
-}
-#[cfg(not(target_os = "windows"))]
-static_detour! {
-    static INVENTORY: extern "C" fn(StdBox<c_void>, StdBox<c_void>, StdBox<c_void>);
+static_detour_this_call! {
+    static INVENTORY: fn(StdBox<c_void>, StdBox<c_void>, StdBox<c_void>);
 }
 fn inventory(this: StdBox<c_void>, entity: StdBox<c_void>, component: StdBox<c_void>) {
     if !DISABLE_INVENTORY.load(Ordering::Relaxed) {
@@ -63,13 +52,8 @@ pub fn disable_inventory() {
     }
 }
 pub static DISABLE_ITEM_PICKUP: AtomicBool = AtomicBool::new(false);
-#[cfg(target_os = "windows")]
-static_detour! {
-    static ITEM_PICKUP: extern "thiscall" fn(StdBox<c_void>, Entity, StdBox<c_void>);
-}
-#[cfg(not(target_os = "windows"))]
-static_detour! {
-    static ITEM_PICKUP: extern "C" fn(StdBox<c_void>, Entity, StdBox<c_void>);
+static_detour_this_call! {
+    static ITEM_PICKUP: fn(StdBox<c_void>, Entity, StdBox<c_void>);
 }
 fn item_pickup(this: StdBox<c_void>, entity: Entity, component: StdBox<c_void>) {
     if !DISABLE_ITEM_PICKUP.load(Ordering::Relaxed)

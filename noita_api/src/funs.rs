@@ -62,3 +62,115 @@ macro_rules! std_call {
 macro_rules! fast_call {
     ($($tt:tt)*) => {extern "C" $($tt)*};
 }
+#[macro_export]
+#[cfg(target_os = "windows")]
+macro_rules! static_detour_this_call {
+    (static $ident:ident: $($tt:tt)*) => {
+        retour::static_detour! {
+            static $ident: extern "thiscall" $($tt)*
+        }
+    };
+    (pub static $ident:ident: $($tt:tt)*) => {
+        retour::static_detour! {
+            pub static $ident: extern "thiscall" $($tt)*
+        }
+    };
+}
+#[macro_export]
+#[cfg(not(target_os = "windows"))]
+macro_rules! static_detour_this_call {
+    (static $ident:ident: $($tt:tt)*) => {
+        retour::static_detour! {
+            static $ident: extern "C" $($tt)*
+        }
+    };
+    (pub static $ident:ident: $($tt:tt)*) => {
+        retour::static_detour! {
+            pub static $ident: extern "C" $($tt)*
+        }
+    };
+}
+#[macro_export]
+#[cfg(target_os = "windows")]
+macro_rules! static_detour_fast_call {
+    (static $ident:ident: $($tt:tt)*) => {
+        retour::static_detour! {
+            static $ident: extern "fastcall" $($tt)*
+        }
+    };
+    (pub static $ident:ident: $($tt:tt)*) => {
+        retour::static_detour! {
+            pub static $ident: extern "fastcall" $($tt)*
+        }
+    };
+}
+#[macro_export]
+#[cfg(not(target_os = "windows"))]
+macro_rules! static_detour_fast_call {
+    (static $ident:ident: $($tt:tt)*) => {
+        retour::static_detour! {
+            static $ident: extern "C" $($tt)*
+        }
+    };
+    (pub static $ident:ident: $($tt:tt)*) => {
+        retour::static_detour! {
+            pub static $ident: extern "C" $($tt)*
+        }
+    };
+}
+#[macro_export]
+#[cfg(target_os = "windows")]
+macro_rules! static_detour_std_call {
+    (static $ident:ident: $($tt:tt)*) => {
+        retour::static_detour! {
+            static $ident: extern "stdcall" $($tt)*
+        }
+    };
+    (pub static $ident:ident: $($tt:tt)*) => {
+        retour::static_detour! {
+            pub static $ident: extern "stdcall" $($tt)*
+        }
+    };
+}
+#[macro_export]
+#[cfg(not(target_os = "windows"))]
+macro_rules! static_detour_std_call {
+    (static $ident:ident: $($tt:tt)*) => {
+        retour::static_detour! {
+            static $ident: extern "C" $($tt)*
+        }
+    };
+    (pub static $ident:ident: $($tt:tt)*) => {
+        retour::static_detour! {
+            pub static $ident: extern "C" $($tt)*
+        }
+    };
+}
+#[macro_export]
+#[cfg(target_os = "windows")]
+macro_rules! static_detour_cdecl {
+    (static $ident:ident: $($tt:tt)*) => {
+        retour::static_detour! {
+            static $ident: extern "cdecl" $($tt)*
+        }
+    };
+    (pub static $ident:ident: $($tt:tt)*) => {
+        retour::static_detour! {
+            pub static $ident: extern "cdecl" $($tt)*
+        }
+    };
+}
+#[macro_export]
+#[cfg(not(target_os = "windows"))]
+macro_rules! static_detour_cdecl {
+    (static $ident:ident: $($tt:tt)*) => {
+        retour::static_detour! {
+            static $ident: extern "C" $($tt)*
+        }
+    };
+    (pub static $ident:ident: $($tt:tt)*) => {
+        retour::static_detour! {
+            pub static $ident: extern "C" $($tt)*
+        }
+    };
+}
