@@ -1,4 +1,4 @@
-use crate::{Entity, StdBox, StdString, Vec2, fast_call, get_fast_call};
+use crate::{Entity, StdBox, StdString, Vec2, fast_call};
 use noita_api_macros::{search, search_fun};
 use retour::RawDetour;
 use std::sync::OnceLock;
@@ -53,20 +53,10 @@ pub fn install_damage_function_manual(
         return;
     }
     let ptr = search!("TakeDamage_Impl() - DamageModelComponent couldn't be found");
-    // 0x1034ad0
+    // 0x0103_4ad0
     let fun_addr = search_fun!(0x68, ptr);
     unsafe {
-        let fun = get_fast_call!(
-            fun_addr as usize,
-            fn(
-                Option<Entity>,
-                Option<StdBox<DamageModel>>,
-                StdBox<StdString>,
-                usize,
-                StdBox<DamageThing>,
-            )
-        );
-        let raw = RawDetour::new(fun as *const (), damage_fun_hook as *const ()).unwrap();
+        let raw = RawDetour::new(fun_addr.cast(), damage_fun_hook as *const ()).unwrap();
         raw.enable().unwrap();
         RAW.set(raw).unwrap();
     }
@@ -77,7 +67,7 @@ fn get_ptr() -> *const () {
 }
 #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 #[unsafe(naked)]
-pub extern "fastcall" fn call_orig_damage(
+pub extern "fastcall" fn damage_fun(
     _entity: Option<Entity>,
     _damage_model: Option<StdBox<DamageModel>>,
     _description: StdBox<StdString>,
@@ -114,7 +104,7 @@ macro_rules! install_damage_function {
             damage: f32,
         ) {
             $fun(
-                $crate::call_orig_damage,
+                $crate::damage_fun,
                 entity,
                 damage_model,
                 description,

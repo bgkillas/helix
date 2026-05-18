@@ -5,7 +5,7 @@ use crate::{
     ComponentSystemVTable, ComponentUpdaterVTable, ComponentVTable, Entity, EntityManager, StdBox,
     StdMap, StdString, StdVec,
 };
-use noita_api_macros::assert_size_with;
+use noita_api_macros::{assert_size, assert_size_with};
 use std::ffi::CStr;
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
@@ -265,10 +265,12 @@ impl Default for ComponentSystemManager {
 }
 #[repr(C)]
 #[derive(Debug)]
+#[assert_size(0x90)]
 pub struct ComponentSystem {
     pub vtable: StdBox<ComponentSystemVTable>,
-    pub unk: [*const usize; 2],
+    pub unk1: [*const usize; 2],
     pub name: StdString,
+    unk: [usize; 27],
 }
 #[repr(C)]
 #[derive(Debug)]

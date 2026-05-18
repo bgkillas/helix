@@ -12,6 +12,7 @@ enum HookType {
     #[default]
     Lua,
     WandFire,
+    Explosion,
     Damage,
     Exit,
     Open,
@@ -267,6 +268,16 @@ fn parse_group(tokens: TokenStream) -> (Vec<Function>, Vec<FunGroup>) {
                 if punct
                     && g.delimiter() == Delimiter::Bracket
                     && let Some(TokenTree::Ident(i)) = g.stream().into_iter().next()
+                    && i == "explosion_hook" =>
+            {
+                function.hook_type = HookType::Explosion;
+                is_fun = true;
+                punct = false;
+            }
+            TokenTree::Group(g)
+                if punct
+                    && g.delimiter() == Delimiter::Bracket
+                    && let Some(TokenTree::Ident(i)) = g.stream().into_iter().next()
                     && i == "damage_hook" =>
             {
                 function.hook_type = HookType::Damage;
@@ -350,7 +361,7 @@ fn parse_attribute(
     let (funs, groups) = parse_group(tokens);
     let luaopen = luaopen(funs, groups, dont_unload, file_path);
     inner_tokens.extend(
-        quote! {use noita_api::{lua_function, fire_hook, open_hook, damage_hook, exit_hook};},
+        quote! {use noita_api::{lua_function, fire_hook, explosion_hook, open_hook, damage_hook, exit_hook};},
     );
     inner_tokens.extend(luaopen);
     let mut group = Group::new(Delimiter::Brace, TokenStream::from_iter(inner_tokens));
@@ -491,6 +502,13 @@ pub fn fire_hook(
 }
 #[proc_macro_attribute]
 pub fn damage_hook(
+    _: proc_macro::TokenStream,
+    tokens: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    tokens
+}
+#[proc_macro_attribute]
+pub fn explosion_hook(
     _: proc_macro::TokenStream,
     tokens: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
@@ -799,6 +817,15 @@ fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, Toke
                     quote! {},
                 );
             }
+            HookType::Explosion => {
+                return (
+                    quote! {
+                        #fun_wrap
+                        noita_api::install_explosion!(#fun_wrap_name);
+                    },
+                    quote! {},
+                );
+            }
             HookType::Damage => {
                 return (
                     quote! {
@@ -815,6 +842,9 @@ fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, Toke
             HookType::Exit | HookType::Open => assert!(fun.ret.is_none()),
             HookType::WandFire => {
                 return (quote! {noita_api::install_fire_wand!(#ident);}, quote! {});
+            }
+            HookType::Explosion => {
+                return (quote! {noita_api::install_explosion!(#ident);}, quote! {});
             }
             HookType::Damage => {
                 return (
@@ -1173,4 +1203,148 @@ pub fn search_fun(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
         }
         .into()
     }
+}
+#[proc_macro]
+pub fn fake_fast_call(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let tokens: TokenStream = tokens.into();
+    let mut iter = tokens.into_iter();
+    let ident = iter.next().unwrap();
+    let type_name = format_ident!(
+        "{}Fun",
+        ident
+            .to_string()
+            .split('_')
+            .map(|s| s
+                .char_indices()
+                .map(|(i, c)| if i == 0 { c.to_ascii_uppercase() } else { c })
+                .collect::<String>())
+            .collect::<String>()
+    );
+    iter.next();
+    let fun: TokenStream = iter.collect();
+    let inner = fun
+        .clone()
+        .into_iter()
+        .find_map(|a| {
+            if let TokenTree::Group(g) = a {
+                Some(g)
+            } else {
+                None
+            }
+        })
+        .unwrap()
+        .stream();
+    let args = inner
+        .clone()
+        .into_iter()
+        .filter(|a| {
+            if let TokenTree::Punct(p) = a {
+                p.as_char() == ','
+            } else {
+                false
+            }
+        })
+        .count()
+        + if let TokenTree::Punct(p) = inner.clone().into_iter().last().unwrap()
+            && p.as_char() == ','
+        {
+            0
+        } else {
+            1
+        };
+    let inner = inner.into_iter().collect::<Vec<_>>();
+    let args_idents = inner
+        .split(|t| {
+            if let TokenTree::Punct(p) = t {
+                p.as_char() == ','
+            } else {
+                false
+            }
+        })
+        .map(|v| TokenStream::from_iter(v.to_vec()));
+    let stack_args = args - 2;
+    let offset = stack_args * 4;
+    let orig_fun = format_ident!("{ident}_fun");
+    let install_macro = format_ident!("install_{ident}");
+    let manual = format_ident!("install_{ident}_manual");
+    let fun_hook = format_ident!("{ident}_fun_hook");
+    let fun_inner = format_ident!("on_{ident}_inner");
+    let ret = format!("ret 0x{offset:x}");
+    let args_list_names = (0..args).map(|i| {
+        let a = format_ident!("a{i}");
+        quote! {#a}
+    });
+    let args_list = (0..args)
+        .zip(args_idents)
+        .map(|(i, v)| {
+            let a = format_ident!("a{i}");
+            quote! {#a: #v}
+        })
+        .collect::<Vec<_>>();
+    let stack_args_list = (0..stack_args)
+        .map(|i| format!("push [ebp+0x{:x}]", 8 + 4 * i))
+        .rev()
+        .collect::<Vec<_>>();
+    quote! {
+        pub type #type_name = fast_call!(#fun);
+        #[allow(unused)]
+        fn get_ptr() -> *const () {
+            RAW.get().unwrap().trampoline() as *const ()
+        }
+        #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+        #[unsafe(naked)]
+        pub extern "fastcall" fn #orig_fun(
+            #(#args_list,)*
+        ) {
+            std::arch::naked_asm!(
+                "push ebp",
+                "mov ebp,esp",
+                #(#stack_args_list,)*
+                "call {get_ptr}",
+                "call eax",
+                "mov esp,ebp",
+                "pop ebp",
+                #ret,
+                get_ptr = sym get_ptr,
+            )
+        }
+        #[macro_export]
+        macro_rules! #install_macro {
+            ($fun:path) => {
+                #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+                #[allow(clippy::too_many_arguments)]
+                extern "fastcall" fn #fun_inner(
+                    #(#args_list,)*
+                ) {
+                    $fun(
+                        $crate::#orig_fun,
+                        #(#args_list_names,)*
+                    );
+                }
+                #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+                #[unsafe(naked)]
+                pub extern "fastcall" fn #fun_hook(
+                    #(#args_list,)*
+                ) {
+                    std::arch::naked_asm!(
+                        "push ebp",
+                        "mov ebp,esp",
+                        #(#stack_args_list,)*
+                        "call {inner}",
+                        "mov esp,ebp",
+                        "pop ebp",
+                        "ret",
+                        inner = sym #fun_inner,
+                    )
+                }
+                #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+                {
+                    _ = $fun;
+                }
+                #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+                $crate::#manual(#fun_hook)
+            }
+        }
+    }
+    .into()
 }

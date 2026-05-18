@@ -6,6 +6,7 @@
 )]
 pub mod alloc;
 pub mod damage;
+pub mod explosion;
 pub mod fire_wand;
 mod funs;
 mod globals;
@@ -19,6 +20,7 @@ pub(crate) mod search;
 pub mod types;
 pub use alloc::*;
 pub use damage::*;
+pub use explosion::*;
 pub use fire_wand::*;
 pub use libloading;
 pub use lua::{LuaRawFn, LuaState};
@@ -26,7 +28,7 @@ pub use lua_global::*;
 pub use new_game::*;
 use noita_api_macros::search_fun;
 pub use noita_api_macros::{
-    damage_hook, exit_hook, fire_hook, lua_function, lua_module, open_hook,
+    damage_hook, exit_hook, explosion_hook, fire_hook, lua_function, lua_module, open_hook,
 };
 pub use pause::*;
 pub use print::*;
