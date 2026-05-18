@@ -66,6 +66,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
+name = "better_explosions"
+version = "0.1.0"
+dependencies = [
+ "noita_api",
+]
+
+[[package]]
 name = "bevy_tangled"
 version = "0.2.0"
 source = "git+https://github.com/bgkillas/bevy_tangled#31b21c88a76aa8c7633e62d62b2679cd7c92fdad"

@@ -1,0 +1,6 @@
+<Mod
+    name="better_explosions"
+    description="to make explosions work outside render range"
+    request_no_api_restrictions="1"
+>
+</Mod>

@@ -1,4 +1,4 @@
 /.idea
 /target
-/mod/helix.dll
-/mod/helix.lua
+/mod/helix.*
+/better_explosions/mod/better_explosions.*

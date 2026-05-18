@@ -1,0 +1,1 @@
+package.loadlib("mods/better_explosions/better_explosions.dll", "luaopen")()

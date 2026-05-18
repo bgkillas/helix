@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 
 [features]
 default = []
-log = []
+log = ["noita_api/log"]
 
 [dependencies]
 noita_api = {workspace = true}
