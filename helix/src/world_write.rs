@@ -55,8 +55,6 @@ impl WorldWrite {
                             (self.construct_cell)(grid_world, x, y, mat, ptr::null_mut())
                         {
                             *pixel = Some(cell);
-                        } else {
-                            *pixel = None;
                         }
                     }
                 }
