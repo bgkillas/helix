@@ -24,7 +24,23 @@ pub struct GameGlobal {
 impl Default for GameGlobal {
     #[inline]
     fn default() -> Self {
-        todo!()
+        Self {
+            frame_num: 0,
+            frame_num_start: 0,
+            unknown1: 0,
+            m_game_world: GameWorld::global(),
+            m_grid_world: GridWorld::global(),
+            m_textures: StdBox::new(Textures::default()),
+            m_cell_factory: CellFactory::global(),
+            unknown2: 0,
+            unknown3: [0; 4],
+            game_print: None,
+            unknown5: [0; 5],
+            pause_state: StdBox::new(0),
+            unk: [0; 5],
+            inventory_open: 0,
+            unk4: [0; 79],
+        }
     }
 }
 impl GameGlobal {

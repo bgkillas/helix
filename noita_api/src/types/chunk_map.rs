@@ -17,6 +17,15 @@ pub struct ChunkMap {
 pub struct ChunkArray {
     pub array: [[Option<StdBox<Chunk>>; 512]; 512],
 }
+impl Default for ChunkArray {
+    #[inline]
+    #[allow(clippy::large_stack_arrays)]
+    fn default() -> Self {
+        Self {
+            array: [[None; 512]; 512],
+        }
+    }
+}
 impl Debug for ChunkArray {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -48,6 +57,15 @@ impl DerefMut for ChunkArray {
 #[derive(Debug)]
 pub struct Chunk {
     pub data: StdBox<[[Option<Cell<()>>; 512]; 512]>,
+}
+impl Default for Chunk {
+    #[inline]
+    #[allow(clippy::large_stack_arrays)]
+    fn default() -> Self {
+        Self {
+            data: StdBox::new([[None; 512]; 512]),
+        }
+    }
 }
 impl Deref for Chunk {
     type Target = [[Option<Cell<()>>; 512]; 512];

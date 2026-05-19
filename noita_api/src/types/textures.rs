@@ -1,5 +1,5 @@
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Textures {}
 #[repr(C)]
 #[derive(Debug)]

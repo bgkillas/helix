@@ -4061,6 +4061,7 @@ dependencies = [
  "better_explosions",
  "eframe",
  "egui",
+ "noita_api",
 ]
 
 [[package]]

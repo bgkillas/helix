@@ -7,6 +7,7 @@ repository.workspace = true
 
 [dependencies]
 better_explosions = {workspace = true}
+noita_api = {workspace = true}
 egui = "0.34.2"
 eframe = "0.34.2"
 

@@ -19,8 +19,36 @@ pub struct CellFactory {
     unknown4: [usize; 4],
     pub fire_material_id: usize,
 }
+impl CellFactory {
+    pub(crate) fn global() -> StdBox<Self> {
+        static GLOBAL: std::sync::LazyLock<StdBox<CellFactory>> =
+            std::sync::LazyLock::new(|| StdBox::new(CellFactory::default()));
+        *GLOBAL
+    }
+}
+impl Default for CellFactory {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            unknown1: 0,
+            material_names: StdVec::default(),
+            material_ids: StdMap::default(),
+            cell_data: StdVec::default(),
+            material_count: 0,
+            unknown2: 0,
+            reaction_lookup: ReactionLookupTable::default(),
+            fast_reaction_lookup: ReactionLookupTable::default(),
+            req_reactions: StdVec::default(),
+            materials_by_tag: StdMap::default(),
+            unknown3: StdVec::default(),
+            fire_cell_data: StdBox::new(CellData::default()),
+            unknown4: [0; 4],
+            fire_material_id: 0,
+        }
+    }
+}
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ReactionLookupTable {
     pub width: usize,
     pub height: usize,

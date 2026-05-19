@@ -8,3 +8,21 @@ pub struct GameWorld {
     pub pixel_scenes: StdBox<StdVec<PixelScene>>,
     //likely more data
 }
+impl GameWorld {
+    pub(crate) fn global() -> StdBox<Self> {
+        static GLOBAL: std::sync::LazyLock<StdBox<GameWorld>> =
+            std::sync::LazyLock::new(|| StdBox::new(GameWorld::default()));
+        *GLOBAL
+    }
+}
+impl Default for GameWorld {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            cam: AABB::default(),
+            unknown1: [0; 13],
+            grid_world: GridWorld::global(),
+            pixel_scenes: StdBox::new(StdVec::default()),
+        }
+    }
+}

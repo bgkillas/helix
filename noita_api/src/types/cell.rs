@@ -89,8 +89,9 @@ impl<T: CellTrait> DerefMut for Cell<T> {
     }
 }
 #[repr(usize)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum CellType {
+    #[default]
     None = 0,
     Liquid = 1,
     Gas = 2,
@@ -98,7 +99,7 @@ pub enum CellType {
     Fire = 4,
 }
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Color {
     pub r: u8,
     pub g: u8,
@@ -106,7 +107,7 @@ pub struct Color {
     pub a: u8,
 }
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct CellGraphics {
     pub texture_file: StdString,
     pub color: Color,
@@ -120,7 +121,7 @@ pub struct CellGraphics {
     pub texture_info: Option<StdBox<TextureInfo>>,
 }
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct CellData {
     pub name: StdString,
     pub ui_name: StdString,
