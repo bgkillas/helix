@@ -1,3 +1,4 @@
+#[derive(Debug, Clone)]
 pub struct LineIter {
     x0: isize,
     y0: isize,
@@ -11,6 +12,7 @@ pub struct LineIter {
 }
 impl Iterator for LineIter {
     type Item = (isize, isize);
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         let ret = (self.x0, self.y0);
         let error = self.error;
@@ -31,45 +33,59 @@ impl Iterator for LineIter {
         Some(ret)
     }
 }
-pub fn line(x0: isize, y0: isize, x1: isize, y1: isize) -> LineIter {
-    let dx = (x1 - x0).abs();
-    let dy = -(y1 - y0).abs();
-    LineIter {
-        x0,
-        y0,
-        x1,
-        y1,
-        dx,
-        dy,
-        sx: if x0 < x1 { 1 } else { -1 },
-        sy: if y0 < y1 { 1 } else { -1 },
-        error: 2 * (dx + dy),
+impl LineIter {
+    #[inline]
+    #[must_use]
+    pub fn new(x0: isize, y0: isize, x1: isize, y1: isize) -> Self {
+        let dx = (x1 - x0).abs();
+        let dy = -(y1 - y0).abs();
+        Self {
+            x0,
+            y0,
+            x1,
+            y1,
+            dx,
+            dy,
+            sx: if x0 < x1 { 1 } else { -1 },
+            sy: if y0 < y1 { 1 } else { -1 },
+            error: 2 * (dx + dy),
+        }
+    }
+    #[inline]
+    #[must_use]
+    pub fn is_next_x_same(&self) -> bool {
+        self.error < self.dy
+    }
+    #[inline]
+    #[must_use]
+    pub fn is_next_y_same(&self) -> bool {
+        self.error > self.dx
     }
 }
 #[test]
 fn test_line() {
     let arr = [(3, 2), (4, 2), (5, 3), (6, 3), (7, 4), (8, 4)];
     let mut iter = arr.iter().copied();
-    for (x, y) in line(3, 2, 8, 4) {
+    for (x, y) in LineIter::new(3, 2, 8, 4) {
         let (nx, ny) = iter.next().unwrap();
         assert_eq!(x, nx, "{x} {y} {nx} {ny}");
         assert_eq!(y, ny, "{x} {y} {nx} {ny}");
     }
     let mut iter = arr.iter().copied().rev();
-    for (x, y) in line(8, 4, 3, 2) {
+    for (x, y) in LineIter::new(8, 4, 3, 2) {
         let (nx, ny) = iter.next().unwrap();
         assert_eq!(x, nx, "{x} {y} {nx} {ny}");
         assert_eq!(y, ny, "{x} {y} {nx} {ny}");
     }
     let arr = [(2, 3), (2, 4), (3, 5), (3, 6), (4, 7), (4, 8)];
     let mut iter = arr.iter().copied();
-    for (x, y) in line(2, 3, 4, 8) {
+    for (x, y) in LineIter::new(2, 3, 4, 8) {
         let (nx, ny) = iter.next().unwrap();
         assert_eq!(x, nx, "{x} {y} {nx} {ny}");
         assert_eq!(y, ny, "{x} {y} {nx} {ny}");
     }
     let mut iter = arr.iter().copied().rev();
-    for (x, y) in line(4, 8, 2, 3) {
+    for (x, y) in LineIter::new(4, 8, 2, 3) {
         let (nx, ny) = iter.next().unwrap();
         assert_eq!(x, nx, "{x} {y} {nx} {ny}");
         assert_eq!(y, ny, "{x} {y} {nx} {ny}");

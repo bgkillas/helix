@@ -13,11 +13,12 @@ opt-level = 3
 
 [workspace]
 resolver = "3"
-members = ["better_explosions/better_explosions","helix", "noita_api", "noita_api_macros"]
+members = ["better_explosions/better_explosions", "better_explosions/viewer","helix", "noita_api", "noita_api_macros"]
 
 [workspace.dependencies]
 noita_api = {path = "noita_api"}
 noita_api_macros = {path = "noita_api_macros"}
+better_explosions = {path = "better_explosions/better_explosions"}
 
 [workspace.lints.clippy]
 pedantic = {level = "warn", priority = -1}

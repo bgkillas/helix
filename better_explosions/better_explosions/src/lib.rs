@@ -1,6 +1,6 @@
-mod arc;
-mod line;
-use crate::line::line;
+pub mod arc;
+pub mod line;
+use crate::line::LineIter;
 use noita_api::{ConfigExplosion, GameGlobal, Vec2};
 use std::f32::consts::TAU;
 #[noita_api::lua_module]
@@ -17,7 +17,8 @@ mod lua {
         explosion(&config, *pos);
     }
 }
-pub(crate) fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
+#[inline]
+pub fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
     let rng = rand::rng();
     let game_global = GameGlobal::global();
     let grid_world = game_global.m_grid_world;
@@ -40,7 +41,7 @@ pub(crate) fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
         let ix1 = ix0 + truncate_f32(cos * config.explosion_radius);
         let iy1 = iy0 + truncate_f32(sin * config.explosion_radius);
         let mut energy = config.ray_energy;
-        for (x, y) in line(ix0, iy0, ix1, iy1) {
+        for (x, y) in LineIter::new(ix0, iy0, ix1, iy1) {
             let px = x.rem_euclid(512).cast_unsigned();
             let py = y.rem_euclid(512).cast_unsigned();
             if px == 0 || py == 0 || px == 511 || py == 511 {
