@@ -49,3 +49,16 @@ impl DerefMut for ChunkArray {
 pub struct Chunk {
     pub data: StdBox<[[Option<Cell<()>>; 512]; 512]>,
 }
+impl Deref for Chunk {
+    type Target = [[Option<Cell<()>>; 512]; 512];
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+impl DerefMut for Chunk {
+    #[inline]
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.data
+    }
+}

@@ -131,10 +131,10 @@ mod lua {
     fn on_explosion(
         orig: ExplosionFun,
         config: StdBox<ConfigExplosion>,
-        transform: StdBox<Vec2<f32>>,
+        pos: StdBox<Vec2<f32>>,
         unk: isize,
     ) {
-        orig(config, transform, unk);
+        orig(config, pos, unk);
     }
     #[damage_hook]
     fn on_damage(

@@ -10,6 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 noita_api = {workspace = true}
+rand = "0.10.1"
 
 [lints]
 workspace = true
