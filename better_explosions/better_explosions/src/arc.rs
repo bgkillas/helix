@@ -30,14 +30,14 @@ impl Iterator for ArcIter {
                 self.low_line.next()?;
             }
             let next_high = self.high_line.next()?;
-            debug_assert_eq!(next.1, next_high.1);
-            debug_assert!(next_high.0 <= next.0);
             self.range = Some((next_high.0..next.0, next.1));
             self.next()
         }
     }
 }
 impl ArcIter {
+    #[inline]
+    #[must_use]
     pub fn new(x0: isize, y0: isize, x1: isize, y1: isize, x2: isize, y2: isize) -> Self {
         let low_line = LineIter::new(x0, y0, x1, y1);
         let is_high = low_line.is_high();

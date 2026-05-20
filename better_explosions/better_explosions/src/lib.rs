@@ -48,6 +48,7 @@ pub fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
         let ix1 = ix0 + truncate_f32(cos * config.explosion_radius);
         let iy1 = iy0 + truncate_f32(sin * config.explosion_radius);
         let mut energy = config.ray_energy;
+        let (mut ix2, mut iy2) = (ix1, iy1);
         for (x, y) in LineIter::new(ix0, iy0, ix1, iy1) {
             let px = x.rem_euclid(512).cast_unsigned();
             let py = y.rem_euclid(512).cast_unsigned();
@@ -62,34 +63,19 @@ pub fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
                     break;
                 }
             }
-            let c = &mut chunk[py][px];
-            if let Some(p) = c {
+            if let Some(p) = chunk[py][px] {
                 if energy > p.hp
                     && p.material.durability <= config.max_durability_to_destroy
                     && config.hole_enabled
                 {
                     energy -= p.hp;
-                    p.ptr.free();
-                    *c = None;
                 } else {
+                    (ix2, iy2) = (x, y);
                     break;
                 }
             }
         }
-        for (x, y) in ArcIter::new() {}
-        /*
-                    if cell_create_id != 0
-                        && rng.random_ratio(
-                            u32::try_from(config.create_cell_probability).unwrap(),
-                            100,
-                        )
-                    {
-                        println!("{px} {py}");
-                        p.ptr.free();
-                        *c = Some(Cell::new(cell_create));
-                    } else {
-        */
-        /*let r = if (ix2, iy2) == (ix1, iy1) {
+        let r = if (ix2, iy2) == (ix1, iy1) {
             truncate_f32(config.explosion_radius).pow(2)
         } else {
             ix2 * ix2 + iy2 * iy2
@@ -102,7 +88,31 @@ pub fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
         let theta = f32::from(ray + 1) * delta_theta;
         let (sin, cos) = theta.sin_cos();
         let ix4 = ix0 + truncate_f32(cos * rf);
-        let iy4 = iy0 + truncate_f32(sin * rf);*/
+        let iy4 = iy0 + truncate_f32(sin * rf);
+        for (x, y) in ArcIter::new(ix0, iy0, ix3, iy3, ix4, iy4) {
+            let px = x.rem_euclid(512).cast_unsigned();
+            let py = y.rem_euclid(512).cast_unsigned();
+            if px == 0 || py == 0 || px == 511 || py == 511 {
+                chunk_x = x.div_euclid(512);
+                chunk_y = y.div_euclid(512);
+                if let Some(c) =
+                    chunk_map[(256 + chunk_y).cast_unsigned()][(256 + chunk_x).cast_unsigned()]
+                {
+                    chunk = c;
+                } else {
+                    break;
+                }
+            }
+            if let Some(p) = chunk[py][px] {
+                p.ptr.free();
+                chunk[py][px] = None;
+            }
+            if cell_create_id != 0
+                && rng.random_ratio(u32::try_from(config.create_cell_probability).unwrap(), 100)
+            {
+                chunk[py][px] = Some(Cell::new(cell_create));
+            }
+        }
     }
 }
 #[allow(clippy::cast_possible_truncation)]
@@ -110,8 +120,8 @@ pub fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
 fn truncate_f32(f: f32) -> isize {
     f as isize
 }
-/*#[allow(clippy::cast_precision_loss)]
+#[allow(clippy::cast_precision_loss)]
 #[allow(clippy::as_conversions)]
 fn truncate_isize(f: isize) -> f32 {
     f as f32
-}*/
+}
