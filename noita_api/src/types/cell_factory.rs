@@ -45,6 +45,8 @@ impl CellFactory {
                     else {
                         continue;
                     };
+                    data.material_type = self.cell_data.len();
+                    data.id_2 = self.cell_data.len();
                     data.name = cell_data.attr("name").map(Into::into).unwrap_or(data.name);
                     data.ui_name = cell_data
                         .attr("ui_name")
@@ -69,6 +71,8 @@ impl CellFactory {
                     self.cell_data.push(data);
                 } else {
                     let mut data = CellData::default();
+                    data.material_type = self.cell_data.len();
+                    data.id_2 = self.cell_data.len();
                     data.name = cell_data.attr("name").unwrap_or_default().into();
                     data.ui_name = cell_data.attr("ui_name").unwrap_or_default().into();
                     data.wang_color = cell_data

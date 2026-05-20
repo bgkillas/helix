@@ -2,8 +2,8 @@
 use better_explosions::line::LineIter;
 use eframe::{Frame, NativeOptions};
 use egui::{
-    CentralPanel, Color32, ColorImage, ComboBox, DragValue, Panel, Pos2, Rect, TextureHandle,
-    TextureOptions, Ui, Vec2,
+    CentralPanel, CollapsingHeader, Color32, ColorImage, ComboBox, DragValue, Key, Panel, Pos2,
+    Rect, ScrollArea, TextureHandle, TextureOptions, Ui, Vec2,
 };
 use noita_api::{Cell, Chunk, GameGlobal, StdBox};
 use rand::RngExt as _;
@@ -29,6 +29,7 @@ fn main() -> eframe::Result {
 #[allow(unused)]
 struct App {
     wand: Wand,
+    menu: Menu,
     paint: u16,
     other: u16,
     other_chance: f64,
@@ -38,10 +39,16 @@ struct App {
     zoom: f32,
     offset: Pos2,
 }
+#[derive(Debug, PartialEq)]
+enum Menu {
+    Map,
+    Materials,
+}
 impl Default for App {
     fn default() -> Self {
         Self {
             wand: Wand::Line(0, 0, 0, 0),
+            menu: Menu::Map,
             paint: 0,
             other: 1,
             other_chance: 0.5,
@@ -219,19 +226,71 @@ impl eframe::App for App {
                 }
             }
         });
-        CentralPanel::default().show_inside(ui, |ui| {
-            let tile_size = self.zoom * 512.0;
-            for (coord, tex) in &self.textures {
-                let pos = (Pos2::new(f32::from(coord.0), f32::from(coord.1)) - self.offset)
-                    * tile_size
-                    + ui.max_rect().center().to_vec2();
-                let rect = Rect::from_min_size(pos.to_pos2(), Vec2::splat(tile_size));
-                ui.painter().image(
-                    tex.id(),
-                    rect,
-                    Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0)),
-                    Color32::WHITE,
-                );
+        Panel::top("top").show_inside(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.selectable_value(&mut self.menu, Menu::Map, "Map");
+                ui.selectable_value(&mut self.menu, Menu::Materials, "Materials");
+            });
+        });
+        CentralPanel::default().show_inside(ui, |ui| match self.menu {
+            Menu::Map => {
+                let s = 1.0 / 16.0 / self.zoom;
+                if ui
+                    .input(|i| i.keys_down.contains(&Key::W) || i.keys_down.contains(&Key::ArrowUp))
+                {
+                    self.offset.y -= s;
+                }
+                if ui.input(|i| {
+                    i.keys_down.contains(&Key::S) || i.keys_down.contains(&Key::ArrowDown)
+                }) {
+                    self.offset.y += s;
+                }
+                if ui.input(|i| {
+                    i.keys_down.contains(&Key::A) || i.keys_down.contains(&Key::ArrowLeft)
+                }) {
+                    self.offset.x -= s;
+                }
+                if ui.input(|i| {
+                    i.keys_down.contains(&Key::D) || i.keys_down.contains(&Key::ArrowRight)
+                }) {
+                    self.offset.x += s;
+                }
+                if ui.input(|i| i.key_released(Key::Q)) {
+                    self.zoom *= 2.0 / 3.0;
+                }
+                if ui.input(|i| i.key_released(Key::E)) {
+                    self.zoom *= 3.0 / 2.0;
+                }
+                let tile_size = self.zoom * 512.0;
+                for (coord, tex) in &self.textures {
+                    let pos = (Pos2::new(f32::from(coord.0), f32::from(coord.1)) - self.offset)
+                        * tile_size
+                        + ui.max_rect().center().to_vec2();
+                    let rect = Rect::from_min_size(pos.to_pos2(), Vec2::splat(tile_size));
+                    ui.painter().image(
+                        tex.id(),
+                        rect,
+                        Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0)),
+                        Color32::WHITE,
+                    );
+                }
+            }
+            Menu::Materials => {
+                ScrollArea::vertical()
+                    .auto_shrink([false; 2])
+                    .show(ui, |ui| {
+                        let game_global = GameGlobal::global();
+                        for cell_data in game_global.m_cell_factory.cell_data.iter() {
+                            CollapsingHeader::new(cell_data.name.as_str())
+                                .id_salt(cell_data.material_type)
+                                .show(ui, |ui| {
+                                    ui.label(format!("id: {}", cell_data.material_type));
+                                    ui.label(format!("wang_color: {}", cell_data.wang_color));
+                                    ui.label(format!("durability: {}", cell_data.durability));
+                                    ui.label(format!("hp: {}", cell_data.hp));
+                                });
+                        }
+                    });
             }
         });
     }

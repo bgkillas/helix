@@ -11,7 +11,7 @@ pub use liquid::*;
 use noita_api_macros::assert_size_with;
 pub use solid::*;
 use std::ffi::c_void;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter};
 use std::num::ParseIntError;
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
@@ -144,6 +144,16 @@ pub struct Color {
     pub b: u8,
     pub a: u8,
 }
+impl Display for Color {
+    #[inline]
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{:02x}{:02x}{:02x}{:02x}",
+            self.a, self.r, self.g, self.b
+        )
+    }
+}
 impl FromStr for Color {
     type Err = ParseIntError;
     #[inline]
@@ -176,7 +186,7 @@ pub struct CellData {
     pub name: StdString,
     pub ui_name: StdString,
     pub material_type: usize,
-    pub id_2: isize,
+    pub id_2: usize,
     pub cell_type: CellType,
     pub platform_type: isize,
     pub wang_color: Color,
