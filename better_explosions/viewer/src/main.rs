@@ -2,7 +2,7 @@
 use better_explosions::line::LineIter;
 use eframe::{Frame, NativeOptions};
 use egui::{
-    CentralPanel, Color32, ColorImage, ComboBox, DragValue, Pos2, Rect, TextureHandle,
+    CentralPanel, Color32, ColorImage, ComboBox, DragValue, Panel, Pos2, Rect, TextureHandle,
     TextureOptions, Ui, Vec2,
 };
 use noita_api::{Cell, Chunk, GameGlobal, StdBox};
@@ -122,7 +122,7 @@ fn make_texture(ui: &mut Ui, x: u16, y: u16, chunk: StdBox<Chunk>) -> TextureHan
 }
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut Ui, _: &mut Frame) {
-        CentralPanel::default().show_inside(ui, |ui| {
+        Panel::left("left").show_inside(ui, |ui| {
             if ui.button("Apply").clicked() {
                 self.update_textures = true;
                 #[allow(clippy::match_same_arms)]
@@ -218,10 +218,13 @@ impl eframe::App for App {
                     //TODO
                 }
             }
+        });
+        CentralPanel::default().show_inside(ui, |ui| {
             let tile_size = self.zoom * 512.0;
             for (coord, tex) in &self.textures {
-                let pos =
-                    (Pos2::new(f32::from(coord.0), f32::from(coord.1)) - self.offset) * tile_size;
+                let pos = (Pos2::new(f32::from(coord.0), f32::from(coord.1)) - self.offset)
+                    * tile_size
+                    + ui.max_rect().center().to_vec2();
                 let rect = Rect::from_min_size(pos.to_pos2(), Vec2::splat(tile_size));
                 ui.painter().image(
                     tex.id(),
