@@ -12,7 +12,9 @@ use noita_api_macros::assert_size_with;
 pub use solid::*;
 use std::ffi::c_void;
 use std::fmt::Debug;
+use std::num::ParseIntError;
 use std::ops::{Deref, DerefMut};
+use std::str::FromStr;
 pub trait CellTrait: Debug {}
 impl CellTrait for () {}
 #[repr(C)]
@@ -112,7 +114,7 @@ impl<T: CellTrait> DerefMut for Cell<T> {
     }
 }
 #[repr(usize)]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub enum CellType {
     #[default]
     None = 0,
@@ -120,6 +122,19 @@ pub enum CellType {
     Gas = 2,
     Solid = 3,
     Fire = 4,
+}
+impl FromStr for CellType {
+    type Err = ();
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "liquid" => Self::Liquid,
+            "gas" => Self::Gas,
+            "solid" => Self::Solid,
+            "fire" => Self::Fire,
+            _ => Self::None,
+        })
+    }
 }
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
@@ -129,8 +144,20 @@ pub struct Color {
     pub b: u8,
     pub a: u8,
 }
+impl FromStr for Color {
+    type Err = ParseIntError;
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self {
+            r: u8::from_str_radix(&s[2..4], 16)?,
+            g: u8::from_str_radix(&s[4..6], 16)?,
+            b: u8::from_str_radix(&s[6..8], 16)?,
+            a: u8::from_str_radix(&s[0..2], 16)?,
+        })
+    }
+}
 #[repr(C)]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct CellGraphics {
     pub texture_file: StdString,
     pub color: Color,
@@ -144,7 +171,7 @@ pub struct CellGraphics {
     pub texture_info: Option<StdBox<TextureInfo>>,
 }
 #[repr(C)]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct CellData {
     pub name: StdString,
     pub ui_name: StdString,

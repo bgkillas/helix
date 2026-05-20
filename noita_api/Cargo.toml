@@ -14,6 +14,7 @@ noita_api_macros = {workspace = true}
 libloading = "0.9.0"
 retour = {version = "0.4.0-alpha.4", features = ["static-detour", "thiscall-abi"]}
 region = "3.0.2"
+nxml-rs = "0.5.1"
 
 [lints]
 workspace = true

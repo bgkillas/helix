@@ -20,6 +20,30 @@ pub struct StdStringRef<'a> {
     capacity: usize,
     lifetime: PhantomData<&'a u8>,
 }
+impl Clone for StdString {
+    #[inline]
+    fn clone(&self) -> Self {
+        let buffer = if self.capacity > 16 {
+            let buffer = StdPtr::malloc_array(self.capacity);
+            unsafe {
+                self.buffer.buffer.copy_to(buffer.ptr, self.size);
+            }
+            Buffer { buffer }
+        } else {
+            unsafe {
+                Buffer {
+                    sso_array: self.buffer.sso_array,
+                }
+            }
+        };
+        Self {
+            buffer,
+            size: self.size,
+            capacity: self.capacity,
+            lifetime: PhantomData,
+        }
+    }
+}
 impl Eq for StdStringRef<'_> {}
 impl PartialEq<Self> for StdStringRef<'_> {
     #[inline]

@@ -305,3 +305,11 @@ impl<T> From<&mut T> for StdBox<T> {
         }
     }
 }
+impl<T> From<&T> for StdBox<T> {
+    #[inline]
+    fn from(value: &T) -> Self {
+        Self {
+            ptr: StdPtr::from(NonNull::new(ptr::from_ref(value).cast_mut()).unwrap()),
+        }
+    }
+}

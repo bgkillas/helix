@@ -8,6 +8,7 @@ pub mod alloc;
 pub mod damage;
 pub mod explosion;
 pub mod fire_wand;
+pub use nxml_rs;
 mod funs;
 mod globals;
 pub mod lua;

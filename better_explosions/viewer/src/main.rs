@@ -9,7 +9,11 @@ use noita_api::{Cell, Chunk, GameGlobal, StdBox};
 use rand::RngExt as _;
 use std::collections::HashMap;
 fn main() -> eframe::Result {
-    let game_global = GameGlobal::global();
+    let mut game_global = GameGlobal::global();
+    game_global
+        .m_cell_factory
+        .generate_cell_data(include_str!("../materials.xml"))
+        .unwrap();
     let grid_world = game_global.m_grid_world;
     let mut chunk_map = grid_world.chunk_map.chunk_array;
     chunk_map[256][256] = Some(StdBox::new(Chunk::default()));
@@ -83,10 +87,14 @@ impl App {
                 *pixel = None;
             }
         } else if let Some(p) = pixel {
-            p.material.material_type = usize::from(color);
+            let game_global = GameGlobal::global();
+            p.material = StdBox::from(&game_global.m_cell_factory.cell_data[usize::from(color)]);
+            p.hp = p.material.hp;
         } else {
+            let game_global = GameGlobal::global();
             let mut cell = Cell::default();
-            cell.material.material_type = usize::from(color);
+            cell.material = StdBox::from(&game_global.m_cell_factory.cell_data[usize::from(color)]);
+            cell.hp = cell.material.hp;
             *pixel = Some(cell);
         }
     }
@@ -102,7 +110,8 @@ impl App {
     }
 }
 fn make_texture(ui: &mut Ui, x: u16, y: u16, chunk: StdBox<Chunk>) -> TextureHandle {
-    let mut vec = vec![Color32::WHITE; chunk[0].len() * chunk.len()];
+    let mut vec =
+        vec![Color32::from_rgba_premultiplied(60, 60, 140, 255); chunk[0].len() * chunk.len()];
     for (x, y, pixel) in chunk.flat_iter() {
         let color = pixel.material.wang_color;
         vec[usize::from(y) * 512 + usize::from(x)] =

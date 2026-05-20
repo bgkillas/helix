@@ -1,4 +1,5 @@
 use crate::{CellData, ConfigExplosion, StdBox, StdMap, StdPtr, StdString, StdVec};
+use nxml_rs::{ElementRef, NxmlError};
 use std::ffi::c_void;
 #[repr(C)]
 #[derive(Debug)]
@@ -24,6 +25,80 @@ impl CellFactory {
         static GLOBAL: std::sync::LazyLock<StdBox<CellFactory>> =
             std::sync::LazyLock::new(|| StdBox::new(CellFactory::default()));
         *GLOBAL
+    }
+    #[inline]
+    pub fn generate_cell_data(&mut self, s: &str) -> Result<(), NxmlError> {
+        self.generate_cell_data_nxml(nxml_rs::parse(s)?);
+        Ok(())
+    }
+    #[inline]
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn generate_cell_data_nxml(&mut self, xml: ElementRef<'_>) {
+        for cell_data in xml.children {
+            if matches!(cell_data.name, "CellData" | "CellDataChild") {
+                if let Some(parent) = cell_data.attr("_parent") {
+                    let Some(mut data) = self
+                        .cell_data
+                        .iter()
+                        .find(|c| c.name.as_str() == parent)
+                        .cloned()
+                    else {
+                        continue;
+                    };
+                    data.name = cell_data.attr("name").map(Into::into).unwrap_or(data.name);
+                    data.ui_name = cell_data
+                        .attr("ui_name")
+                        .map(Into::into)
+                        .unwrap_or(data.ui_name);
+                    data.wang_color = cell_data
+                        .attr("wang_color")
+                        .map_or(data.wang_color, |c| c.parse().unwrap());
+                    data.durability = cell_data
+                        .attr("durability")
+                        .map_or(data.durability, |c| c.parse().unwrap());
+                    data.hp = cell_data.attr("hp").map_or(data.hp, |c| c.parse().unwrap());
+                    data.cell_type = cell_data
+                        .attr("cell_type")
+                        .map_or(data.cell_type, |c| c.parse().unwrap());
+                    data.liquid_sand = cell_data
+                        .attr("liquid_sane")
+                        .map_or(data.liquid_sand, |c| c.parse::<u8>().unwrap() == 1);
+                    data.liquid_static = cell_data
+                        .attr("liquid_static")
+                        .map_or(data.liquid_static, |c| c.parse::<u8>().unwrap() == 1);
+                    self.cell_data.push(data);
+                } else {
+                    let mut data = CellData::default();
+                    data.name = cell_data.attr("name").unwrap_or_default().into();
+                    data.ui_name = cell_data.attr("ui_name").unwrap_or_default().into();
+                    data.wang_color = cell_data
+                        .attr("wang_color")
+                        .unwrap_or("00000000")
+                        .parse()
+                        .unwrap();
+                    data.durability = cell_data.attr("durability").unwrap_or("0").parse().unwrap();
+                    data.hp = cell_data.attr("hp").unwrap_or("0").parse().unwrap();
+                    data.cell_type = cell_data
+                        .attr("cell_type")
+                        .unwrap_or("none")
+                        .parse()
+                        .unwrap();
+                    data.liquid_sand = cell_data
+                        .attr("liquid_sane")
+                        .unwrap_or("0")
+                        .parse::<u8>()
+                        .unwrap()
+                        == 1;
+                    data.liquid_static = cell_data
+                        .attr("liquid_static")
+                        .unwrap_or("0")
+                        .parse::<u8>()
+                        .unwrap()
+                        == 1;
+                    self.cell_data.push(data);
+                }
+            }
+        }
     }
 }
 impl Default for CellFactory {

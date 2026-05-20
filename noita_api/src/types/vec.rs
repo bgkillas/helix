@@ -9,6 +9,20 @@ pub struct StdVec<T> {
     pub end: *mut T,
     pub cap: *mut T,
 }
+impl<T: Clone> Clone for StdVec<T> {
+    #[inline]
+    fn clone(&self) -> Self {
+        if self.is_empty() {
+            Self::default()
+        } else {
+            let mut new = StdVec::with_capacity(self.capacity());
+            for e in self.iter() {
+                new.push(e.clone());
+            }
+            new
+        }
+    }
+}
 impl<T: Debug> Debug for StdVec<T> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
