@@ -61,6 +61,11 @@ impl LineIter {
     pub fn is_next_y_same(&self) -> bool {
         self.error > self.dx
     }
+    #[inline]
+    #[must_use]
+    pub fn is_high(&self) -> bool {
+        self.dx < -self.dy
+    }
 }
 #[test]
 fn test_line() {

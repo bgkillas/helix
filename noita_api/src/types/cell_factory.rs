@@ -68,6 +68,9 @@ impl CellFactory {
                     data.liquid_static = cell_data
                         .attr("liquid_static")
                         .map_or(data.liquid_static, |c| c.parse::<u8>().unwrap() == 1);
+                    self.material_names.push(data.name.clone());
+                    self.material_ids
+                        .insert(data.name.clone(), data.material_type);
                     self.cell_data.push(data);
                 } else {
                     let mut data = CellData::default();
@@ -99,6 +102,9 @@ impl CellFactory {
                         .parse::<u8>()
                         .unwrap()
                         == 1;
+                    self.material_names.push(data.name.clone());
+                    self.material_ids
+                        .insert(data.name.clone(), data.material_type);
                     self.cell_data.push(data);
                 }
             }

@@ -37,3 +37,15 @@ impl Iterator for ArcIter {
         }
     }
 }
+impl ArcIter {
+    pub fn new(x0: isize, y0: isize, x1: isize, y1: isize, x2: isize, y2: isize) -> Self {
+        let low_line = LineIter::new(x0, y0, x1, y1);
+        let is_high = low_line.is_high();
+        Self {
+            low_line,
+            high_line: LineIter::new(x0, y0, x2, y2),
+            range: None,
+            is_high,
+        }
+    }
+}

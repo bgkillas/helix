@@ -79,6 +79,14 @@ impl Cell<()> {
             CellType::Fire => FullCell::FireCell(self.cast()),
         }
     }
+    #[inline]
+    #[must_use]
+    pub fn new(material: StdBox<CellData>) -> Self {
+        let mut cell = Self::default();
+        cell.material = material;
+        cell.hp = cell.material.hp;
+        cell
+    }
 }
 pub enum FullCell {
     None(Cell<()>),

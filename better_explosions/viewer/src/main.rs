@@ -1,11 +1,12 @@
 #![allow(clippy::shadow_reuse)]
+use better_explosions::explosion;
 use better_explosions::line::LineIter;
 use eframe::{Frame, NativeOptions};
 use egui::{
     CentralPanel, CollapsingHeader, Color32, ColorImage, ComboBox, DragValue, Key, Panel, Pos2,
     Rect, ScrollArea, TextureHandle, TextureOptions, Ui, Vec2,
 };
-use noita_api::{Cell, Chunk, GameGlobal, StdBox};
+use noita_api::{Cell, Chunk, ConfigExplosion, GameGlobal, StdBox};
 use rand::RngExt as _;
 use std::collections::HashMap;
 fn main() -> eframe::Result {
@@ -32,7 +33,7 @@ struct App {
     menu: Menu,
     paint: u16,
     other: u16,
-    other_chance: f64,
+    other_chance: f32,
     update_textures: bool,
     unloaded: HashMap<(u16, u16), StdBox<Chunk>>,
     textures: HashMap<(u16, u16), TextureHandle>,
@@ -62,7 +63,7 @@ impl Default for App {
 }
 #[derive(Debug)]
 enum Wand {
-    Explosive,
+    Explosive(isize, isize, f32, isize, isize),
     Line(isize, isize, isize, isize),
     Arc,
     CellEater,
@@ -72,8 +73,10 @@ impl PartialEq for Wand {
     fn eq(&self, other: &Self) -> bool {
         matches!(
             (self, other),
-            (Wand::Explosive, Wand::Explosive)
-                | (Wand::Line(_, _, _, _), Wand::Line(_, _, _, _))
+            (
+                Wand::Explosive(_, _, _, _, _),
+                Wand::Explosive(_, _, _, _, _)
+            ) | (Wand::Line(_, _, _, _), Wand::Line(_, _, _, _))
                 | (Wand::Arc, Wand::Arc)
                 | (Wand::CellEater, Wand::CellEater)
                 | (Wand::SquareEater, Wand::SquareEater)
@@ -83,7 +86,7 @@ impl PartialEq for Wand {
 impl App {
     pub fn paint_pixel(&self, pixel: &mut Option<Cell<()>>) {
         let mut rng = rand::rng();
-        let color = if rng.random_bool(self.other_chance) {
+        let color = if rng.random_bool(self.other_chance.into()) {
             self.paint
         } else {
             self.other
@@ -99,9 +102,9 @@ impl App {
             p.hp = p.material.hp;
         } else {
             let game_global = GameGlobal::global();
-            let mut cell = Cell::default();
-            cell.material = StdBox::from(&game_global.m_cell_factory.cell_data[usize::from(color)]);
-            cell.hp = cell.material.hp;
+            let cell = Cell::new(StdBox::from(
+                &game_global.m_cell_factory.cell_data[usize::from(color)],
+            ));
             *pixel = Some(cell);
         }
     }
@@ -134,8 +137,26 @@ impl eframe::App for App {
                 self.update_textures = true;
                 #[allow(clippy::match_same_arms)]
                 match self.wand {
-                    Wand::Explosive => {
-                        //TODO
+                    Wand::Explosive(x0, y0, r, dur, energy) => {
+                        let mut config = ConfigExplosion::default();
+                        config.explosion_radius = r;
+                        config.max_durability_to_destroy = dur;
+                        config.ray_energy = energy;
+                        let game_global = GameGlobal::global();
+                        config.create_cell_material = game_global.m_cell_factory.cell_data
+                            [usize::from(self.other)]
+                        .name
+                        .clone();
+                        config.create_cell_probability =
+                            truncate_f32(self.other_chance * 100.0).cast_unsigned();
+                        config.hole_enabled = true;
+                        explosion(
+                            &config,
+                            noita_api::Vec2 {
+                                x: truncate_isize(x0),
+                                y: truncate_isize(y0),
+                            },
+                        );
                     }
                     Wand::Line(x0, y0, x1, y1) => {
                         let game_global = GameGlobal::global();
@@ -187,14 +208,18 @@ impl eframe::App for App {
             ui.add(DragValue::new(&mut self.other_chance));
             ComboBox::from_label("Wand")
                 .selected_text(match self.wand {
-                    Wand::Explosive => "Explosive",
+                    Wand::Explosive(_, _, _, _, _) => "Explosive",
                     Wand::Line(_, _, _, _) => "Line",
                     Wand::Arc => "Arc",
                     Wand::CellEater => "CellEater",
                     Wand::SquareEater => "SquareEater",
                 })
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.wand, Wand::Explosive, "Explosive");
+                    ui.selectable_value(
+                        &mut self.wand,
+                        Wand::Explosive(0, 0, 0.0, 0, 0),
+                        "Explosive",
+                    );
                     ui.selectable_value(&mut self.wand, Wand::Line(0, 0, 0, 0), "Line");
                     ui.selectable_value(&mut self.wand, Wand::Arc, "Arc");
                     ui.selectable_value(&mut self.wand, Wand::CellEater, "CellEater");
@@ -202,8 +227,17 @@ impl eframe::App for App {
                 });
             #[allow(clippy::match_same_arms)]
             match &mut self.wand {
-                Wand::Explosive => {
-                    //TODO
+                Wand::Explosive(x0, y0, r, dur, energy) => {
+                    ui.label("start x");
+                    ui.add(DragValue::new(x0));
+                    ui.label("start y");
+                    ui.add(DragValue::new(y0));
+                    ui.label("radius");
+                    ui.add(DragValue::new(r));
+                    ui.label("max durability");
+                    ui.add(DragValue::new(dur));
+                    ui.label("energy");
+                    ui.add(DragValue::new(energy));
                 }
                 Wand::Line(x0, y0, x1, y1) => {
                     ui.label("start x");
@@ -294,4 +328,14 @@ impl eframe::App for App {
             }
         });
     }
+}
+#[allow(clippy::cast_precision_loss)]
+#[allow(clippy::as_conversions)]
+fn truncate_isize(f: isize) -> f32 {
+    f as f32
+}
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::as_conversions)]
+fn truncate_f32(f: f32) -> isize {
+    f as isize
 }

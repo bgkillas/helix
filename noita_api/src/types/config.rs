@@ -3,9 +3,9 @@ use crate::{
     ConfigGridCosmeticParticleVTable, StdBox, StdString, ValueRange, Vec2,
 };
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ConfigExplosion {
-    pub vftable: StdBox<ConfigExplosionVTable>,
+    pub vftable: Option<StdBox<ConfigExplosionVTable>>,
     pub never_cache: bool,
     padding1: [u8; 3],
     pub explosion_radius: f32,
@@ -39,7 +39,7 @@ pub struct ConfigExplosion {
     pub hole_destroy_physics_dynamic: bool,
     padding6: [u8; 2],
     pub create_cell_material: StdString,
-    pub create_cell_probability: isize,
+    pub create_cell_probability: usize,
     pub background_lightning_count: isize,
     pub spark_material: StdString,
     pub material_sparks_min_hp: isize,
@@ -89,9 +89,9 @@ pub struct ConfigExplosion {
     pub impl_delay_frame: isize,
 }
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ConfigDamageCritical {
-    pub vftable: StdBox<ConfigDamageCriticalVTable>,
+    pub vftable: Option<StdBox<ConfigDamageCriticalVTable>>,
     pub chance: isize,
     pub damage_multiplier: f32,
     pub m_succeeded: bool,

@@ -1,7 +1,9 @@
 pub mod arc;
 pub mod line;
+use crate::arc::ArcIter;
 use crate::line::LineIter;
-use noita_api::{ConfigExplosion, GameGlobal, Vec2};
+use noita_api::{Cell, ConfigExplosion, GameGlobal, StdBox, Vec2};
+use rand::RngExt as _;
 use std::f32::consts::TAU;
 #[noita_api::lua_module]
 mod lua {
@@ -19,13 +21,18 @@ mod lua {
 }
 #[inline]
 pub fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
-    let rng = rand::rng();
+    let mut rng = rand::rng();
     let game_global = GameGlobal::global();
+    let cell_create_id = *game_global
+        .m_cell_factory
+        .material_ids
+        .get(&config.create_cell_material)
+        .unwrap();
+    let cell_create = StdBox::from(&game_global.m_cell_factory.cell_data[cell_create_id]);
     let grid_world = game_global.m_grid_world;
     let chunk_map = grid_world.chunk_map.chunk_array;
     let ix0 = truncate_f32(pos.x);
     let iy0 = truncate_f32(pos.y);
-    _ = rng;
     let rays: u16 = 16;
     let delta_theta = TAU / f32::from(rays);
     for ray in 0..rays {
@@ -57,7 +64,10 @@ pub fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
             }
             let c = &mut chunk[py][px];
             if let Some(p) = c {
-                if energy > p.hp && p.material.durability <= config.max_durability_to_destroy {
+                if energy > p.hp
+                    && p.material.durability <= config.max_durability_to_destroy
+                    && config.hole_enabled
+                {
                     energy -= p.hp;
                     p.ptr.free();
                     *c = None;
@@ -66,6 +76,19 @@ pub fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
                 }
             }
         }
+        for (x, y) in ArcIter::new() {}
+        /*
+                    if cell_create_id != 0
+                        && rng.random_ratio(
+                            u32::try_from(config.create_cell_probability).unwrap(),
+                            100,
+                        )
+                    {
+                        println!("{px} {py}");
+                        p.ptr.free();
+                        *c = Some(Cell::new(cell_create));
+                    } else {
+        */
         /*let r = if (ix2, iy2) == (ix1, iy1) {
             truncate_f32(config.explosion_radius).pow(2)
         } else {
