@@ -10,6 +10,7 @@ better_explosions = {workspace = true}
 noita_api = {workspace = true}
 egui = "0.34.2"
 eframe = "0.34.2"
+rand = "0.10.1"
 
 [lints]
 workspace = true

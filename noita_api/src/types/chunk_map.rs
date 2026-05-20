@@ -17,6 +17,16 @@ pub struct ChunkMap {
 pub struct ChunkArray {
     pub array: [[Option<StdBox<Chunk>>; 512]; 512],
 }
+impl ChunkArray {
+    #[inline]
+    pub fn flat_iter(&self) -> impl Iterator<Item = (u16, u16, StdBox<Chunk>)> {
+        self.iter().enumerate().flat_map(|(y, yc)| {
+            yc.iter().copied().enumerate().filter_map(move |(x, xc)| {
+                xc.map(|c| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), c))
+            })
+        })
+    }
+}
 impl Default for ChunkArray {
     #[inline]
     #[allow(clippy::large_stack_arrays)]
@@ -57,6 +67,16 @@ impl DerefMut for ChunkArray {
 #[derive(Debug)]
 pub struct Chunk {
     pub data: StdBox<[[Option<Cell<()>>; 512]; 512]>,
+}
+impl Chunk {
+    #[inline]
+    pub fn flat_iter(&self) -> impl Iterator<Item = (u16, u16, Cell<()>)> {
+        self.iter().enumerate().flat_map(|(y, yc)| {
+            yc.iter().copied().enumerate().filter_map(move |(x, xc)| {
+                xc.map(|c| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), c))
+            })
+        })
+    }
 }
 impl Default for Chunk {
     #[inline]

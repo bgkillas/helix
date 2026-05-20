@@ -33,6 +33,29 @@ pub struct CellInner<T: CellTrait> {
 pub struct Cell<T: CellTrait> {
     pub ptr: StdBox<CellInner<T>>,
 }
+impl Default for Cell<()> {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            ptr: StdBox::new(CellInner::default()),
+        }
+    }
+}
+impl Default for CellInner<()> {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            vtable: StdBox::new(CellVTable::default()),
+            hp: 0,
+            unknown1: [0; 2],
+            is_burning: false,
+            temperature_of_fire: 0,
+            unknown2: [0; 2],
+            material: StdBox::new(CellData::default()),
+            data: (),
+        }
+    }
+}
 impl<T: CellTrait> Cell<T> {
     #[inline]
     #[must_use]
@@ -99,7 +122,7 @@ pub enum CellType {
     Fire = 4,
 }
 #[repr(C)]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Color {
     pub r: u8,
     pub g: u8,

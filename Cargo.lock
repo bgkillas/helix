@@ -4062,6 +4062,7 @@ dependencies = [
  "eframe",
  "egui",
  "noita_api",
+ "rand 0.10.1",
 ]
 
 [[package]]

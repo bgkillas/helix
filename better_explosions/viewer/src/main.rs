@@ -1,8 +1,13 @@
 #![allow(clippy::shadow_reuse)]
 use better_explosions::line::LineIter;
 use eframe::{Frame, NativeOptions};
-use egui::{CentralPanel, ComboBox, DragValue, Ui};
-use noita_api::{Chunk, GameGlobal, StdBox};
+use egui::{
+    CentralPanel, Color32, ColorImage, ComboBox, DragValue, Pos2, Rect, TextureHandle,
+    TextureOptions, Ui, Vec2,
+};
+use noita_api::{Cell, Chunk, GameGlobal, StdBox};
+use rand::RngExt as _;
+use std::collections::HashMap;
 fn main() -> eframe::Result {
     let game_global = GameGlobal::global();
     let grid_world = game_global.m_grid_world;
@@ -17,14 +22,30 @@ fn main() -> eframe::Result {
         Box::new(|_| Ok(Box::<App>::default())),
     )
 }
-#[derive(Debug)]
+#[allow(unused)]
 struct App {
     wand: Wand,
+    paint: u16,
+    other: u16,
+    other_chance: f64,
+    update_textures: bool,
+    unloaded: HashMap<(u16, u16), StdBox<Chunk>>,
+    textures: HashMap<(u16, u16), TextureHandle>,
+    zoom: f32,
+    offset: Pos2,
 }
 impl Default for App {
     fn default() -> Self {
         Self {
             wand: Wand::Line(0, 0, 0, 0),
+            paint: 0,
+            other: 1,
+            other_chance: 0.5,
+            update_textures: true,
+            unloaded: HashMap::with_capacity(512),
+            textures: HashMap::with_capacity(512),
+            zoom: 1.0,
+            offset: Pos2::new(256.0, 256.0),
         }
     }
 }
@@ -48,10 +69,53 @@ impl PartialEq for Wand {
         )
     }
 }
+impl App {
+    pub fn paint_pixel(&self, pixel: &mut Option<Cell<()>>) {
+        let mut rng = rand::rng();
+        let color = if rng.random_bool(self.other_chance) {
+            self.paint
+        } else {
+            self.other
+        };
+        if color == 0 {
+            if let Some(p) = pixel {
+                p.ptr.free();
+                *pixel = None;
+            }
+        } else if let Some(p) = pixel {
+            p.material.material_type = usize::from(color);
+        } else {
+            let mut cell = Cell::default();
+            cell.material.material_type = usize::from(color);
+            *pixel = Some(cell);
+        }
+    }
+    pub fn update_textures(&mut self, ui: &mut Ui) {
+        self.textures.clear();
+        let game_global = GameGlobal::global();
+        let grid_world = game_global.m_grid_world;
+        let chunk_map = grid_world.chunk_map.chunk_array;
+        for (x, y, c) in chunk_map.flat_iter() {
+            let texture = make_texture(ui, x, y, c);
+            self.textures.insert((x, y), texture);
+        }
+    }
+}
+fn make_texture(ui: &mut Ui, x: u16, y: u16, chunk: StdBox<Chunk>) -> TextureHandle {
+    let mut vec = vec![Color32::WHITE; chunk[0].len() * chunk.len()];
+    for (x, y, pixel) in chunk.flat_iter() {
+        let color = pixel.material.wang_color;
+        vec[usize::from(y) * 512 + usize::from(x)] =
+            Color32::from_rgba_premultiplied(color.r, color.g, color.b, color.a);
+    }
+    let image = ColorImage::new([chunk[0].len(), chunk.len()], vec);
+    ui.load_texture(format!("{x}x{y}"), image, TextureOptions::NEAREST)
+}
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut Ui, _: &mut Frame) {
         CentralPanel::default().show_inside(ui, |ui| {
             if ui.button("Apply").clicked() {
+                self.update_textures = true;
                 #[allow(clippy::match_same_arms)]
                 match self.wand {
                     Wand::Explosive => {
@@ -80,11 +144,7 @@ impl eframe::App for App {
                                         break;
                                     }
                                 }
-                                let c = &mut chunk[py][px];
-                                if let Some(p) = c {
-                                    p.ptr.free();
-                                    *c = None;
-                                }
+                                self.paint_pixel(&mut chunk[py][px]);
                             }
                         }
                     }
@@ -99,6 +159,16 @@ impl eframe::App for App {
                     }
                 }
             }
+            if self.update_textures {
+                self.update_textures = false;
+                self.update_textures(ui);
+            }
+            ui.label("main id");
+            ui.add(DragValue::new(&mut self.paint));
+            ui.label("other id");
+            ui.add(DragValue::new(&mut self.other));
+            ui.label("other chance");
+            ui.add(DragValue::new(&mut self.other_chance));
             ComboBox::from_label("Wand")
                 .selected_text(match self.wand {
                     Wand::Explosive => "Explosive",
@@ -120,9 +190,13 @@ impl eframe::App for App {
                     //TODO
                 }
                 Wand::Line(x0, y0, x1, y1) => {
+                    ui.label("start x");
                     ui.add(DragValue::new(x0));
+                    ui.label("start y");
                     ui.add(DragValue::new(y0));
+                    ui.label("end x");
                     ui.add(DragValue::new(x1));
+                    ui.label("end y");
                     ui.add(DragValue::new(y1));
                 }
                 Wand::Arc => {
@@ -134,6 +208,18 @@ impl eframe::App for App {
                 Wand::SquareEater => {
                     //TODO
                 }
+            }
+            let tile_size = self.zoom * 512.0;
+            for (coord, tex) in &self.textures {
+                let pos =
+                    (Pos2::new(f32::from(coord.0), f32::from(coord.1)) - self.offset) * tile_size;
+                let rect = Rect::from_min_size(pos.to_pos2(), Vec2::splat(tile_size));
+                ui.painter().image(
+                    tex.id(),
+                    rect,
+                    Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0)),
+                    Color32::WHITE,
+                );
             }
         });
     }

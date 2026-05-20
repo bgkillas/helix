@@ -5,7 +5,7 @@ pub struct ComponentBufferVTable<T> {
     phantom: PhantomData<T>,
 }
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct CellVTable<T> {
     phantom: PhantomData<T>,
 }
