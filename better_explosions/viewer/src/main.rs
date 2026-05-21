@@ -21,19 +21,33 @@ fn main() -> eframe::Result {
     chunk_map[255][256] = Some(StdBox::new(Chunk::default()));
     chunk_map[256][255] = Some(StdBox::new(Chunk::default()));
     chunk_map[255][255] = Some(StdBox::new(Chunk::default()));
+    fill(29);
     eframe::run_native(
         "explosions",
         NativeOptions::default(),
         Box::new(|_| Ok(Box::<App>::default())),
     )
 }
+fn fill(mat: u16) {
+    let game_global = GameGlobal::global();
+    let matptr = StdBox::from(&game_global.m_cell_factory.cell_data[usize::from(mat)]);
+    let grid_world = game_global.m_grid_world;
+    let chunk_map = grid_world.chunk_map.chunk_array;
+    for (_, _, mut c) in chunk_map.flat_iter() {
+        for (_, _, p) in c.iter_mut() {
+            if let Some(ptr) = p {
+                ptr.ptr.free();
+            }
+            *p = Some(Cell::new(matptr));
+        }
+    }
+}
 #[allow(unused)]
 struct App {
     wand: Wand,
     menu: Menu,
-    paint: u16,
-    other: u16,
-    other_chance: f32,
+    material: u16,
+    material_chance: f32,
     update_textures: bool,
     unloaded: HashMap<(u16, u16), StdBox<Chunk>>,
     textures: HashMap<(u16, u16), TextureHandle>,
@@ -50,9 +64,8 @@ impl Default for App {
         Self {
             wand: Wand::Line(0, 0, 0, 0),
             menu: Menu::Map,
-            paint: 0,
-            other: 1,
-            other_chance: 0.5,
+            material: 1,
+            material_chance: 0.0,
             update_textures: true,
             unloaded: HashMap::with_capacity(512),
             textures: HashMap::with_capacity(512),
@@ -86,10 +99,10 @@ impl PartialEq for Wand {
 impl App {
     pub fn paint_pixel(&self, pixel: &mut Option<Cell<()>>) {
         let mut rng = rand::rng();
-        let color = if rng.random_bool(self.other_chance.into()) {
-            self.other
+        let color = if rng.random_bool(self.material_chance.into()) {
+            self.material
         } else {
-            self.paint
+            0
         };
         if color == 0 {
             if let Some(p) = pixel {
@@ -144,11 +157,11 @@ impl eframe::App for App {
                         config.ray_energy = energy;
                         let game_global = GameGlobal::global();
                         config.create_cell_material = game_global.m_cell_factory.cell_data
-                            [usize::from(self.other)]
+                            [usize::from(self.material)]
                         .name
                         .clone();
                         config.create_cell_probability =
-                            truncate_f32(self.other_chance * 100.0).cast_unsigned();
+                            truncate_f32(self.material_chance * 100.0).cast_unsigned();
                         config.hole_enabled = true;
                         explosion(
                             &config,
@@ -200,12 +213,10 @@ impl eframe::App for App {
                 self.update_textures = false;
                 self.update_textures(ui);
             }
-            ui.label("main id");
-            ui.add(DragValue::new(&mut self.paint));
-            ui.label("other id");
-            ui.add(DragValue::new(&mut self.other));
-            ui.label("other chance");
-            ui.add(DragValue::new(&mut self.other_chance));
+            ui.label("material id");
+            ui.add(DragValue::new(&mut self.material));
+            ui.label("material chance");
+            ui.add(DragValue::new(&mut self.material_chance));
             ComboBox::from_label("Wand")
                 .selected_text(match self.wand {
                     Wand::Explosive(_, _, _, _, _) => "Explosive",

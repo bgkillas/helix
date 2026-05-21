@@ -82,10 +82,13 @@ impl Cell<()> {
     #[inline]
     #[must_use]
     pub fn new(material: StdBox<CellData>) -> Self {
-        let mut cell = Self::default();
-        cell.material = material;
-        cell.hp = cell.material.hp;
-        cell
+        Self {
+            ptr: StdBox::new(CellInner {
+                material,
+                hp: material.hp,
+                ..CellInner::default()
+            }),
+        }
     }
 }
 pub enum FullCell {

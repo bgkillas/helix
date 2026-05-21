@@ -19,12 +19,25 @@ pub struct ChunkArray {
 }
 impl ChunkArray {
     #[inline]
-    pub fn flat_iter(&self) -> impl Iterator<Item = (u16, u16, StdBox<Chunk>)> {
-        self.iter().enumerate().flat_map(|(y, yc)| {
-            yc.iter().copied().enumerate().filter_map(move |(x, xc)| {
-                xc.map(|c| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), c))
-            })
+    pub fn iter(&self) -> impl Iterator<Item = (u16, u16, Option<StdBox<Chunk>>)> {
+        self.array.iter().enumerate().flat_map(|(y, yc)| {
+            yc.iter()
+                .copied()
+                .enumerate()
+                .map(move |(x, xc)| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), xc))
         })
+    }
+    #[inline]
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (u16, u16, &mut Option<StdBox<Chunk>>)> {
+        self.array.iter_mut().enumerate().flat_map(|(y, yc)| {
+            yc.iter_mut()
+                .enumerate()
+                .map(move |(x, xc)| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), xc))
+        })
+    }
+    #[inline]
+    pub fn flat_iter(&self) -> impl Iterator<Item = (u16, u16, StdBox<Chunk>)> {
+        self.iter().filter_map(|(x, y, oc)| oc.map(|c| (x, y, c)))
     }
 }
 impl Default for ChunkArray {
@@ -40,13 +53,7 @@ impl Debug for ChunkArray {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_list()
-            .entries(self.iter().enumerate().flat_map(|(i, a)| {
-                a.iter().enumerate().filter_map(
-                    move |(j, c)| {
-                        if c.is_some() { Some((i, j)) } else { None }
-                    },
-                )
-            }))
+            .entries(self.flat_iter().map(|(x, y, _)| (x, y)))
             .finish()
     }
 }
@@ -70,12 +77,25 @@ pub struct Chunk {
 }
 impl Chunk {
     #[inline]
-    pub fn flat_iter(&self) -> impl Iterator<Item = (u16, u16, Cell<()>)> {
-        self.iter().enumerate().flat_map(|(y, yc)| {
-            yc.iter().copied().enumerate().filter_map(move |(x, xc)| {
-                xc.map(|c| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), c))
-            })
+    pub fn iter(&self) -> impl Iterator<Item = (u16, u16, Option<Cell<()>>)> {
+        self.data.iter().enumerate().flat_map(|(y, yc)| {
+            yc.iter()
+                .copied()
+                .enumerate()
+                .map(move |(x, xc)| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), xc))
         })
+    }
+    #[inline]
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (u16, u16, &mut Option<Cell<()>>)> {
+        self.data.iter_mut().enumerate().flat_map(|(y, yc)| {
+            yc.iter_mut()
+                .enumerate()
+                .map(move |(x, xc)| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), xc))
+        })
+    }
+    #[inline]
+    pub fn flat_iter(&self) -> impl Iterator<Item = (u16, u16, Cell<()>)> {
+        self.iter().filter_map(|(x, y, oc)| oc.map(|c| (x, y, c)))
     }
 }
 impl Default for Chunk {
