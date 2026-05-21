@@ -9,12 +9,16 @@ pub struct LineIter {
     sx: isize,
     sy: isize,
     error: isize,
+    first: bool,
 }
 impl Iterator for LineIter {
     type Item = (isize, isize);
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let ret = (self.x0, self.y0);
+        if self.first {
+            self.first = false;
+            return Some((self.x0, self.y0));
+        }
         let error = self.error;
         if error >= self.dy {
             if self.x0 == self.x1 {
@@ -30,7 +34,7 @@ impl Iterator for LineIter {
             self.error += 2 * self.dx;
             self.y0 += self.sy;
         }
-        Some(ret)
+        Some((self.x0, self.y0))
     }
 }
 impl LineIter {
@@ -49,6 +53,7 @@ impl LineIter {
             sx: if x0 < x1 { 1 } else { -1 },
             sy: if y0 < y1 { 1 } else { -1 },
             error: 2 * (dx + dy),
+            first: true,
         }
     }
     #[inline]
@@ -94,5 +99,26 @@ fn test_line() {
         let (nx, ny) = iter.next().unwrap();
         assert_eq!(x, nx, "{x} {y} {nx} {ny}");
         assert_eq!(y, ny, "{x} {y} {nx} {ny}");
+    }
+    for i in 0..8 {
+        for j in 0..8 {
+            for k in 0..8 {
+                if i == k || (j == 0 && k == 8) {
+                    continue;
+                }
+                let mut iter_a = LineIter::new(i, 0, j, 8);
+                let mut iter_b = LineIter::new(j, 8, 0, k);
+                let mut iter_c = LineIter::new(0, k, i, 0);
+                let start_a = iter_a.next();
+                let start_b = iter_b.next();
+                let start_c = iter_c.next();
+                assert_eq!(start_a, Some((i, 0)), "{i} {j} {k}");
+                assert_eq!(start_b, Some((j, 8)), "{i} {j} {k}");
+                assert_eq!(start_c, Some((0, k)), "{i} {j} {k}");
+                assert_eq!(iter_a.last(), start_b, "{i} {j} {k}");
+                assert_eq!(iter_b.last(), start_c, "{i} {j} {k}");
+                assert_eq!(iter_c.last(), start_a, "{i} {j} {k}");
+            }
+        }
     }
 }

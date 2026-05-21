@@ -21,6 +21,13 @@ mod lua {
 }
 #[inline]
 pub fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
+    let rays: u16 = 32;
+    explosion_with_rays(config, pos, rays);
+}
+//could do the 8 octants at once
+//have arc iter not do circle by quadrangle
+#[inline]
+pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) {
     let mut rng = rand::rng();
     let game_global = GameGlobal::global();
     let cell_create_id = *game_global
@@ -33,7 +40,6 @@ pub fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
     let chunk_map = grid_world.chunk_map.chunk_array;
     let ix0 = truncate_f32(pos.x);
     let iy0 = truncate_f32(pos.y);
-    let rays: u16 = 16;
     let delta_theta = TAU / f32::from(rays);
     for ray in 0..rays {
         let mut chunk_x = ix0.div_euclid(512);
@@ -76,9 +82,9 @@ pub fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
             }
         }
         let r = if (ix2, iy2) == (ix1, iy1) {
-            truncate_f32(config.explosion_radius).pow(2)
+            truncate_f32(config.explosion_radius)
         } else {
-            ix2 * ix2 + iy2 * iy2
+            truncate_f32(truncate_isize(ix2).hypot(truncate_isize(iy2)))
         };
         let rf = truncate_isize(r);
         let theta = f32::from(ray) * delta_theta;

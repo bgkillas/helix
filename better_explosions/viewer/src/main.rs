@@ -290,7 +290,7 @@ impl eframe::App for App {
                         let pixel_rel = chunk_rel * 512.0;
                         (truncate_f32(pixel_rel.x), truncate_f32(pixel_rel.y))
                     };
-                    if ui.input(|i| i.pointer.button_pressed(PointerButton::Primary)) {
+                    if ui.input(|i| i.pointer.button_down(PointerButton::Primary)) {
                         let (x, y) = get_cursor_pixel();
                         match &mut self.wand {
                             Wand::Line(x0, y0, _, _) | Wand::Explosive(x0, y0, _, _, _) => {
@@ -299,7 +299,7 @@ impl eframe::App for App {
                             _ => {}
                         }
                     }
-                    if ui.input(|i| i.pointer.button_pressed(PointerButton::Secondary)) {
+                    if ui.input(|i| i.pointer.button_down(PointerButton::Secondary)) {
                         let (x, y) = get_cursor_pixel();
                         match &mut self.wand {
                             Wand::Line(_, _, x1, y1) => {
@@ -312,33 +312,33 @@ impl eframe::App for App {
                             _ => {}
                         }
                     }
-                }
-                let s = 1.0 / 16.0 / self.zoom;
-                if ui
-                    .input(|i| i.keys_down.contains(&Key::W) || i.keys_down.contains(&Key::ArrowUp))
-                {
-                    self.offset.y -= s;
-                }
-                if ui.input(|i| {
-                    i.keys_down.contains(&Key::S) || i.keys_down.contains(&Key::ArrowDown)
-                }) {
-                    self.offset.y += s;
-                }
-                if ui.input(|i| {
-                    i.keys_down.contains(&Key::A) || i.keys_down.contains(&Key::ArrowLeft)
-                }) {
-                    self.offset.x -= s;
-                }
-                if ui.input(|i| {
-                    i.keys_down.contains(&Key::D) || i.keys_down.contains(&Key::ArrowRight)
-                }) {
-                    self.offset.x += s;
-                }
-                if ui.input(|i| i.key_pressed(Key::Q)) {
-                    self.zoom *= 2.0 / 3.0;
-                }
-                if ui.input(|i| i.key_pressed(Key::E)) {
-                    self.zoom *= 3.0 / 2.0;
+                    let s = 1.0 / 16.0 / self.zoom;
+                    if ui.input(|i| {
+                        i.keys_down.contains(&Key::W) || i.keys_down.contains(&Key::ArrowUp)
+                    }) {
+                        self.offset.y -= s;
+                    }
+                    if ui.input(|i| {
+                        i.keys_down.contains(&Key::S) || i.keys_down.contains(&Key::ArrowDown)
+                    }) {
+                        self.offset.y += s;
+                    }
+                    if ui.input(|i| {
+                        i.keys_down.contains(&Key::A) || i.keys_down.contains(&Key::ArrowLeft)
+                    }) {
+                        self.offset.x -= s;
+                    }
+                    if ui.input(|i| {
+                        i.keys_down.contains(&Key::D) || i.keys_down.contains(&Key::ArrowRight)
+                    }) {
+                        self.offset.x += s;
+                    }
+                    if ui.input(|i| i.key_pressed(Key::Q)) {
+                        self.zoom *= 2.0 / 3.0;
+                    }
+                    if ui.input(|i| i.key_pressed(Key::E)) {
+                        self.zoom *= 3.0 / 2.0;
+                    }
                 }
                 for (coord, tex) in &self.textures {
                     let pos = (Pos2::new(f32::from(coord.0), f32::from(coord.1)) - self.offset)
