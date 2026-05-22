@@ -63,7 +63,7 @@ impl CellFactory {
                         .attr("cell_type")
                         .map_or(data.cell_type, |c| c.parse().unwrap());
                     data.liquid_sand = cell_data
-                        .attr("liquid_sane")
+                        .attr("liquid_sand")
                         .map_or(data.liquid_sand, |c| c.parse::<u8>().unwrap() == 1);
                     data.liquid_static = cell_data
                         .attr("liquid_static")
@@ -96,7 +96,7 @@ impl CellFactory {
                         .parse()
                         .unwrap();
                     data.liquid_sand = cell_data
-                        .attr("liquid_sane")
+                        .attr("liquid_sand")
                         .unwrap_or("0")
                         .parse::<u8>()
                         .unwrap()
