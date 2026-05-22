@@ -41,7 +41,7 @@ pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) 
     let ix0 = truncate_f32(pos.x);
     let iy0 = truncate_f32(pos.y);
     let delta_theta = TAU / f32::from(rays);
-    for ray in 0..rays {
+    for ray in 0..rays / 8 {
         let mut chunk_x = ix0.div_euclid(512);
         let mut chunk_y = iy0.div_euclid(512);
         let Some(mut chunk) =
@@ -95,7 +95,7 @@ pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) 
         let (sin, cos) = theta.sin_cos();
         let ix4 = ix0 + truncate_f32(cos * rf);
         let iy4 = iy0 + truncate_f32(sin * rf);
-        for (x, y) in ArcIter::new(ix0, iy0, ix3, iy3, ix4, iy4) {
+        for (x, y) in ArcIter::new(ix0, iy0, ix3, iy3, ix4, iy4, r * r) {
             let px = x.rem_euclid(512).cast_unsigned();
             let py = y.rem_euclid(512).cast_unsigned();
             if px == 0 || py == 0 || px == 511 || py == 511 {

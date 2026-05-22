@@ -1,51 +1,72 @@
 use crate::line::LineIter;
-use std::ops::Range;
 #[derive(Debug, Clone)]
 pub struct ArcIter {
     low_line: LineIter,
     high_line: LineIter,
-    range: Option<(Range<isize>, isize)>,
-    is_high: bool,
+    range_x: isize,
+    range_y_start: isize,
+    range_y_end: isize,
+    hx: isize,
+    hy: isize,
+    r2: isize,
 }
 impl Iterator for ArcIter {
     type Item = (isize, isize);
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some((range, over)) = &mut self.range
-            && let Some(next) = range.next()
-        {
-            Some(if self.is_high {
-                (*over, next)
+        if self.range_y_end >= self.range_y_start {
+            return if self.range_x.cast_unsigned().is_multiple_of(2) {
+                let y = self.range_y_start;
+                self.range_y_start += 1;
+                Some((self.range_x, y))
             } else {
-                (next, *over)
-            })
-        } else if self.is_high {
-            None
+                let y = self.range_y_end;
+                self.range_y_end -= 1;
+                Some((self.range_x, y))
+            };
+        }
+        if let Some((_, hy)) = self.high_line.next() {
+            let (lx, ly) = self.low_line.next().unwrap();
+            self.range_x = lx;
+            self.range_y_start = ly + 1;
+            self.range_y_end = hy;
+            Some((lx, ly))
+        } else if let Some((lx, ly)) = self.low_line.next() {
+            self.hx += 1;
+            if self.hx * self.hx + self.hy * self.hy > self.r2 {
+                self.hy -= 1;
+            }
+            self.range_x = lx;
+            self.range_y_start = ly + 1;
+            self.range_y_end = self.hy;
+            Some((lx, ly))
         } else {
-            let mut next = self.low_line.next()?;
-            while self.low_line.is_next_y_same() {
-                next = self.low_line.next()?;
-            }
-            while self.high_line.is_next_y_same() {
-                self.low_line.next()?;
-            }
-            let next_high = self.high_line.next()?;
-            self.range = Some((next_high.0..next.0, next.1));
-            self.next()
+            None
         }
     }
 }
 impl ArcIter {
     #[inline]
     #[must_use]
-    pub fn new(x0: isize, y0: isize, x1: isize, y1: isize, x2: isize, y2: isize) -> Self {
+    pub fn new(
+        x0: isize,
+        y0: isize,
+        x1: isize,
+        y1: isize,
+        x2: isize,
+        y2: isize,
+        r2: isize,
+    ) -> Self {
         let low_line = LineIter::new(x0, y0, x1, y1);
-        let is_high = low_line.is_high();
         Self {
             low_line,
             high_line: LineIter::new(x0, y0, x2, y2),
-            range: None,
-            is_high,
+            range_x: 0,
+            range_y_start: 0,
+            range_y_end: -1,
+            hx: x1,
+            hy: x2,
+            r2,
         }
     }
 }
