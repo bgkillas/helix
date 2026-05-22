@@ -1,5 +1,6 @@
 pub mod arc;
 pub mod line;
+pub mod octant;
 use crate::arc::ArcIter;
 use crate::line::LineIter;
 use noita_api::{Cell, ConfigExplosion, GameGlobal, StdBox, Vec2};
