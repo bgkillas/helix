@@ -68,6 +68,11 @@ impl CellFactory {
                     data.liquid_static = cell_data
                         .attr("liquid_static")
                         .map_or(data.liquid_static, |c| c.parse::<u8>().unwrap() == 1);
+                    if let Some(graphics) = cell_data.child("Graphics") {
+                        data.graphics.color = graphics
+                            .attr("color")
+                            .map_or(data.graphics.color, |c| c.parse().unwrap());
+                    }
                     self.material_names.push(data.name.clone());
                     self.material_ids
                         .insert(data.name.clone(), data.material_type);
@@ -102,6 +107,13 @@ impl CellFactory {
                         .parse::<u8>()
                         .unwrap()
                         == 1;
+                    if let Some(graphics) = cell_data.child("Graphics") {
+                        data.graphics.color = graphics
+                            .attr("color")
+                            .unwrap_or("00000000")
+                            .parse()
+                            .unwrap();
+                    }
                     self.material_names.push(data.name.clone());
                     self.material_ids
                         .insert(data.name.clone(), data.material_type);

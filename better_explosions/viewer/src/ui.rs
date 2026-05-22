@@ -118,7 +118,7 @@ fn make_texture(ui: &mut Ui, x: u16, y: u16, chunk: StdBox<Chunk>) -> TextureHan
     let mut vec =
         vec![Color32::from_rgba_premultiplied(60, 60, 140, 255); chunk[0].len() * chunk.len()];
     for (x, y, pixel) in chunk.flat_iter() {
-        let color = pixel.material.wang_color;
+        let color = pixel.material.graphics.color;
         vec[usize::from(y) * 512 + usize::from(x)] =
             Color32::from_rgba_premultiplied(color.r, color.g, color.b, color.a);
     }
@@ -210,7 +210,7 @@ impl eframe::App for App {
                 .show_ui(ui, |ui| {
                     ui.selectable_value(
                         &mut self.wand,
-                        Wand::Explosive(0, 0, 0.0, 0, 0),
+                        Wand::Explosive(0, 0, 0.0, isize::MAX, isize::MAX),
                         "Explosive",
                     );
                     ui.selectable_value(&mut self.wand, Wand::Line(0, 0, 0, 0), "Line");
@@ -346,6 +346,7 @@ impl eframe::App for App {
                                 .show(ui, |ui| {
                                     ui.label(format!("id: {}", cell_data.material_type));
                                     ui.label(format!("wang_color: {}", cell_data.wang_color));
+                                    ui.label(format!("color: {}", cell_data.graphics.color));
                                     ui.label(format!("durability: {}", cell_data.durability));
                                     ui.label(format!("hp: {}", cell_data.hp));
                                 });

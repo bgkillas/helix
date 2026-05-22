@@ -4,6 +4,7 @@ use crate::arc::ArcIter;
 use crate::line::LineIter;
 use noita_api::{Cell, ConfigExplosion, GameGlobal, StdBox, Vec2};
 use rand::RngExt as _;
+use rand::distr::Bernoulli;
 use std::f32::consts::TAU;
 #[noita_api::lua_module]
 mod lua {
@@ -41,6 +42,8 @@ pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) 
     let ix0 = truncate_f32(pos.x);
     let iy0 = truncate_f32(pos.y);
     let delta_theta = TAU / f32::from(rays);
+    let bern =
+        Bernoulli::from_ratio(u32::try_from(config.create_cell_probability).unwrap(), 100).unwrap();
     for ray in 0..rays / 8 {
         let mut chunk_x = ix0.div_euclid(512);
         let mut chunk_y = iy0.div_euclid(512);
@@ -111,12 +114,11 @@ pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) 
             }
             if let Some(p) = chunk[py][px] {
                 p.ptr.free();
-                chunk[py][px] = None;
             }
-            if cell_create_id != 0
-                && rng.random_ratio(u32::try_from(config.create_cell_probability).unwrap(), 100)
-            {
+            if cell_create_id != 0 && rng.sample(bern) {
                 chunk[py][px] = Some(Cell::new(cell_create));
+            } else {
+                chunk[py][px] = None;
             }
         }
     }
