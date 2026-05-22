@@ -8,9 +8,14 @@ repository.workspace = true
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+default=[]
+test=["image"]
+
 [dependencies]
 noita_api = {workspace = true}
 rand = "0.10.1"
+image = {version = "0.25.10", optional = true}
 
 [lints]
 workspace = true

@@ -28,18 +28,17 @@ impl Iterator for ArcIter {
         if let Some((_, hy)) = self.high_line.next() {
             let (lx, ly) = self.low_line.next().unwrap();
             self.range_x = lx;
-            self.range_y_start = ly + 1;
+            self.range_y_start = ly;
             self.range_y_end = hy;
-            Some((lx, ly))
+            self.next()
         } else if let Some((lx, ly)) = self.low_line.next() {
             self.hx += 1;
-            if self.hx * self.hx + self.hy * self.hy > self.r2 {
-                self.hy -= 1;
-            }
+            let yy = self.r2 - self.hx * self.hx;
+            self.hy = yy.max(0).isqrt();
             self.range_x = lx;
-            self.range_y_start = ly + 1;
+            self.range_y_start = ly;
             self.range_y_end = self.hy;
-            Some((lx, ly))
+            self.next()
         } else {
             None
         }
@@ -57,16 +56,49 @@ impl ArcIter {
         y2: isize,
         r2: isize,
     ) -> Self {
-        let low_line = LineIter::new(x0, y0, x1, y1);
         Self {
-            low_line,
+            low_line: LineIter::new(x0, y0, x1, y1),
             high_line: LineIter::new(x0, y0, x2, y2),
             range_x: 0,
             range_y_start: 0,
             range_y_end: -1,
-            hx: x1,
-            hy: x2,
+            hx: x2,
+            hy: y2,
             r2,
         }
     }
+}
+#[cfg(feature = "test")]
+#[test]
+fn test() {
+    use crate::truncate_f32;
+    use image::RgbImage;
+    use std::f32::consts::TAU;
+    let mut image = RgbImage::new(65, 65);
+    let rays: u16 = 32;
+    for ray in 0..rays / 8 {
+        let r = 64 - ray * 16;
+        let r2: isize = usize::from(r).cast_signed().pow(2);
+        let rf = f32::from(r);
+        let delta_theta = TAU / f32::from(rays);
+        let ix0 = 0;
+        let iy0 = 0;
+        let theta = f32::from(ray) * delta_theta;
+        let (sin, cos) = theta.sin_cos();
+        let ix3 = ix0 + truncate_f32(cos * rf);
+        let iy3 = iy0 + truncate_f32(sin * rf);
+        let theta = f32::from(ray + 1) * delta_theta;
+        let (sin, cos) = theta.sin_cos();
+        let ix4 = ix0 + truncate_f32(cos * rf);
+        let iy4 = iy0 + truncate_f32(sin * rf);
+        for (i, (x, y)) in ArcIter::new(ix0, iy0, ix3, iy3, ix4, iy4, r2).enumerate() {
+            let p = &mut image
+                .get_pixel_mut(x.try_into().unwrap(), y.try_into().unwrap())
+                .0;
+            p[0] = u8::try_from(i & 0xff).unwrap();
+            p[1] = 64 * u8::try_from((i >> 8) & 0xff).unwrap();
+            p[2] = 64;
+        }
+    }
+    image.save("test.png").unwrap();
 }
