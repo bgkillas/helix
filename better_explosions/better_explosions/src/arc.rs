@@ -70,7 +70,7 @@ impl ArcIter {
 }
 #[cfg(feature = "test")]
 #[test]
-fn test() {
+fn test1() {
     use crate::truncate_f32;
     use image::RgbImage;
     use std::f32::consts::TAU;
@@ -100,5 +100,40 @@ fn test() {
             p[2] = 64;
         }
     }
-    image.save("test.png").unwrap();
+    image.save("../../test1.png").unwrap();
+}
+#[cfg(feature = "test")]
+#[test]
+fn test2() {
+    use crate::truncate_f32;
+    use image::RgbImage;
+    use std::f32::consts::TAU;
+    let mut image = RgbImage::new(65, 65);
+    let rays: u16 = 32;
+    for r in (0..=64).rev() {
+        for ray in 0..rays / 8 {
+            let r2: isize = usize::from(r).cast_signed().pow(2);
+            let rf = f32::from(r);
+            let delta_theta = TAU / f32::from(rays);
+            let ix0 = 0;
+            let iy0 = 0;
+            let theta = f32::from(ray) * delta_theta;
+            let (sin, cos) = theta.sin_cos();
+            let ix3 = ix0 + truncate_f32(cos * rf);
+            let iy3 = iy0 + truncate_f32(sin * rf);
+            let theta = f32::from(ray + 1) * delta_theta;
+            let (sin, cos) = theta.sin_cos();
+            let ix4 = ix0 + truncate_f32(cos * rf);
+            let iy4 = iy0 + truncate_f32(sin * rf);
+            for (x, y) in ArcIter::new(ix0, iy0, ix3, iy3, ix4, iy4, r2) {
+                let p = &mut image
+                    .get_pixel_mut(x.try_into().unwrap(), y.try_into().unwrap())
+                    .0;
+                p[0] = 3 * r;
+                p[1] = 3 * r;
+                p[2] = 3 * r;
+            }
+        }
+    }
+    image.save("../../test2.png").unwrap();
 }
