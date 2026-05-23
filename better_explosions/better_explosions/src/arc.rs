@@ -6,29 +6,30 @@ pub struct ArcIter {
     range_x: isize,
     range_y_start: isize,
     range_y_end: isize,
+    x0: isize,
+    y0: isize,
     hx: isize,
-    hy: isize,
     r2: isize,
+    steep: bool,
 }
 impl Iterator for ArcIter {
-    type Item = (isize, isize);
+    type Item = (usize, usize);
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.range_y_end >= self.range_y_start {
             Some(self.next_range())
         } else if let Some((_, hy)) = self.high_line.next() {
             let (lx, ly) = self.low_line.next().unwrap();
-            self.range_x = lx;
-            self.range_y_start = ly;
-            self.range_y_end = hy;
+            self.range_x = lx.cast_signed();
+            self.range_y_start = ly.cast_signed();
+            self.range_y_end = hy.cast_signed();
             Some(self.next_range())
         } else if let Some((lx, ly)) = self.low_line.next() {
             self.hx += self.low_line.sx;
-            let yy = self.r2 - self.hx * self.hx;
-            self.hy = yy.max(0).isqrt();
-            self.range_x = lx;
-            self.range_y_start = ly;
-            self.range_y_end = self.hy;
+            let yy = self.r2 - (self.hx - self.x0).pow(2);
+            self.range_x = lx.cast_signed();
+            self.range_y_start = ly.cast_signed();
+            self.range_y_end = self.y0 + yy.isqrt();
             Some(self.next_range())
         } else {
             None
@@ -39,6 +40,27 @@ impl ArcIter {
     #[inline]
     #[must_use]
     pub fn new(
+        x0: usize,
+        y0: usize,
+        x1: usize,
+        y1: usize,
+        x2: usize,
+        y2: usize,
+        r2: isize,
+    ) -> Self {
+        Self::newi(
+            x0.cast_signed(),
+            y0.cast_signed(),
+            x1.cast_signed(),
+            y1.cast_signed(),
+            x2.cast_signed(),
+            y2.cast_signed(),
+            r2,
+        )
+    }
+    #[inline]
+    #[must_use]
+    pub fn newi(
         x0: isize,
         y0: isize,
         x1: isize,
@@ -48,25 +70,27 @@ impl ArcIter {
         r2: isize,
     ) -> Self {
         Self {
-            low_line: LineIter::new(x0, y0, x1, y1),
-            high_line: LineIter::new(x0, y0, x2, y2),
+            low_line: LineIter::newi(x0, y0, x1, y1),
+            high_line: LineIter::newi(x0, y0, x2, y2),
             range_x: 0,
             range_y_start: 1,
             range_y_end: 0,
+            x0,
+            y0,
             hx: x2,
-            hy: y2,
             r2,
+            steep: (y2 - y0).abs() > (x2 - x0).abs(),
         }
     }
-    fn next_range(&mut self) -> (isize, isize) {
+    fn next_range(&mut self) -> (usize, usize) {
         if self.range_x.cast_unsigned().is_multiple_of(2) {
             let y = self.range_y_start;
             self.range_y_start += 1;
-            (self.range_x, y)
+            (self.range_x.cast_unsigned(), y.cast_unsigned())
         } else {
             let y = self.range_y_end;
             self.range_y_end -= 1;
-            (self.range_x, y)
+            (self.range_x.cast_unsigned(), y.cast_unsigned())
         }
     }
 }
@@ -78,21 +102,21 @@ fn test1() {
     use std::f32::consts::TAU;
     let mut image = RgbImage::new(65, 65);
     let rays: u16 = 32;
+    let delta_theta = TAU / f32::from(rays);
     for ray in 0..rays / 8 {
         let r = 64 - ray * 16;
         let r2: isize = usize::from(r).cast_signed().pow(2);
         let rf = f32::from(r);
-        let delta_theta = TAU / f32::from(rays);
-        let ix0 = 0;
-        let iy0 = 0;
+        let ix0: usize = 0;
+        let iy0: usize = 0;
         let theta = f32::from(ray) * delta_theta;
         let (sin, cos) = theta.sin_cos();
-        let ix3 = ix0 + truncate_f32(cos * rf);
-        let iy3 = iy0 + truncate_f32(sin * rf);
+        let ix3 = (ix0.cast_signed() + truncate_f32(cos * rf)).cast_unsigned();
+        let iy3 = (iy0.cast_signed() + truncate_f32(sin * rf)).cast_unsigned();
         let theta = f32::from(ray + 1) * delta_theta;
         let (sin, cos) = theta.sin_cos();
-        let ix4 = ix0 + truncate_f32(cos * rf);
-        let iy4 = iy0 + truncate_f32(sin * rf);
+        let ix4 = (ix0.cast_signed() + truncate_f32(cos * rf)).cast_unsigned();
+        let iy4 = (iy0.cast_signed() + truncate_f32(sin * rf)).cast_unsigned();
         for (i, (x, y)) in ArcIter::new(ix0, iy0, ix3, iy3, ix4, iy4, r2).enumerate() {
             let p = &mut image
                 .get_pixel_mut(x.try_into().unwrap(), y.try_into().unwrap())
@@ -112,21 +136,21 @@ fn test2() {
     use std::f32::consts::TAU;
     let mut image = RgbImage::new(65, 65);
     let rays: u16 = 32;
+    let delta_theta = TAU / f32::from(rays);
     for r in (0..=64).rev() {
         for ray in 0..rays / 8 {
             let r2: isize = usize::from(r).cast_signed().pow(2);
             let rf = f32::from(r);
-            let delta_theta = TAU / f32::from(rays);
-            let ix0 = 0;
-            let iy0 = 0;
+            let ix0: usize = 0;
+            let iy0: usize = 0;
             let theta = f32::from(ray) * delta_theta;
             let (sin, cos) = theta.sin_cos();
-            let ix3 = ix0 + truncate_f32(cos * rf);
-            let iy3 = iy0 + truncate_f32(sin * rf);
+            let ix3 = (ix0.cast_signed() + truncate_f32(cos * rf)).cast_unsigned();
+            let iy3 = (iy0.cast_signed() + truncate_f32(sin * rf)).cast_unsigned();
             let theta = f32::from(ray + 1) * delta_theta;
             let (sin, cos) = theta.sin_cos();
-            let ix4 = ix0 + truncate_f32(cos * rf);
-            let iy4 = iy0 + truncate_f32(sin * rf);
+            let ix4 = (ix0.cast_signed() + truncate_f32(cos * rf)).cast_unsigned();
+            let iy4 = (iy0.cast_signed() + truncate_f32(sin * rf)).cast_unsigned();
             for (x, y) in ArcIter::new(ix0, iy0, ix3, iy3, ix4, iy4, r2) {
                 let p = &mut image
                     .get_pixel_mut(x.try_into().unwrap(), y.try_into().unwrap())

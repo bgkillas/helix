@@ -12,12 +12,12 @@ pub struct LineIter {
     first: bool,
 }
 impl Iterator for LineIter {
-    type Item = (isize, isize);
+    type Item = (usize, usize);
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.first {
             self.first = false;
-            return Some((self.x0, self.y0));
+            return Some((self.x0.cast_unsigned(), self.y0.cast_unsigned()));
         }
         let error = self.error;
         if error >= self.dy {
@@ -34,13 +34,23 @@ impl Iterator for LineIter {
             self.error += 2 * self.dx;
             self.y0 += self.sy;
         }
-        Some((self.x0, self.y0))
+        Some((self.x0.cast_unsigned(), self.y0.cast_unsigned()))
     }
 }
 impl LineIter {
     #[inline]
     #[must_use]
-    pub fn new(x0: isize, y0: isize, x1: isize, y1: isize) -> Self {
+    pub fn new(x0: usize, y0: usize, x1: usize, y1: usize) -> Self {
+        Self::newi(
+            x0.cast_signed(),
+            y0.cast_signed(),
+            x1.cast_signed(),
+            y1.cast_signed(),
+        )
+    }
+    #[inline]
+    #[must_use]
+    pub fn newi(x0: isize, y0: isize, x1: isize, y1: isize) -> Self {
         let dx = (x1 - x0).abs();
         let dy = -(y1 - y0).abs();
         Self {

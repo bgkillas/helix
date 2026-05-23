@@ -37,34 +37,26 @@ pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) 
     let cell_create = StdBox::from(&game_global.m_cell_factory.cell_data[cell_create_id]);
     let grid_world = game_global.m_grid_world;
     let chunk_map = grid_world.chunk_map.chunk_array;
-    let ix0 = truncate_f32(pos.x);
-    let iy0 = truncate_f32(pos.y);
+    let ix0 = (512 * 256 + truncate_f32(pos.x)).cast_unsigned();
+    let iy0 = (512 * 256 + truncate_f32(pos.y)).cast_unsigned();
     let delta_theta = TAU / f32::from(rays);
     let bern =
         Bernoulli::from_ratio(u32::try_from(config.create_cell_probability).unwrap(), 100).unwrap();
     for ray in 0..rays {
-        let mut chunk_x = ix0.div_euclid(512);
-        let mut chunk_y = iy0.div_euclid(512);
-        let Some(mut chunk) =
-            chunk_map[(256 + chunk_y).cast_unsigned()][(256 + chunk_x).cast_unsigned()]
-        else {
+        let Some(mut chunk) = chunk_map[iy0 / 512][ix0 / 512] else {
             return;
         };
         let theta = (f32::from(ray) + 0.5) * delta_theta;
         let (sin, cos) = theta.sin_cos();
-        let ix1 = ix0 + truncate_f32(cos * config.explosion_radius);
-        let iy1 = iy0 + truncate_f32(sin * config.explosion_radius);
+        let ix1 = (ix0.cast_signed() + truncate_f32(cos * config.explosion_radius)).cast_unsigned();
+        let iy1 = (iy0.cast_signed() + truncate_f32(sin * config.explosion_radius)).cast_unsigned();
         let mut energy = config.ray_energy;
         let (mut ix2, mut iy2) = (ix1, iy1);
         for (x, y) in LineIter::new(ix0, iy0, ix1, iy1) {
-            let px = x.rem_euclid(512).cast_unsigned();
-            let py = y.rem_euclid(512).cast_unsigned();
+            let px = x % 512;
+            let py = y % 512;
             if px == 0 || py == 0 || px == 511 || py == 511 {
-                chunk_x = x.div_euclid(512);
-                chunk_y = y.div_euclid(512);
-                if let Some(c) =
-                    chunk_map[(256 + chunk_y).cast_unsigned()][(256 + chunk_x).cast_unsigned()]
-                {
+                if let Some(c) = chunk_map[y / 512][x / 512] {
                     chunk = c;
                 } else {
                     break;
@@ -85,26 +77,22 @@ pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) 
         let r = if (ix2, iy2) == (ix1, iy1) {
             truncate_f32(config.explosion_radius)
         } else {
-            truncate_f32(truncate_isize(ix2).hypot(truncate_isize(iy2)))
+            truncate_f32(truncate_usize(ix2).hypot(truncate_usize(iy2)))
         };
         let rf = truncate_isize(r);
         let theta = f32::from(ray) * delta_theta;
         let (sin, cos) = theta.sin_cos();
-        let ix3 = ix0 + truncate_f32(cos * rf);
-        let iy3 = iy0 + truncate_f32(sin * rf);
+        let ix3 = (ix0.cast_signed() + truncate_f32(cos * rf)).cast_unsigned();
+        let iy3 = (iy0.cast_signed() + truncate_f32(sin * rf)).cast_unsigned();
         let theta = f32::from(ray + 1) * delta_theta;
         let (sin, cos) = theta.sin_cos();
-        let ix4 = ix0 + truncate_f32(cos * rf);
-        let iy4 = iy0 + truncate_f32(sin * rf);
+        let ix4 = (ix0.cast_signed() + truncate_f32(cos * rf)).cast_unsigned();
+        let iy4 = (iy0.cast_signed() + truncate_f32(sin * rf)).cast_unsigned();
         for (x, y) in ArcIter::new(ix0, iy0, ix3, iy3, ix4, iy4, r * r) {
-            let px = x.rem_euclid(512).cast_unsigned();
-            let py = y.rem_euclid(512).cast_unsigned();
+            let px = x % 512;
+            let py = y % 512;
             if px == 0 || py == 0 || px == 511 || py == 511 {
-                chunk_x = x.div_euclid(512);
-                chunk_y = y.div_euclid(512);
-                if let Some(c) =
-                    chunk_map[(256 + chunk_y).cast_unsigned()][(256 + chunk_x).cast_unsigned()]
-                {
+                if let Some(c) = chunk_map[y / 512][x / 512] {
                     chunk = c;
                 } else {
                     break;
@@ -129,5 +117,10 @@ fn truncate_f32(f: f32) -> isize {
 #[allow(clippy::cast_precision_loss)]
 #[allow(clippy::as_conversions)]
 fn truncate_isize(f: isize) -> f32 {
+    f as f32
+}
+#[allow(clippy::cast_precision_loss)]
+#[allow(clippy::as_conversions)]
+fn truncate_usize(f: usize) -> f32 {
     f as f32
 }

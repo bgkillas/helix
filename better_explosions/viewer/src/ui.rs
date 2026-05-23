@@ -153,26 +153,20 @@ impl eframe::App for App {
                             },
                         );
                     }
-                    Wand::Line(x0, y0, x1, y1) => {
+                    Wand::Line(ix0, iy0, ix1, iy1) => {
+                        let x0 = (512 * 256 + ix0).cast_unsigned();
+                        let y0 = (512 * 256 + iy0).cast_unsigned();
+                        let x1 = (512 * 256 + ix1).cast_unsigned();
+                        let y1 = (512 * 256 + iy1).cast_unsigned();
                         let game_global = GameGlobal::global();
                         let grid_world = game_global.m_grid_world;
                         let chunk_map = grid_world.chunk_map.chunk_array;
-                        let mut chunk_x = x0.div_euclid(512);
-                        let mut chunk_y = y0.div_euclid(512);
-                        if let Some(mut chunk) = chunk_map[(256 + chunk_y).cast_unsigned()]
-                            [(256 + chunk_x).cast_unsigned()]
-                        {
+                        if let Some(mut chunk) = chunk_map[y0 / 512][x0 / 512] {
                             for (x, y) in LineIter::new(x0, y0, x1, y1) {
-                                let px = x.rem_euclid(512).cast_unsigned();
-                                let py = y.rem_euclid(512).cast_unsigned();
+                                let px = x % 512;
+                                let py = y % 512;
                                 if px == 0 || py == 0 || px == 511 || py == 511 {
-                                    chunk_x = x.div_euclid(512);
-                                    chunk_y = y.div_euclid(512);
-                                    if (-256..256).contains(&chunk_x)
-                                        && (-256..256).contains(&chunk_y)
-                                        && let Some(c) = chunk_map[(256 + chunk_y).cast_unsigned()]
-                                            [(256 + chunk_x).cast_unsigned()]
-                                    {
+                                    if let Some(c) = chunk_map[y / 512][x / 512] {
                                         chunk = c;
                                     } else {
                                         break;
