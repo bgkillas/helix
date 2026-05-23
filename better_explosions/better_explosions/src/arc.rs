@@ -15,30 +15,21 @@ impl Iterator for ArcIter {
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.range_y_end >= self.range_y_start {
-            return if self.range_x.cast_unsigned().is_multiple_of(2) {
-                let y = self.range_y_start;
-                self.range_y_start += 1;
-                Some((self.range_x, y))
-            } else {
-                let y = self.range_y_end;
-                self.range_y_end -= 1;
-                Some((self.range_x, y))
-            };
-        }
-        if let Some((_, hy)) = self.high_line.next() {
+            Some(self.next_range())
+        } else if let Some((_, hy)) = self.high_line.next() {
             let (lx, ly) = self.low_line.next().unwrap();
             self.range_x = lx;
             self.range_y_start = ly;
             self.range_y_end = hy;
-            self.next()
+            Some(self.next_range())
         } else if let Some((lx, ly)) = self.low_line.next() {
-            self.hx += 1;
+            self.hx += self.low_line.sx;
             let yy = self.r2 - self.hx * self.hx;
             self.hy = yy.max(0).isqrt();
             self.range_x = lx;
             self.range_y_start = ly;
             self.range_y_end = self.hy;
-            self.next()
+            Some(self.next_range())
         } else {
             None
         }
@@ -60,11 +51,22 @@ impl ArcIter {
             low_line: LineIter::new(x0, y0, x1, y1),
             high_line: LineIter::new(x0, y0, x2, y2),
             range_x: 0,
-            range_y_start: 0,
-            range_y_end: -1,
+            range_y_start: 1,
+            range_y_end: 0,
             hx: x2,
             hy: y2,
             r2,
+        }
+    }
+    fn next_range(&mut self) -> (isize, isize) {
+        if self.range_x.cast_unsigned().is_multiple_of(2) {
+            let y = self.range_y_start;
+            self.range_y_start += 1;
+            (self.range_x, y)
+        } else {
+            let y = self.range_y_end;
+            self.range_y_end -= 1;
+            (self.range_x, y)
         }
     }
 }

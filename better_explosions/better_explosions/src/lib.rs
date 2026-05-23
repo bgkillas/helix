@@ -1,6 +1,5 @@
 pub mod arc;
 pub mod line;
-pub mod octant;
 use crate::arc::ArcIter;
 use crate::line::LineIter;
 use noita_api::{Cell, ConfigExplosion, GameGlobal, StdBox, Vec2};
@@ -26,8 +25,6 @@ pub fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
     let rays: u16 = 32;
     explosion_with_rays(config, pos, rays);
 }
-//could do the 8 octants at once
-//have arc iter not do circle by quadrangle
 #[inline]
 pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) {
     let mut rng = rand::rng();
@@ -45,7 +42,7 @@ pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) 
     let delta_theta = TAU / f32::from(rays);
     let bern =
         Bernoulli::from_ratio(u32::try_from(config.create_cell_probability).unwrap(), 100).unwrap();
-    for ray in 0..rays / 8 {
+    for ray in 0..rays {
         let mut chunk_x = ix0.div_euclid(512);
         let mut chunk_y = iy0.div_euclid(512);
         let Some(mut chunk) =

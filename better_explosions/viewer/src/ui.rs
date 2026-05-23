@@ -1,6 +1,5 @@
 use better_explosions::explosion;
 use better_explosions::line::LineIter;
-use better_explosions::octant::Octant;
 use eframe::Frame;
 use eframe::emath::{Pos2, Rect, Vec2};
 use eframe::epaint::textures::TextureOptions;
@@ -61,7 +60,6 @@ impl Default for App {
 enum Wand {
     Explosive(isize, isize, f32, isize, isize),
     Line(isize, isize, isize, isize),
-    LineOctant(isize, isize, isize, isize),
     Arc,
     CellEater,
     SquareEater,
@@ -74,7 +72,6 @@ impl PartialEq for Wand {
                 Wand::Explosive(_, _, _, _, _),
                 Wand::Explosive(_, _, _, _, _)
             ) | (Wand::Line(_, _, _, _), Wand::Line(_, _, _, _))
-                | (Wand::LineOctant(_, _, _, _), Wand::LineOctant(_, _, _, _))
                 | (Wand::Arc, Wand::Arc)
                 | (Wand::CellEater, Wand::CellEater)
                 | (Wand::SquareEater, Wand::SquareEater)
@@ -185,43 +182,6 @@ impl eframe::App for App {
                             }
                         }
                     }
-                    Wand::LineOctant(x0, y0, x1, y1) => {
-                        let game_global = GameGlobal::global();
-                        let grid_world = game_global.m_grid_world;
-                        let chunk_map = grid_world.chunk_map.chunk_array;
-                        let mut chunk_x = x0.div_euclid(512);
-                        let mut chunk_y = y0.div_euclid(512);
-                        if let Some(c) = chunk_map[(256 + chunk_y).cast_unsigned()]
-                            [(256 + chunk_x).cast_unsigned()]
-                        {
-                            let mut chunk = [Some(c); 8];
-                            for (ox, oy) in LineIter::new(0, 0, x1 - x0, y1 - y0) {
-                                for (i, dx, dy) in Octant::new(ox, oy) {
-                                    let x = x0 + dx;
-                                    let y = y0 + dy;
-                                    let px = x.rem_euclid(512).cast_unsigned();
-                                    let py = y.rem_euclid(512).cast_unsigned();
-                                    if px == 0 || py == 0 || px == 511 || py == 511 {
-                                        chunk_x = x.div_euclid(512);
-                                        chunk_y = y.div_euclid(512);
-                                        chunk[i] = if (-256..256).contains(&chunk_x)
-                                            && (-256..256).contains(&chunk_y)
-                                            && let Some(c) = chunk_map
-                                                [(256 + chunk_y).cast_unsigned()]
-                                                [(256 + chunk_x).cast_unsigned()]
-                                        {
-                                            Some(c)
-                                        } else {
-                                            None
-                                        };
-                                    }
-                                    if let Some(mut ch) = chunk[i] {
-                                        self.paint_pixel(&mut ch[py][px]);
-                                    }
-                                }
-                            }
-                        }
-                    }
                     Wand::Arc => {
                         //TODO
                     }
@@ -245,7 +205,6 @@ impl eframe::App for App {
                 .selected_text(match self.wand {
                     Wand::Explosive(_, _, _, _, _) => "Explosive",
                     Wand::Line(_, _, _, _) => "Line",
-                    Wand::LineOctant(_, _, _, _) => "LineOctant",
                     Wand::Arc => "Arc",
                     Wand::CellEater => "CellEater",
                     Wand::SquareEater => "SquareEater",
@@ -257,7 +216,6 @@ impl eframe::App for App {
                         "Explosive",
                     );
                     ui.selectable_value(&mut self.wand, Wand::Line(0, 0, 0, 0), "Line");
-                    ui.selectable_value(&mut self.wand, Wand::LineOctant(0, 0, 0, 0), "LineOctant");
                     ui.selectable_value(&mut self.wand, Wand::Arc, "Arc");
                     ui.selectable_value(&mut self.wand, Wand::CellEater, "CellEater");
                     ui.selectable_value(&mut self.wand, Wand::SquareEater, "SquareEater");
@@ -277,16 +235,6 @@ impl eframe::App for App {
                     ui.add(DragValue::new(energy));
                 }
                 Wand::Line(x0, y0, x1, y1) => {
-                    ui.label("start x");
-                    ui.add(DragValue::new(x0));
-                    ui.label("start y");
-                    ui.add(DragValue::new(y0));
-                    ui.label("end x");
-                    ui.add(DragValue::new(x1));
-                    ui.label("end y");
-                    ui.add(DragValue::new(y1));
-                }
-                Wand::LineOctant(x0, y0, x1, y1) => {
                     ui.label("start x");
                     ui.add(DragValue::new(x0));
                     ui.label("start y");
@@ -329,9 +277,7 @@ impl eframe::App for App {
                     if ui.input(|i| i.pointer.button_down(PointerButton::Primary)) {
                         let (x, y) = get_cursor_pixel();
                         match &mut self.wand {
-                            Wand::LineOctant(x0, y0, _, _)
-                            | Wand::Line(x0, y0, _, _)
-                            | Wand::Explosive(x0, y0, _, _, _) => {
+                            Wand::Line(x0, y0, _, _) | Wand::Explosive(x0, y0, _, _, _) => {
                                 (*x0, *y0) = (x, y);
                             }
                             _ => {}
@@ -340,7 +286,7 @@ impl eframe::App for App {
                     if ui.input(|i| i.pointer.button_down(PointerButton::Secondary)) {
                         let (x, y) = get_cursor_pixel();
                         match &mut self.wand {
-                            Wand::LineOctant(_, _, x1, y1) | Wand::Line(_, _, x1, y1) => {
+                            Wand::Line(_, _, x1, y1) => {
                                 (*x1, *y1) = (x, y);
                             }
                             Wand::Explosive(x0, y0, r, _, _) => {
