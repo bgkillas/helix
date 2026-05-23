@@ -48,8 +48,8 @@ pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) 
         };
         let theta = (f32::from(ray) + 0.5) * delta_theta;
         let (sin, cos) = theta.sin_cos();
-        let ix1 = (ix0.cast_signed() + truncate_f32(cos * config.explosion_radius)).cast_unsigned();
-        let iy1 = (iy0.cast_signed() + truncate_f32(sin * config.explosion_radius)).cast_unsigned();
+        let ix1 = (ix0.cast_signed() + round_f32(cos * config.explosion_radius)).cast_unsigned();
+        let iy1 = (iy0.cast_signed() + round_f32(sin * config.explosion_radius)).cast_unsigned();
         let mut energy = config.ray_energy;
         let (mut ix2, mut iy2) = (ix1, iy1);
         for (x, y) in LineIter::new(ix0, iy0, ix1, iy1) {
@@ -75,19 +75,19 @@ pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) 
             }
         }
         let r = if (ix2, iy2) == (ix1, iy1) {
-            truncate_f32(config.explosion_radius)
+            truncate_f32u(config.explosion_radius)
         } else {
-            truncate_f32(truncate_usize(ix2).hypot(truncate_usize(iy2)))
+            truncate_f32u(truncate_usize(ix2).hypot(truncate_usize(iy2)))
         };
-        let rf = truncate_isize(r);
+        let rf = truncate_usize(r);
         let theta = f32::from(ray) * delta_theta;
         let (sin, cos) = theta.sin_cos();
-        let ix3 = (ix0.cast_signed() + truncate_f32(cos * rf)).cast_unsigned();
-        let iy3 = (iy0.cast_signed() + truncate_f32(sin * rf)).cast_unsigned();
+        let ix3 = (ix0.cast_signed() + round_f32(cos * rf)).cast_unsigned();
+        let iy3 = (iy0.cast_signed() + round_f32(sin * rf)).cast_unsigned();
         let theta = f32::from(ray + 1) * delta_theta;
         let (sin, cos) = theta.sin_cos();
-        let ix4 = (ix0.cast_signed() + truncate_f32(cos * rf)).cast_unsigned();
-        let iy4 = (iy0.cast_signed() + truncate_f32(sin * rf)).cast_unsigned();
+        let ix4 = (ix0.cast_signed() + round_f32(cos * rf)).cast_unsigned();
+        let iy4 = (iy0.cast_signed() + round_f32(sin * rf)).cast_unsigned();
         for (x, y) in ArcIter::new(ix0, iy0, ix3, iy3, ix4, iy4, r * r) {
             let px = x % 512;
             let py = y % 512;
@@ -114,10 +114,16 @@ pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) 
 fn truncate_f32(f: f32) -> isize {
     f as isize
 }
-#[allow(clippy::cast_precision_loss)]
+#[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::as_conversions)]
-fn truncate_isize(f: isize) -> f32 {
-    f as f32
+fn round_f32(f: f32) -> isize {
+    f.round() as isize
+}
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
+#[allow(clippy::as_conversions)]
+fn truncate_f32u(f: f32) -> usize {
+    f as usize
 }
 #[allow(clippy::cast_precision_loss)]
 #[allow(clippy::as_conversions)]

@@ -60,8 +60,8 @@ impl LineIter {
             y1,
             dx,
             dy,
-            sx: if x0 < x1 { 1 } else { -1 },
-            sy: if y0 < y1 { 1 } else { -1 },
+            sx: if x0 <= x1 { 1 } else { -1 },
+            sy: if y0 <= y1 { 1 } else { -1 },
             error: 2 * (dx + dy),
             first: true,
         }
