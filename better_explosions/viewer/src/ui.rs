@@ -60,7 +60,7 @@ impl Default for App {
 enum Wand {
     Explosive(isize, isize, f32, isize, isize),
     Line(isize, isize, isize, isize),
-    Arc,
+    Fill,
     CellEater,
     SquareEater,
 }
@@ -72,7 +72,7 @@ impl PartialEq for Wand {
                 Wand::Explosive(_, _, _, _, _),
                 Wand::Explosive(_, _, _, _, _)
             ) | (Wand::Line(_, _, _, _), Wand::Line(_, _, _, _))
-                | (Wand::Arc, Wand::Arc)
+                | (Wand::Fill, Wand::Fill)
                 | (Wand::CellEater, Wand::CellEater)
                 | (Wand::SquareEater, Wand::SquareEater)
         )
@@ -176,8 +176,8 @@ impl eframe::App for App {
                             }
                         }
                     }
-                    Wand::Arc => {
-                        //TODO
+                    Wand::Fill => {
+                        fill(self.material);
                     }
                     Wand::CellEater => {
                         //TODO
@@ -199,7 +199,7 @@ impl eframe::App for App {
                 .selected_text(match self.wand {
                     Wand::Explosive(_, _, _, _, _) => "Explosive",
                     Wand::Line(_, _, _, _) => "Line",
-                    Wand::Arc => "Arc",
+                    Wand::Fill => "Fill",
                     Wand::CellEater => "CellEater",
                     Wand::SquareEater => "SquareEater",
                 })
@@ -210,7 +210,7 @@ impl eframe::App for App {
                         "Explosive",
                     );
                     ui.selectable_value(&mut self.wand, Wand::Line(0, 0, 0, 0), "Line");
-                    ui.selectable_value(&mut self.wand, Wand::Arc, "Arc");
+                    ui.selectable_value(&mut self.wand, Wand::Fill, "Fill");
                     ui.selectable_value(&mut self.wand, Wand::CellEater, "CellEater");
                     ui.selectable_value(&mut self.wand, Wand::SquareEater, "SquareEater");
                 });
@@ -238,9 +238,7 @@ impl eframe::App for App {
                     ui.label("end y");
                     ui.add(DragValue::new(y1));
                 }
-                Wand::Arc => {
-                    //TODO
-                }
+                Wand::Fill => {}
                 Wand::CellEater => {
                     //TODO
                 }

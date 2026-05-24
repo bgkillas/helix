@@ -30,19 +30,23 @@ pub fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
 pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) {
     let mut rng = rand::rng();
     let game_global = GameGlobal::global();
-    let cell_create_id = *game_global
+    let cell_create_id = game_global
         .m_cell_factory
         .material_ids
         .get(&config.create_cell_material)
-        .unwrap();
+        .copied()
+        .unwrap_or_default();
     let cell_create = StdBox::from(&game_global.m_cell_factory.cell_data[cell_create_id]);
     let grid_world = game_global.m_grid_world;
     let chunk_map = grid_world.chunk_map.chunk_array;
     let ix0 = (512 * 256 + truncate_f32(pos.x)).cast_unsigned();
     let iy0 = (512 * 256 + truncate_f32(pos.y)).cast_unsigned();
     let delta_theta = TAU / f32::from(rays);
-    let bern =
-        Bernoulli::from_ratio(u32::try_from(config.create_cell_probability).unwrap(), 100).unwrap();
+    let bern = if cell_create_id == 0 {
+        Bernoulli::from_ratio(0, 1).unwrap()
+    } else {
+        Bernoulli::from_ratio(u32::try_from(config.create_cell_probability).unwrap(), 100).unwrap()
+    };
     for ray in 0..rays {
         let Some(mut chunk) = chunk_map[iy0 / 512][ix0 / 512] else {
             return;
@@ -102,7 +106,7 @@ pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) 
             if let Some(p) = chunk[py][px] {
                 p.ptr.free();
             }
-            if cell_create_id != 0 && rng.sample(bern) {
+            if rng.sample(bern) {
                 chunk[py][px] = Some(Cell::new(cell_create));
             } else {
                 chunk[py][px] = None;
