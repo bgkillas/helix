@@ -48,10 +48,11 @@ pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) 
     } else {
         Bernoulli::from_ratio(u32::try_from(config.create_cell_probability).unwrap(), 100).unwrap()
     };
+    let Some(mut chunk) = chunk_map[iy0 / 512][ix0 / 512] else {
+        return;
+    };
     for ray in 0..rays {
-        let Some(mut chunk) = chunk_map[iy0 / 512][ix0 / 512] else {
-            return;
-        };
+        chunk = chunk_map[iy0 / 512][ix0 / 512].unwrap();
         let theta = (f32::from(ray) + 0.5) * delta_theta;
         let (sin, cos) = theta.sin_cos();
         let ix1 = (ix0.cast_signed() + round_f32(cos * config.explosion_radius)).cast_unsigned();
@@ -97,6 +98,7 @@ pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) 
         let (sin, cos) = theta.sin_cos();
         let ix4 = (ix0.cast_signed() + round_f32(cos * rf)).cast_unsigned();
         let iy4 = (iy0.cast_signed() + round_f32(sin * rf)).cast_unsigned();
+        chunk = chunk_map[iy0 / 512][ix0 / 512].unwrap();
         for (x, y) in ArcIter::new(ix0, iy0, ix3, iy3, ix4, iy4, r * r) {
             let px = x % 512;
             let py = y % 512;
