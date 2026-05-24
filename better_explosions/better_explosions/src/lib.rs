@@ -17,13 +17,14 @@ mod lua {
         pos: StdBox<Vec2<f32>>,
         _: isize,
     ) {
+        //fun(config, pos, u);
         explosion(&config, *pos);
     }
 }
 #[inline]
 pub fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
     let r = truncate_f32u(config.explosion_radius);
-    let rays: u16 = u16::try_from((8 * (r / 16).max(1)).min(1024)).unwrap();
+    let rays: u16 = u16::try_from((8 * r.div_ceil(16).max(1)).min(1024)).unwrap();
     explosion_with_rays(config, pos, rays);
 }
 #[inline]
@@ -64,6 +65,7 @@ pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) 
                 if let Some(c) = chunk_map[y / 512][x / 512] {
                     chunk = c;
                 } else {
+                    (ix2, iy2) = (x, y);
                     break;
                 }
             }
@@ -82,7 +84,9 @@ pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) 
         let r = if (ix2, iy2) == (ix1, iy1) {
             truncate_f32u(config.explosion_radius)
         } else {
-            truncate_f32u(truncate_usize(ix2).hypot(truncate_usize(iy2)))
+            truncate_f32u(
+                truncate_usize(ix2.abs_diff(ix0)).hypot(truncate_usize(iy2.abs_diff(iy0))),
+            )
         };
         let rf = truncate_usize(r);
         let theta = f32::from(ray) * delta_theta;
