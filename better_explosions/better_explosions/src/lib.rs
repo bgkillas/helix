@@ -22,7 +22,8 @@ mod lua {
 }
 #[inline]
 pub fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
-    let rays: u16 = 32;
+    let r = truncate_f32u(config.explosion_radius);
+    let rays: u16 = u16::try_from((8 * (r / 16).max(1)).min(1024)).unwrap();
     explosion_with_rays(config, pos, rays);
 }
 #[inline]
