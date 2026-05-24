@@ -1,4 +1,4 @@
-use better_explosions::explosion;
+use better_explosions::ExplosionManager;
 use better_explosions::line::LineIter;
 use eframe::Frame;
 use eframe::emath::{Pos2, Rect, Vec2};
@@ -145,7 +145,7 @@ impl eframe::App for App {
                         config.create_cell_probability =
                             truncate_f32(self.material_chance * 100.0).cast_unsigned();
                         config.hole_enabled = true;
-                        explosion(
+                        ExplosionManager::default().explosion(
                             &config,
                             noita_api::Vec2 {
                                 x: truncate_isize(x0),

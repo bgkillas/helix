@@ -1,121 +1,170 @@
+#![feature(sync_unsafe_cell)]
 pub mod arc;
 pub mod line;
 use crate::arc::ArcIter;
 use crate::line::LineIter;
-use noita_api::{Cell, ConfigExplosion, GameGlobal, StdBox, Vec2};
+use noita_api::{Cell, CellData, ConfigExplosion, GameGlobal, GridWorld, StdBox, Vec2, this_call};
 use rand::RngExt as _;
 use rand::distr::Bernoulli;
 use std::f32::consts::TAU;
 #[noita_api::lua_module]
 mod lua {
-    use crate::explosion;
+    use crate::ExplosionManager;
     use noita_api::{ConfigExplosion, ExplosionFun, StdBox, Vec2};
-    #[explosion_hook]
-    fn on_explosion(
-        _: ExplosionFun,
-        config: StdBox<ConfigExplosion>,
-        pos: StdBox<Vec2<f32>>,
-        _: isize,
-    ) {
-        //fun(config, pos, u);
-        explosion(&config, *pos);
+    impl ExplosionManager {
+        #[explosion_hook]
+        fn on_explosion(
+            &mut self,
+            _fun: ExplosionFun,
+            config: StdBox<ConfigExplosion>,
+            pos: StdBox<Vec2<f32>>,
+            _unk: isize,
+        ) {
+            self.explosion(&config, *pos);
+        }
     }
 }
-#[inline]
-pub fn explosion(config: &ConfigExplosion, pos: Vec2<f32>) {
-    let r = truncate_f32u(config.explosion_radius);
-    let rays: u16 = u16::try_from((8 * r.div_ceil(16).max(1)).min(1024)).unwrap();
-    explosion_with_rays(config, pos, rays);
+#[allow(dead_code)]
+pub struct ExplosionManager {
+    construct_cell: this_call!(
+        fn(StdBox<GridWorld>, isize, isize, StdBox<CellData>, *mut ()) -> Option<Cell<()>>
+    ),
 }
-#[inline]
-pub fn explosion_with_rays(config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) {
-    let mut rng = rand::rng();
-    let game_global = GameGlobal::global();
-    let cell_create_id = game_global
-        .m_cell_factory
-        .material_ids
-        .get(&config.create_cell_material)
-        .copied()
-        .unwrap_or_default();
-    let cell_create = StdBox::from(&game_global.m_cell_factory.cell_data[cell_create_id]);
-    let grid_world = game_global.m_grid_world;
-    let chunk_map = grid_world.chunk_map.chunk_array;
-    let ix0 = (512 * 256 + truncate_f32(pos.x)).cast_unsigned();
-    let iy0 = (512 * 256 + truncate_f32(pos.y)).cast_unsigned();
-    let delta_theta = TAU / f32::from(rays);
-    let bern = if cell_create_id == 0 {
-        Bernoulli::from_ratio(0, 1).unwrap()
-    } else {
-        Bernoulli::from_ratio(u32::try_from(config.create_cell_probability).unwrap(), 100).unwrap()
-    };
-    let Some(mut chunk) = chunk_map[iy0 / 512][ix0 / 512] else {
-        return;
-    };
-    for ray in 0..rays {
-        chunk = chunk_map[iy0 / 512][ix0 / 512].unwrap();
-        let theta = (f32::from(ray) + 0.5) * delta_theta;
-        let (sin, cos) = theta.sin_cos();
-        let ix1 = (ix0.cast_signed() + round_f32(cos * config.explosion_radius)).cast_unsigned();
-        let iy1 = (iy0.cast_signed() + round_f32(sin * config.explosion_radius)).cast_unsigned();
-        let mut energy = config.ray_energy;
-        let (mut ix2, mut iy2) = (ix1, iy1);
-        for (x, y) in LineIter::new(ix0, iy0, ix1, iy1) {
-            let px = x % 512;
-            let py = y % 512;
-            if px == 0 || py == 0 || px == 511 || py == 511 {
-                if let Some(c) = chunk_map[y / 512][x / 512] {
-                    chunk = c;
-                } else {
-                    (ix2, iy2) = (x, y);
-                    break;
-                }
-            }
-            if let Some(p) = chunk[py][px] {
-                if energy > p.hp
-                    && p.material.durability <= config.max_durability_to_destroy
-                    && config.hole_enabled
-                {
-                    energy -= p.hp;
-                } else {
-                    (ix2, iy2) = (x, y);
-                    break;
-                }
-            }
+#[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+extern "C" fn dummy(
+    _: StdBox<GridWorld>,
+    _: isize,
+    _: isize,
+    _: StdBox<CellData>,
+    _: *mut (),
+) -> Option<Cell<()>> {
+    None
+}
+impl Default for ExplosionManager {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+            construct_cell: dummy,
+            #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+            construct_cell: noita_api::get_construct_cell(),
         }
-        let r = if (ix2, iy2) == (ix1, iy1) {
-            truncate_f32u(config.explosion_radius)
+    }
+}
+impl ExplosionManager {
+    #[inline]
+    pub fn explosion(&self, config: &ConfigExplosion, pos: Vec2<f32>) {
+        let r = truncate_f32u(config.explosion_radius);
+        let rays: u16 = u16::try_from((8 * r.div_ceil(16).max(1)).min(1024)).unwrap();
+        self.explosion_with_rays(config, pos, rays);
+    }
+    #[inline]
+    pub fn explosion_with_rays(&self, config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) {
+        let mut rng = rand::rng();
+        let game_global = GameGlobal::global();
+        let cell_create_id = game_global
+            .m_cell_factory
+            .material_ids
+            .get(&config.create_cell_material)
+            .copied()
+            .unwrap_or_default();
+        let cell_create = StdBox::from(&game_global.m_cell_factory.cell_data[cell_create_id]);
+        let grid_world = game_global.m_grid_world;
+        let chunk_map = grid_world.chunk_map.chunk_array;
+        let ix0 = (512 * 256 + truncate_f32(pos.x)).cast_unsigned();
+        let iy0 = (512 * 256 + truncate_f32(pos.y)).cast_unsigned();
+        let delta_theta = TAU / f32::from(rays);
+        let bern = if cell_create_id == 0 {
+            Bernoulli::from_ratio(0, 1).unwrap()
         } else {
-            truncate_f32u(
-                truncate_usize(ix2.abs_diff(ix0)).hypot(truncate_usize(iy2.abs_diff(iy0))),
-            )
+            Bernoulli::from_ratio(u32::try_from(config.create_cell_probability).unwrap(), 100)
+                .unwrap()
         };
-        let rf = truncate_usize(r);
-        let theta = f32::from(ray) * delta_theta;
-        let (sin, cos) = theta.sin_cos();
-        let ix3 = (ix0.cast_signed() + round_f32(cos * rf)).cast_unsigned();
-        let iy3 = (iy0.cast_signed() + round_f32(sin * rf)).cast_unsigned();
-        let theta = f32::from(ray + 1) * delta_theta;
-        let (sin, cos) = theta.sin_cos();
-        let ix4 = (ix0.cast_signed() + round_f32(cos * rf)).cast_unsigned();
-        let iy4 = (iy0.cast_signed() + round_f32(sin * rf)).cast_unsigned();
-        chunk = chunk_map[iy0 / 512][ix0 / 512].unwrap();
-        for (x, y) in ArcIter::new(ix0, iy0, ix3, iy3, ix4, iy4, r * r) {
-            let px = x % 512;
-            let py = y % 512;
-            if px == 0 || py == 0 || px == 511 || py == 511 {
-                if let Some(c) = chunk_map[y / 512][x / 512] {
-                    chunk = c;
-                } else {
-                    break;
+        let Some(origin_chunk) = chunk_map[iy0 / 512][ix0 / 512] else {
+            return;
+        };
+        let mut chunk;
+        for ray in 0..rays {
+            chunk = origin_chunk;
+            let theta = (f32::from(ray) + 0.5) * delta_theta;
+            let (sin, cos) = theta.sin_cos();
+            let ix1 =
+                (ix0.cast_signed() + round_f32(cos * config.explosion_radius)).cast_unsigned();
+            let iy1 =
+                (iy0.cast_signed() + round_f32(sin * config.explosion_radius)).cast_unsigned();
+            let mut energy = config.ray_energy;
+            let (mut ix2, mut iy2) = (ix1, iy1);
+            for (x, y) in LineIter::new(ix0, iy0, ix1, iy1) {
+                let px = x % 512;
+                let py = y % 512;
+                if px == 0 || py == 0 || px == 511 || py == 511 {
+                    if let Some(c) = chunk_map[y / 512][x / 512] {
+                        chunk = c;
+                    } else {
+                        (ix2, iy2) = (x, y);
+                        break;
+                    }
+                }
+                if let Some(p) = chunk[py][px] {
+                    if energy > p.hp
+                        && p.material.durability <= config.max_durability_to_destroy
+                        && config.hole_enabled
+                    {
+                        energy -= p.hp;
+                    } else {
+                        (ix2, iy2) = (x, y);
+                        break;
+                    }
                 }
             }
-            if let Some(p) = chunk[py][px] {
-                p.ptr.free();
-            }
-            if rng.sample(bern) {
-                chunk[py][px] = Some(Cell::new(cell_create));
+            let r = if (ix2, iy2) == (ix1, iy1) {
+                truncate_f32u(config.explosion_radius)
             } else {
-                chunk[py][px] = None;
+                truncate_f32u(
+                    truncate_usize(ix2.abs_diff(ix0)).hypot(truncate_usize(iy2.abs_diff(iy0))),
+                )
+            };
+            let rf = truncate_usize(r);
+            let theta = f32::from(ray) * delta_theta;
+            let (sin, cos) = theta.sin_cos();
+            let ix3 = (ix0.cast_signed() + round_f32(cos * rf)).cast_unsigned();
+            let iy3 = (iy0.cast_signed() + round_f32(sin * rf)).cast_unsigned();
+            let theta = f32::from(ray + 1) * delta_theta;
+            let (sin, cos) = theta.sin_cos();
+            let ix4 = (ix0.cast_signed() + round_f32(cos * rf)).cast_unsigned();
+            let iy4 = (iy0.cast_signed() + round_f32(sin * rf)).cast_unsigned();
+            chunk = origin_chunk;
+            for (x, y) in ArcIter::new(ix0, iy0, ix3, iy3, ix4, iy4, r * r) {
+                let px = x % 512;
+                let py = y % 512;
+                if px == 0 || py == 0 || px == 511 || py == 511 {
+                    if let Some(c) = chunk_map[y / 512][x / 512] {
+                        chunk = c;
+                    } else {
+                        break;
+                    }
+                }
+                if let Some(p) = chunk[py][px] {
+                    p.ptr.free();
+                }
+                if rng.sample(bern) {
+                    #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+                    {
+                        chunk[py][px] = Some(Cell::new(cell_create));
+                    }
+                    #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
+                    {
+                        chunk[py][px] = (self.construct_cell)(
+                            grid_world,
+                            x.cast_signed() - 512 * 256,
+                            y.cast_signed() - 512 * 256,
+                            cell_create,
+                            std::ptr::null_mut(),
+                        );
+                    }
+                } else {
+                    chunk[py][px] = None;
+                }
             }
         }
     }
