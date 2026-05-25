@@ -794,11 +794,14 @@ fn add_lua_fn(fun: Function, struct_ident: Option<&Ident>) -> (TokenStream, Toke
         let names = fun
             .arg_names
             .into_iter()
-            .map(|a| Ident::new(&a, Span::call_site()));
+            .enumerate()
+            .map(|(i, _)| Ident::new(&format!("var_{i}"), Span::call_site()));
         let fun_type = names
             .clone()
             .zip(fun.args.iter().map(|a| a.1.clone()))
-            .map(|(n, a)| quote! {#n: #a});
+            .map(|(n, a)| {
+                quote! {#n: #a}
+            });
         let fun_wrap = quote! {
             #[allow(clippy::too_many_arguments)]
             fn #fun_wrap_name(#(#fun_type,)*) {

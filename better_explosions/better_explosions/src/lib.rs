@@ -15,10 +15,10 @@ mod lua {
         #[explosion_hook]
         fn on_explosion(
             &mut self,
-            _fun: ExplosionFun,
+            _: ExplosionFun,
             config: StdBox<ConfigExplosion>,
             pos: StdBox<Vec2<f32>>,
-            _unk: isize,
+            _: isize,
         ) {
             self.explosion(&config, *pos);
         }
