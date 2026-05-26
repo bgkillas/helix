@@ -16,10 +16,13 @@ fn main() -> eframe::Result {
     chunk_map[255][256] = Some(StdBox::new(Chunk::default()));
     chunk_map[256][255] = Some(StdBox::new(Chunk::default()));
     chunk_map[255][255] = Some(StdBox::new(Chunk::default()));
-    ui::fill(29);
     eframe::run_native(
         "explosions",
         NativeOptions::default(),
-        Box::new(|_| Ok(Box::<ui::App>::default())),
+        Box::new(|_| {
+            let mut app = Box::<ui::App>::default();
+            app.fill(29);
+            Ok(app)
+        }),
     )
 }

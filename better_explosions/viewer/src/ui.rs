@@ -10,20 +10,6 @@ use egui::{
 use noita_api::{Cell, Chunk, ConfigExplosion, GameGlobal, StdBox};
 use rand::RngExt as _;
 use std::collections::HashMap;
-pub fn fill(mat: u16) {
-    let game_global = GameGlobal::global();
-    let matptr = StdBox::from(&game_global.m_cell_factory.cell_data[usize::from(mat)]);
-    let grid_world = game_global.m_grid_world;
-    let chunk_map = grid_world.chunk_map.chunk_array;
-    for (_, _, mut c) in chunk_map.flat_iter() {
-        for (_, _, p) in c.iter_mut() {
-            if let Some(ptr) = p {
-                ptr.ptr.free();
-            }
-            *p = Some(Cell::new(matptr));
-        }
-    }
-}
 #[allow(unused)]
 pub struct App {
     wand: Wand,
@@ -43,13 +29,26 @@ enum Menu {
 }
 impl Default for App {
     fn default() -> Self {
+        let mut unloaded = HashMap::with_capacity(512);
+        unloaded.insert((257, 257), StdBox::new(Chunk::default()));
+        unloaded.insert((256, 257), StdBox::new(Chunk::default()));
+        unloaded.insert((255, 257), StdBox::new(Chunk::default()));
+        unloaded.insert((254, 257), StdBox::new(Chunk::default()));
+        unloaded.insert((254, 256), StdBox::new(Chunk::default()));
+        unloaded.insert((254, 255), StdBox::new(Chunk::default()));
+        unloaded.insert((254, 254), StdBox::new(Chunk::default()));
+        unloaded.insert((255, 254), StdBox::new(Chunk::default()));
+        unloaded.insert((256, 254), StdBox::new(Chunk::default()));
+        unloaded.insert((257, 254), StdBox::new(Chunk::default()));
+        unloaded.insert((257, 255), StdBox::new(Chunk::default()));
+        unloaded.insert((257, 256), StdBox::new(Chunk::default()));
         Self {
-            wand: Wand::Explosive(0, 0, 0.0, isize::MAX, isize::MAX),
+            wand: Wand::Explosive(0, 0, 0.0, 12, usize::MAX),
             menu: Menu::Map,
-            material: 1,
+            material: 58,
             material_chance: 0.0,
             update_textures: true,
-            unloaded: HashMap::with_capacity(512),
+            unloaded,
             textures: HashMap::with_capacity(512),
             zoom: 1.0,
             offset: Pos2::new(256.0, 256.0),
@@ -58,11 +57,11 @@ impl Default for App {
 }
 #[derive(Debug)]
 enum Wand {
-    Explosive(isize, isize, f32, isize, isize),
+    Explosive(isize, isize, f32, usize, usize),
     Line(isize, isize, isize, isize),
     Fill,
-    CellEater,
-    SquareEater,
+    CellEater(isize, isize, f32),
+    SquareEater(isize, isize, usize),
 }
 impl PartialEq for Wand {
     fn eq(&self, other: &Self) -> bool {
@@ -73,8 +72,8 @@ impl PartialEq for Wand {
                 Wand::Explosive(_, _, _, _, _)
             ) | (Wand::Line(_, _, _, _), Wand::Line(_, _, _, _))
                 | (Wand::Fill, Wand::Fill)
-                | (Wand::CellEater, Wand::CellEater)
-                | (Wand::SquareEater, Wand::SquareEater)
+                | (Wand::CellEater(_, _, _), Wand::CellEater(_, _, _))
+                | (Wand::SquareEater(_, _, _), Wand::SquareEater(_, _, _))
         )
     }
 }
@@ -109,18 +108,54 @@ impl App {
         let grid_world = game_global.m_grid_world;
         let chunk_map = grid_world.chunk_map.chunk_array;
         for (x, y, c) in chunk_map.flat_iter() {
-            let texture = make_texture(ui, x, y, c);
+            let texture = make_texture(ui, x, y, c, true);
+            self.textures.insert((x, y), texture);
+        }
+        for ((x, y), c) in self.unloaded.iter().map(|(a, b)| (*a, *b)) {
+            let texture = make_texture(ui, x, y, c, false);
             self.textures.insert((x, y), texture);
         }
     }
+    pub fn fill(&mut self, mat: u16) {
+        let game_global = GameGlobal::global();
+        let matptr = StdBox::from(&game_global.m_cell_factory.cell_data[usize::from(mat)]);
+        let grid_world = game_global.m_grid_world;
+        let chunk_map = grid_world.chunk_map.chunk_array;
+        for (_, _, mut c) in chunk_map.flat_iter() {
+            for (_, _, p) in c.iter_mut() {
+                if let Some(ptr) = p {
+                    ptr.ptr.free();
+                }
+                *p = Some(Cell::new(matptr));
+            }
+        }
+        for ((_, _), mut c) in self.unloaded.iter().map(|(a, b)| (*a, *b)) {
+            for (_, _, p) in c.iter_mut() {
+                if let Some(ptr) = p {
+                    ptr.ptr.free();
+                }
+                *p = Some(Cell::new(matptr));
+            }
+        }
+    }
 }
-fn make_texture(ui: &mut Ui, x: u16, y: u16, chunk: StdBox<Chunk>) -> TextureHandle {
+fn make_texture(
+    ui: &mut Ui,
+    x: u16,
+    y: u16,
+    chunk: StdBox<Chunk>,
+    is_loaded: bool,
+) -> TextureHandle {
     let mut vec =
         vec![Color32::from_rgba_premultiplied(60, 60, 140, 255); chunk[0].len() * chunk.len()];
     for (x, y, pixel) in chunk.flat_iter() {
         let color = pixel.material.graphics.color;
-        vec[usize::from(y) * 512 + usize::from(x)] =
-            Color32::from_rgba_premultiplied(color.r, color.g, color.b, color.a);
+        vec[usize::from(y) * 512 + usize::from(x)] = Color32::from_rgba_premultiplied(
+            color.r,
+            color.g,
+            color.b,
+            if is_loaded { color.a } else { color.a / 2 },
+        );
     }
     let image = ColorImage::new([chunk[0].len(), chunk.len()], vec);
     ui.load_texture(format!("{x}x{y}"), image, TextureOptions::NEAREST)
@@ -161,29 +196,62 @@ impl eframe::App for App {
                         let game_global = GameGlobal::global();
                         let grid_world = game_global.m_grid_world;
                         let chunk_map = grid_world.chunk_map.chunk_array;
-                        if let Some(mut chunk) = chunk_map[y0 / 512][x0 / 512] {
-                            for (x, y) in LineIter::new(x0, y0, x1, y1) {
-                                let px = x % 512;
-                                let py = y % 512;
-                                if px == 0 || py == 0 || px == 511 || py == 511 {
-                                    if let Some(c) = chunk_map[y / 512][x / 512] {
-                                        chunk = c;
-                                    } else {
-                                        break;
-                                    }
-                                }
-                                self.paint_pixel(&mut chunk[py][px]);
+                        let mut chunk = chunk_map[y0 / 512][x0 / 512];
+                        for (x, y) in LineIter::new(x0, y0, x1, y1) {
+                            let px = x % 512;
+                            let py = y % 512;
+                            if px == 0 || py == 0 || px == 511 || py == 511 {
+                                chunk = chunk_map[y / 512][x / 512];
+                            }
+                            if let Some(mut c) = chunk {
+                                self.paint_pixel(&mut c[py][px]);
                             }
                         }
                     }
                     Wand::Fill => {
-                        fill(self.material);
+                        self.fill(self.material);
                     }
-                    Wand::CellEater => {
+                    Wand::CellEater(x0, y0, r) => {
                         //TODO
+                        let mut config = ConfigExplosion::default();
+                        config.explosion_radius = r;
+                        config.max_durability_to_destroy = usize::MAX;
+                        config.ray_energy = usize::MAX;
+                        let game_global = GameGlobal::global();
+                        config.create_cell_material = game_global.m_cell_factory.cell_data
+                            [usize::from(self.material)]
+                        .name
+                        .clone();
+                        config.create_cell_probability =
+                            truncate_f32(self.material_chance * 100.0).cast_unsigned();
+                        config.hole_enabled = true;
+                        ExplosionManager::default().explosion(
+                            &config,
+                            noita_api::Vec2 {
+                                x: truncate_isize(x0),
+                                y: truncate_isize(y0),
+                            },
+                        );
                     }
-                    Wand::SquareEater => {
-                        //TODO
+                    Wand::SquareEater(x0, y0, l) => {
+                        let x0 = (512 * 256 + x0).cast_unsigned();
+                        let y0 = (512 * 256 + y0).cast_unsigned();
+                        let game_global = GameGlobal::global();
+                        let grid_world = game_global.m_grid_world;
+                        let chunk_map = grid_world.chunk_map.chunk_array;
+                        let mut chunk = chunk_map[y0 / 512][x0 / 512];
+                        for y in y0 - l..y0 + l {
+                            for x in x0 - l..x0 + l {
+                                let px = x % 512;
+                                let py = y % 512;
+                                if px == 0 || py == 0 || px == 511 || py == 511 {
+                                    chunk = chunk_map[y / 512][x / 512];
+                                }
+                                if let Some(mut c) = chunk {
+                                    self.paint_pixel(&mut c[py][px]);
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -200,19 +268,19 @@ impl eframe::App for App {
                     Wand::Explosive(_, _, _, _, _) => "Explosive",
                     Wand::Line(_, _, _, _) => "Line",
                     Wand::Fill => "Fill",
-                    Wand::CellEater => "CellEater",
-                    Wand::SquareEater => "SquareEater",
+                    Wand::CellEater(_, _, _) => "CellEater",
+                    Wand::SquareEater(_, _, _) => "SquareEater",
                 })
                 .show_ui(ui, |ui| {
                     ui.selectable_value(
                         &mut self.wand,
-                        Wand::Explosive(0, 0, 0.0, isize::MAX, isize::MAX),
+                        Wand::Explosive(0, 0, 0.0, 12, usize::MAX),
                         "Explosive",
                     );
                     ui.selectable_value(&mut self.wand, Wand::Line(0, 0, 0, 0), "Line");
                     ui.selectable_value(&mut self.wand, Wand::Fill, "Fill");
-                    ui.selectable_value(&mut self.wand, Wand::CellEater, "CellEater");
-                    ui.selectable_value(&mut self.wand, Wand::SquareEater, "SquareEater");
+                    ui.selectable_value(&mut self.wand, Wand::CellEater(0, 0, 0.0), "CellEater");
+                    ui.selectable_value(&mut self.wand, Wand::SquareEater(0, 0, 0), "SquareEater");
                 });
             #[allow(clippy::match_same_arms)]
             match &mut self.wand {
@@ -239,11 +307,21 @@ impl eframe::App for App {
                     ui.add(DragValue::new(y1));
                 }
                 Wand::Fill => {}
-                Wand::CellEater => {
-                    //TODO
+                Wand::CellEater(x0, y0, r) => {
+                    ui.label("start x");
+                    ui.add(DragValue::new(x0));
+                    ui.label("start y");
+                    ui.add(DragValue::new(y0));
+                    ui.label("radius");
+                    ui.add(DragValue::new(r));
                 }
-                Wand::SquareEater => {
-                    //TODO
+                Wand::SquareEater(x0, y0, l) => {
+                    ui.label("start x");
+                    ui.add(DragValue::new(x0));
+                    ui.label("start y");
+                    ui.add(DragValue::new(y0));
+                    ui.label("length");
+                    ui.add(DragValue::new(l));
                 }
             }
         });
@@ -269,10 +347,13 @@ impl eframe::App for App {
                     if ui.input(|i| i.pointer.button_down(PointerButton::Primary)) {
                         let (x, y) = get_cursor_pixel();
                         match &mut self.wand {
-                            Wand::Line(x0, y0, _, _) | Wand::Explosive(x0, y0, _, _, _) => {
+                            Wand::Line(x0, y0, _, _)
+                            | Wand::Explosive(x0, y0, _, _, _)
+                            | Wand::CellEater(x0, y0, _)
+                            | Wand::SquareEater(x0, y0, _) => {
                                 (*x0, *y0) = (x, y);
                             }
-                            _ => {}
+                            Wand::Fill => {}
                         }
                     }
                     if ui.input(|i| i.pointer.button_down(PointerButton::Secondary)) {
@@ -281,11 +362,18 @@ impl eframe::App for App {
                             Wand::Line(_, _, x1, y1) => {
                                 (*x1, *y1) = (x, y);
                             }
-                            Wand::Explosive(x0, y0, r, _, _) => {
+                            Wand::Explosive(x0, y0, r, _, _) | Wand::CellEater(x0, y0, r) => {
                                 *r = truncate_isize(x.abs_diff(*x0).cast_signed())
                                     .hypot(truncate_isize(y.abs_diff(*y0).cast_signed()));
                             }
-                            _ => {}
+                            Wand::SquareEater(x0, y0, w) => {
+                                *w = truncate_f32(
+                                    truncate_isize(x.abs_diff(*x0).cast_signed())
+                                        .hypot(truncate_isize(y.abs_diff(*y0).cast_signed())),
+                                )
+                                .cast_unsigned();
+                            }
+                            Wand::Fill => {}
                         }
                     }
                     let s = 1.0 / 16.0 / self.zoom;

@@ -148,6 +148,9 @@ impl ExplosionManager {
                 }
                 if let Some(mut c) = chunk {
                     if let Some(p) = c[py][px] {
+                        if p.material.durability > config.max_durability_to_destroy {
+                            continue;
+                        }
                         p.ptr.free();
                     }
                     if rng.sample(bern) {
