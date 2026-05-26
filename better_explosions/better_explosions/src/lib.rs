@@ -30,15 +30,16 @@ pub struct ExplosionManager {
         fn(StdBox<GridWorld>, isize, isize, StdBox<CellData>, *mut ()) -> Option<Cell<()>>
     ),
 }
+#[allow(clippy::unnecessary_wraps)]
 #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
 extern "C" fn dummy(
     _: StdBox<GridWorld>,
     _: isize,
     _: isize,
-    _: StdBox<CellData>,
+    cell_data: StdBox<CellData>,
     _: *mut (),
 ) -> Option<Cell<()>> {
-    None
+    Some(Cell::new(cell_data))
 }
 impl Default for ExplosionManager {
     #[inline]
@@ -55,7 +56,8 @@ impl ExplosionManager {
     #[inline]
     pub fn explosion(&self, config: &ConfigExplosion, pos: Vec2<f32>) {
         let r = truncate_f32u(config.explosion_radius);
-        let rays: u16 = u16::try_from((8 * r.div_ceil(16).max(1)).min(1024)).unwrap();
+        let n = (8 * r.div_ceil(16)).max((((r * 63) / 10) / 16) & !7);
+        let rays: u16 = u16::try_from(n).unwrap();
         self.explosion_with_rays(config, pos, rays);
     }
     #[inline]
@@ -85,7 +87,7 @@ impl ExplosionManager {
         };
         let mut chunk;
         for ray in 0..rays {
-            chunk = origin_chunk;
+            chunk = Some(origin_chunk);
             let theta = (f32::from(ray) + 0.5) * delta_theta;
             let (sin, cos) = theta.sin_cos();
             let ix1 =
@@ -99,13 +101,15 @@ impl ExplosionManager {
                 let py = y % 512;
                 if px == 0 || py == 0 || px == 511 || py == 511 {
                     if let Some(c) = chunk_map[y / 512][x / 512] {
-                        chunk = c;
+                        chunk = Some(c);
                     } else {
                         (ix2, iy2) = (x, y);
                         break;
                     }
                 }
-                if let Some(p) = chunk[py][px] {
+                if let Some(c) = chunk
+                    && let Some(p) = c[py][px]
+                {
                     if energy > p.hp
                         && p.material.durability <= config.max_durability_to_destroy
                         && config.hole_enabled
@@ -121,7 +125,9 @@ impl ExplosionManager {
                 truncate_f32u(config.explosion_radius)
             } else {
                 truncate_f32u(
-                    truncate_usize(ix2.abs_diff(ix0)).hypot(truncate_usize(iy2.abs_diff(iy0))),
+                    (truncate_usize(ix2.abs_diff(ix0)).hypot(truncate_usize(iy2.abs_diff(iy0)))
+                        * 1.2)
+                        .min(config.explosion_radius),
                 )
             };
             let rf = truncate_usize(r);
@@ -133,37 +139,28 @@ impl ExplosionManager {
             let (sin, cos) = theta.sin_cos();
             let ix4 = (ix0.cast_signed() + round_f32(cos * rf)).cast_unsigned();
             let iy4 = (iy0.cast_signed() + round_f32(sin * rf)).cast_unsigned();
-            chunk = origin_chunk;
+            chunk = Some(origin_chunk);
             for (x, y) in ArcIter::new(ix0, iy0, ix3, iy3, ix4, iy4, r * r) {
                 let px = x % 512;
                 let py = y % 512;
                 if px == 0 || py == 0 || px == 511 || py == 511 {
-                    if let Some(c) = chunk_map[y / 512][x / 512] {
-                        chunk = c;
-                    } else {
-                        break;
-                    }
+                    chunk = chunk_map[y / 512][x / 512];
                 }
-                if let Some(p) = chunk[py][px] {
-                    p.ptr.free();
-                }
-                if rng.sample(bern) {
-                    #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
-                    {
-                        chunk[py][px] = Some(Cell::new(cell_create));
+                if let Some(mut c) = chunk {
+                    if let Some(p) = c[py][px] {
+                        p.ptr.free();
                     }
-                    #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
-                    {
-                        chunk[py][px] = (self.construct_cell)(
+                    if rng.sample(bern) {
+                        c[py][px] = (self.construct_cell)(
                             grid_world,
                             x.cast_signed() - 512 * 256,
                             y.cast_signed() - 512 * 256,
                             cell_create,
                             std::ptr::null_mut(),
                         );
+                    } else {
+                        c[py][px] = None;
                     }
-                } else {
-                    chunk[py][px] = None;
                 }
             }
         }
