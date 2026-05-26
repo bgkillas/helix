@@ -82,12 +82,7 @@ impl ExplosionManager {
             Bernoulli::from_ratio(u32::try_from(config.create_cell_probability).unwrap(), 100)
                 .unwrap()
         };
-        let Some(origin_chunk) = chunk_map[iy0 / 512][ix0 / 512] else {
-            return;
-        };
-        let mut chunk;
         for ray in 0..rays {
-            chunk = Some(origin_chunk);
             let theta = (f32::from(ray) + 0.5) * delta_theta;
             let (sin, cos) = theta.sin_cos();
             let ix1 =
@@ -99,26 +94,21 @@ impl ExplosionManager {
             for (x, y) in LineIter::new(ix0, iy0, ix1, iy1) {
                 let px = x % 512;
                 let py = y % 512;
-                if px == 0 || py == 0 || px == 511 || py == 511 {
-                    if let Some(c) = chunk_map[y / 512][x / 512] {
-                        chunk = Some(c);
-                    } else {
-                        (ix2, iy2) = (x, y);
-                        break;
+                if let Some(c) = chunk_map[y / 512][x / 512] {
+                    if let Some(p) = c[py][px] {
+                        if energy > p.hp
+                            && p.material.durability <= config.max_durability_to_destroy
+                            && config.hole_enabled
+                        {
+                            energy -= p.hp;
+                        } else {
+                            (ix2, iy2) = (x, y);
+                            break;
+                        }
                     }
-                }
-                if let Some(c) = chunk
-                    && let Some(p) = c[py][px]
-                {
-                    if energy > p.hp
-                        && p.material.durability <= config.max_durability_to_destroy
-                        && config.hole_enabled
-                    {
-                        energy -= p.hp;
-                    } else {
-                        (ix2, iy2) = (x, y);
-                        break;
-                    }
+                } else {
+                    (ix2, iy2) = (x, y);
+                    break;
                 }
             }
             let r = if (ix2, iy2) == (ix1, iy1) {
@@ -139,14 +129,10 @@ impl ExplosionManager {
             let (sin, cos) = theta.sin_cos();
             let ix4 = (ix0.cast_signed() + round_f32(cos * rf)).cast_unsigned();
             let iy4 = (iy0.cast_signed() + round_f32(sin * rf)).cast_unsigned();
-            chunk = Some(origin_chunk);
             for (x, y) in ArcIter::new(ix0, iy0, ix3, iy3, ix4, iy4, r * r) {
                 let px = x % 512;
                 let py = y % 512;
-                if px == 0 || py == 0 || px == 511 || py == 511 {
-                    chunk = chunk_map[y / 512][x / 512];
-                }
-                if let Some(mut c) = chunk {
+                if let Some(mut c) = chunk_map[y / 512][x / 512] {
                     if let Some(p) = c[py][px] {
                         if p.material.durability > config.max_durability_to_destroy {
                             continue;

@@ -101,29 +101,24 @@ impl ArcIter {
         }
     }
     fn next_range(&mut self) -> (usize, usize) {
-        let (x, y) = if self.range_x.cast_unsigned().is_multiple_of(2) {
-            let y = self.range_y_start;
-            self.range_y_start += 1;
-            (self.range_x.cast_unsigned(), y.cast_unsigned())
-        } else {
-            let y = self.range_y_end;
-            self.range_y_end -= 1;
-            (self.range_x.cast_unsigned(), y.cast_unsigned())
-        };
+        let y = self.range_y_start.cast_unsigned();
+        self.range_y_start += 1;
+        let x = self.range_x.cast_unsigned();
         if self.steep { (y, x) } else { (x, y) }
     }
 }
 #[cfg(feature = "test")]
 #[test]
-fn test1() {
+fn test() {
     use crate::round_f32;
     use image::RgbImage;
     use std::f32::consts::TAU;
-    let mut image = RgbImage::new(65, 65);
-    let rays: u16 = 32;
+    let r: u16 = 256;
+    let mut image = RgbImage::new(u32::from(r) + 8, u32::from(r) + 8);
+    let rays: u16 = 64;
     let delta_theta = TAU / f32::from(rays);
-    for ray in 0..rays / 8 {
-        let r = 64 - ray * 16;
+    for ray in 0..rays / 4 {
+        let r = r - ray * 16;
         let r2: usize = usize::from(r).pow(2);
         let rf = f32::from(r);
         let ix0: usize = 0;
@@ -140,85 +135,10 @@ fn test1() {
             let p = &mut image
                 .get_pixel_mut(x.try_into().unwrap(), y.try_into().unwrap())
                 .0;
-            p[0] = u8::try_from(i & 0xff).unwrap();
-            p[1] = 64 * u8::try_from((i >> 8) & 0xff).unwrap();
-            p[2] = 64;
+            p[0] = 128 + u8::try_from(i % 128).unwrap();
+            p[1] = 128 + u8::try_from(i % 128).unwrap();
+            p[2] = 128 + u8::try_from(i % 128).unwrap();
         }
     }
-    image.save("../../test1.png").unwrap();
-}
-#[cfg(feature = "test")]
-#[test]
-fn testo0() {
-    test_octant(0, "../../testo0.png");
-}
-#[cfg(feature = "test")]
-#[test]
-fn testo1() {
-    test_octant(1, "../../testo1.png");
-}
-#[cfg(feature = "test")]
-#[test]
-fn testo2() {
-    test_octant(2, "../../testo2.png");
-}
-#[cfg(feature = "test")]
-#[test]
-fn testo3() {
-    test_octant(3, "../../testo3.png");
-}
-#[cfg(feature = "test")]
-#[test]
-fn testo4() {
-    test_octant(4, "../../testo4.png");
-}
-#[cfg(feature = "test")]
-#[test]
-fn testo5() {
-    test_octant(5, "../../testo5.png");
-}
-#[cfg(feature = "test")]
-#[test]
-fn testo6() {
-    test_octant(6, "../../testo6.png");
-}
-#[cfg(feature = "test")]
-#[test]
-fn testo7() {
-    test_octant(7, "../../testo7.png");
-}
-#[cfg(feature = "test")]
-#[cfg(test)]
-fn test_octant(o: u16, n: &str) {
-    use crate::round_f32;
-    use image::RgbImage;
-    use std::f32::consts::TAU;
-    let mut image = RgbImage::new(256, 256);
-    let rays: u16 = 32;
-    let delta_theta = TAU / f32::from(rays);
-    let ix0: usize = 128;
-    let iy0: usize = 128;
-    for r in (0..=64).rev() {
-        for ray in o * rays / 8..(o + 1) * rays / 8 {
-            let r2: usize = usize::from(r).pow(2);
-            let rf = f32::from(r);
-            let theta = f32::from(ray) * delta_theta;
-            let (sin, cos) = theta.sin_cos();
-            let ix3 = (ix0.cast_signed() + round_f32(cos * rf)).cast_unsigned();
-            let iy3 = (iy0.cast_signed() + round_f32(sin * rf)).cast_unsigned();
-            let theta = f32::from(ray + 1) * delta_theta;
-            let (sin, cos) = theta.sin_cos();
-            let ix4 = (ix0.cast_signed() + round_f32(cos * rf)).cast_unsigned();
-            let iy4 = (iy0.cast_signed() + round_f32(sin * rf)).cast_unsigned();
-            for (x, y) in ArcIter::new(ix0, iy0, ix3, iy3, ix4, iy4, r2) {
-                let p = &mut image
-                    .get_pixel_mut(x.try_into().unwrap(), y.try_into().unwrap())
-                    .0;
-                p[0] = 3 * r;
-                p[1] = 3 * r;
-                p[2] = 3 * r;
-            }
-        }
-    }
-    image.save(n).unwrap();
+    image.save("../../test.png").unwrap();
 }

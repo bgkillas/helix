@@ -11,6 +11,9 @@ incremental = true
 codegen-units = 1
 opt-level = 3
 
+[profile.dev]
+opt-level = 1
+
 [workspace]
 resolver = "3"
 members = ["better_explosions/better_explosions", "better_explosions/viewer", "helix", "noita_api", "noita_api_macros"]

@@ -62,6 +62,8 @@ enum Wand {
     Fill,
     CellEater(isize, isize, f32),
     SquareEater(isize, isize, usize),
+    Load(i16, i16),
+    Unload(i16, i16),
 }
 impl PartialEq for Wand {
     fn eq(&self, other: &Self) -> bool {
@@ -196,14 +198,10 @@ impl eframe::App for App {
                         let game_global = GameGlobal::global();
                         let grid_world = game_global.m_grid_world;
                         let chunk_map = grid_world.chunk_map.chunk_array;
-                        let mut chunk = chunk_map[y0 / 512][x0 / 512];
                         for (x, y) in LineIter::new(x0, y0, x1, y1) {
                             let px = x % 512;
                             let py = y % 512;
-                            if px == 0 || py == 0 || px == 511 || py == 511 {
-                                chunk = chunk_map[y / 512][x / 512];
-                            }
-                            if let Some(mut c) = chunk {
+                            if let Some(mut c) = chunk_map[y / 512][x / 512] {
                                 self.paint_pixel(&mut c[py][px]);
                             }
                         }
@@ -239,18 +237,41 @@ impl eframe::App for App {
                         let game_global = GameGlobal::global();
                         let grid_world = game_global.m_grid_world;
                         let chunk_map = grid_world.chunk_map.chunk_array;
-                        let mut chunk = chunk_map[y0 / 512][x0 / 512];
                         for y in y0 - l..y0 + l {
                             for x in x0 - l..x0 + l {
                                 let px = x % 512;
                                 let py = y % 512;
-                                if px == 0 || py == 0 || px == 511 || py == 511 {
-                                    chunk = chunk_map[y / 512][x / 512];
-                                }
-                                if let Some(mut c) = chunk {
+                                if let Some(mut c) = chunk_map[y / 512][x / 512] {
                                     self.paint_pixel(&mut c[py][px]);
                                 }
                             }
+                        }
+                    }
+                    Wand::Load(x0, y0) => {
+                        let x0 = (256 + x0).cast_unsigned();
+                        let y0 = (256 + y0).cast_unsigned();
+                        let game_global = GameGlobal::global();
+                        let grid_world = game_global.m_grid_world;
+                        let mut chunk_map = grid_world.chunk_map.chunk_array;
+                        chunk_map[usize::from(y0)][usize::from(x0)] =
+                            Some(if let Some(chunk) = self.unloaded.remove(&(x0, y0)) {
+                                chunk
+                            } else {
+                                let mut chunk = Chunk::default();
+                                for (_, _, p) in chunk.iter_mut() {
+                                    self.paint_pixel(p);
+                                }
+                                StdBox::new(chunk)
+                            });
+                    }
+                    Wand::Unload(x0, y0) => {
+                        let x0 = (256 + x0).cast_unsigned();
+                        let y0 = (256 + y0).cast_unsigned();
+                        let game_global = GameGlobal::global();
+                        let grid_world = game_global.m_grid_world;
+                        let mut chunk_map = grid_world.chunk_map.chunk_array;
+                        if let Some(chunk) = chunk_map[usize::from(y0)][usize::from(x0)].take() {
+                            self.unloaded.insert((x0, y0), chunk);
                         }
                     }
                 }
@@ -270,6 +291,8 @@ impl eframe::App for App {
                     Wand::Fill => "Fill",
                     Wand::CellEater(_, _, _) => "CellEater",
                     Wand::SquareEater(_, _, _) => "SquareEater",
+                    Wand::Load(_, _) => "Load",
+                    Wand::Unload(_, _) => "Unload",
                 })
                 .show_ui(ui, |ui| {
                     ui.selectable_value(
@@ -281,6 +304,8 @@ impl eframe::App for App {
                     ui.selectable_value(&mut self.wand, Wand::Fill, "Fill");
                     ui.selectable_value(&mut self.wand, Wand::CellEater(0, 0, 0.0), "CellEater");
                     ui.selectable_value(&mut self.wand, Wand::SquareEater(0, 0, 0), "SquareEater");
+                    ui.selectable_value(&mut self.wand, Wand::Load(0, 0), "Load");
+                    ui.selectable_value(&mut self.wand, Wand::Unload(0, 0), "Unload");
                 });
             #[allow(clippy::match_same_arms)]
             match &mut self.wand {
@@ -323,6 +348,18 @@ impl eframe::App for App {
                     ui.label("length");
                     ui.add(DragValue::new(l));
                 }
+                Wand::Load(x0, y0) => {
+                    ui.label("chunk x");
+                    ui.add(DragValue::new(x0));
+                    ui.label("chunk y");
+                    ui.add(DragValue::new(y0));
+                }
+                Wand::Unload(x0, y0) => {
+                    ui.label("chunk x");
+                    ui.add(DragValue::new(x0));
+                    ui.label("chunk y");
+                    ui.add(DragValue::new(y0));
+                }
             }
         });
         Panel::top("top").show_inside(ui, |ui| {
@@ -353,6 +390,12 @@ impl eframe::App for App {
                             | Wand::SquareEater(x0, y0, _) => {
                                 (*x0, *y0) = (x, y);
                             }
+                            Wand::Load(x0, y0) | Wand::Unload(x0, y0) => {
+                                (*x0, *y0) = (
+                                    i16::try_from(x.div_euclid(512)).unwrap(),
+                                    i16::try_from(y.div_euclid(512)).unwrap(),
+                                );
+                            }
                             Wand::Fill => {}
                         }
                     }
@@ -373,7 +416,7 @@ impl eframe::App for App {
                                 )
                                 .cast_unsigned();
                             }
-                            Wand::Fill => {}
+                            Wand::Fill | Wand::Load(_, _) | Wand::Unload(_, _) => {}
                         }
                     }
                     let s = 1.0 / 16.0 / self.zoom;
