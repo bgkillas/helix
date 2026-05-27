@@ -8,7 +8,7 @@ fn main() -> eframe::Result {
     let mut game_global = GameGlobal::global();
     game_global
         .m_cell_factory
-        .generate_cell_data(include_str!("../materials.xml"))
+        .generate_cell_data(include_str!("../../materials.xml"))
         .unwrap();
     let grid_world = game_global.m_grid_world;
     let mut chunk_map = grid_world.chunk_map.chunk_array;

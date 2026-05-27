@@ -10,6 +10,8 @@ test:
     cargo test --features test -- --test-threads=1 --nocapture
 test_rel:
     cargo test --release --features test -- --test-threads=1 --nocapture
+bench:
+    cargo bench --quiet -- --color always --test-threads=1 --nocapture
 clippy:
     cd better_explosions/viewer && cargo fmt
     cd better_explosions/viewer && cargo clippy

@@ -1,4 +1,6 @@
 #![feature(sync_unsafe_cell)]
+#![feature(test)]
+extern crate test;
 pub mod arc;
 pub mod line;
 use crate::arc::ArcIter;
@@ -154,6 +156,33 @@ impl ExplosionManager {
             }
         }
     }
+}
+#[bench]
+fn bench_explosion(bencher: &mut test::Bencher) {
+    use noita_api::{Chunk, GameGlobal, StdBox};
+    use std::hint::black_box;
+    let mut game_global = GameGlobal::global();
+    game_global
+        .m_cell_factory
+        .generate_cell_data(include_str!("../../materials.xml"))
+        .unwrap();
+    let grid_world = game_global.m_grid_world;
+    let mut chunk_map = grid_world.chunk_map.chunk_array;
+    chunk_map[256][256] = black_box(Some(StdBox::new(Chunk::default())));
+    let mut config = ConfigExplosion::default();
+    config.explosion_radius = 200.0;
+    config.max_durability_to_destroy = 12;
+    config.ray_energy = black_box(usize::MAX);
+    let game_global = GameGlobal::global();
+    config.create_cell_material = game_global.m_cell_factory.cell_data[1].name.clone();
+    config.create_cell_probability = 50;
+    config.hole_enabled = true;
+    let c = black_box(config);
+    let pos = black_box(Vec2 { x: 256.0, y: 256.0 });
+    let em = ExplosionManager {
+        construct_cell: dummy,
+    };
+    bencher.iter(|| em.explosion(&c, pos))
 }
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::as_conversions)]
