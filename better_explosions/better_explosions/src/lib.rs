@@ -2,7 +2,10 @@
 #![feature(test)]
 extern crate test;
 pub mod arc;
+pub mod circle;
+pub mod circumference;
 pub mod line;
+pub mod octant;
 use crate::arc::ArcIter;
 use crate::line::LineIter;
 use noita_api::{Cell, CellData, ConfigExplosion, GameGlobal, GridWorld, StdBox, Vec2, this_call};
@@ -158,8 +161,8 @@ impl ExplosionManager {
     }
 }
 #[bench]
-fn bench_explosion(bencher: &mut test::Bencher) {
-    use noita_api::{Chunk, GameGlobal, StdBox};
+fn bench0_empty_explosion(bencher: &mut test::Bencher) {
+    use noita_api::{Chunk, GameGlobal};
     use std::hint::black_box;
     let mut game_global = GameGlobal::global();
     game_global
@@ -172,7 +175,75 @@ fn bench_explosion(bencher: &mut test::Bencher) {
     let mut config = ConfigExplosion::default();
     config.explosion_radius = 200.0;
     config.max_durability_to_destroy = 12;
-    config.ray_energy = black_box(usize::MAX);
+    config.ray_energy = usize::MAX;
+    let game_global = GameGlobal::global();
+    config.create_cell_material = game_global.m_cell_factory.cell_data[1].name.clone();
+    config.create_cell_probability = 0;
+    config.hole_enabled = true;
+    let c = black_box(config);
+    let pos = black_box(Vec2 { x: 256.0, y: 256.0 });
+    let em = ExplosionManager {
+        construct_cell: dummy,
+    };
+    bencher.iter(|| em.explosion(&c, pos))
+}
+#[bench]
+fn bench1_half_explosion(bencher: &mut test::Bencher) {
+    use noita_api::GameGlobal;
+    use std::hint::black_box;
+    let mut config = ConfigExplosion::default();
+    config.explosion_radius = 200.0;
+    config.max_durability_to_destroy = 12;
+    config.ray_energy = usize::MAX;
+    let game_global = GameGlobal::global();
+    config.create_cell_material = game_global.m_cell_factory.cell_data[1].name.clone();
+    config.create_cell_probability = 50;
+    config.hole_enabled = true;
+    let c = black_box(config);
+    let pos = black_box(Vec2 { x: 256.0, y: 256.0 });
+    let em = ExplosionManager {
+        construct_cell: dummy,
+    };
+    bencher.iter(|| em.explosion(&c, pos))
+}
+#[bench]
+fn bench2_empty_explosion_wall(bencher: &mut test::Bencher) {
+    use noita_api::{Chunk, GameGlobal};
+    use std::hint::black_box;
+    let game_global = GameGlobal::global();
+    let grid_world = game_global.m_grid_world;
+    let mut chunk_map = grid_world.chunk_map.chunk_array;
+    let mut chunk = Chunk::default();
+    let cell_data = StdBox::from(&game_global.m_cell_factory.cell_data[58]);
+    for y in 0..512 {
+        for x in 300..512 {
+            chunk[y][x] = Some(Cell::new(cell_data))
+        }
+    }
+    chunk_map[256][256] = black_box(Some(StdBox::new(chunk)));
+    let mut config = ConfigExplosion::default();
+    config.explosion_radius = 200.0;
+    config.max_durability_to_destroy = 12;
+    config.ray_energy = usize::MAX;
+    let game_global = GameGlobal::global();
+    config.create_cell_material = game_global.m_cell_factory.cell_data[1].name.clone();
+    config.create_cell_probability = 0;
+    config.hole_enabled = true;
+    let c = black_box(config);
+    let pos = black_box(Vec2 { x: 256.0, y: 256.0 });
+    let em = ExplosionManager {
+        construct_cell: dummy,
+    };
+    bencher.iter(|| em.explosion(&c, pos))
+}
+#[bench]
+fn bench3_half_explosion_wall(bencher: &mut test::Bencher) {
+    use noita_api::GameGlobal;
+    use std::hint::black_box;
+    let mut config = ConfigExplosion::default();
+    config.explosion_radius = 200.0;
+    config.max_durability_to_destroy = 12;
+    config.ray_energy = usize::MAX;
     let game_global = GameGlobal::global();
     config.create_cell_material = game_global.m_cell_factory.cell_data[1].name.clone();
     config.create_cell_probability = 50;

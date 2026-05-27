@@ -1,4 +1,5 @@
 use better_explosions::ExplosionManager;
+use better_explosions::circle::Circle;
 use better_explosions::line::LineIter;
 use eframe::Frame;
 use eframe::emath::{Pos2, Rect, Vec2};
@@ -210,26 +211,18 @@ impl eframe::App for App {
                         self.fill(self.material);
                     }
                     Wand::CellEater(x0, y0, r) => {
-                        //TODO
-                        let mut config = ConfigExplosion::default();
-                        config.explosion_radius = r;
-                        config.max_durability_to_destroy = usize::MAX;
-                        config.ray_energy = usize::MAX;
+                        let x0 = (512 * 256 + x0).cast_unsigned();
+                        let y0 = (512 * 256 + y0).cast_unsigned();
                         let game_global = GameGlobal::global();
-                        config.create_cell_material = game_global.m_cell_factory.cell_data
-                            [usize::from(self.material)]
-                        .name
-                        .clone();
-                        config.create_cell_probability =
-                            truncate_f32(self.material_chance * 100.0).cast_unsigned();
-                        config.hole_enabled = true;
-                        ExplosionManager::default().explosion(
-                            &config,
-                            noita_api::Vec2 {
-                                x: truncate_isize(x0),
-                                y: truncate_isize(y0),
-                            },
-                        );
+                        let grid_world = game_global.m_grid_world;
+                        let chunk_map = grid_world.chunk_map.chunk_array;
+                        for (x, y) in Circle::new(x0, y0, truncate_f32u(r)) {
+                            let px = x % 512;
+                            let py = y % 512;
+                            if let Some(mut c) = chunk_map[y / 512][x / 512] {
+                                self.paint_pixel(&mut c[py][px]);
+                            }
+                        }
                     }
                     Wand::SquareEater(x0, y0, l) => {
                         let x0 = (512 * 256 + x0).cast_unsigned();
@@ -490,4 +483,10 @@ fn truncate_isize(f: isize) -> f32 {
 #[allow(clippy::as_conversions)]
 fn truncate_f32(f: f32) -> isize {
     f as isize
+}
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::as_conversions)]
+#[allow(clippy::cast_sign_loss)]
+fn truncate_f32u(f: f32) -> usize {
+    f as usize
 }
