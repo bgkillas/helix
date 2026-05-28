@@ -14,7 +14,6 @@ use noita_api::{Cell, CellData, ConfigExplosion, GameGlobal, GridWorld, StdBox, 
 use rand::RngExt as _;
 use rand::distr::Bernoulli;
 use std::f32::consts::TAU;
-use std::mem::MaybeUninit;
 use std::num::NonZeroUsize;
 #[noita_api::lua_module]
 mod lua {
@@ -188,12 +187,11 @@ impl ExplosionManager {
         } else {
             u32::try_from(config.create_cell_probability).unwrap()
         };
-        #[allow(clippy::type_complexity)]
-        let mut hp_map: [[Option<Box<[[Option<NonZeroUsize>; 512]; 512]>>; 512]; 512] =
-            unsafe { MaybeUninit::zeroed().assume_init() };
-        for (x, y, _) in grid_world.chunk_map.flat_iter() {
-            hp_map[usize::from(y)][usize::from(x)] =
-                Some(unsafe { Box::new_zeroed().assume_init() });
+        let mut hp_vec: Vec<Option<NonZeroUsize>> =
+            vec![None; 512 * 512 * grid_world.chunk_map.chunk_count];
+        let mut hp_map: Box<[[usize; 512]; 512]> = unsafe { Box::new_uninit().assume_init() };
+        for (i, (x, y, _)) in grid_world.chunk_map.flat_iter().enumerate() {
+            hp_map[usize::from(y)][usize::from(x)] = i;
         }
         let bern = Bernoulli::from_ratio(chance, 100).unwrap();
         let r = truncate_f32u(config.explosion_radius);
@@ -207,8 +205,8 @@ impl ExplosionManager {
                         let cx = x / 512;
                         let cy = y / 512;
                         if let Some(mut c) = chunk_map[cy][cx] {
-                            let hp_cm = hp_map[cy][cx].as_mut().unwrap();
-                            if let Some(hp) = hp_cm[py][px] {
+                            let hp_index = 512 * 512 * hp_map[cy][cx] + 512 * py + px;
+                            if let Some(hp) = hp_vec[hp_index] {
                                 if hp.get() == usize::MAX {
                                     continue 'a;
                                 }
@@ -223,7 +221,7 @@ impl ExplosionManager {
                                         && config.hole_enabled
                                         && let Some(new) = energy.checked_sub(p.hp)
                                     {
-                                        hp_cm[py][px] = Some(
+                                        hp_vec[hp_index] = Some(
                                             NonZeroUsize::new(p.hp).unwrap_or(NonZeroUsize::MAX),
                                         );
                                         energy = new;
@@ -232,7 +230,7 @@ impl ExplosionManager {
                                         break 'a;
                                     }
                                 } else {
-                                    hp_cm[py][px] = Some(NonZeroUsize::MAX);
+                                    hp_vec[hp_index] = Some(NonZeroUsize::MAX);
                                 }
                                 if rng.sample(bern) {
                                     c[py][px] = (self.construct_cell)(

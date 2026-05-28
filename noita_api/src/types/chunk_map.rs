@@ -31,13 +31,14 @@ impl ChunkMap {
     }
     #[inline]
     pub fn remove(&mut self, x: u16, y: u16) -> Option<StdBox<Chunk>> {
-        self.min_chunk.x = isize::MAX;
-        self.min_chunk.y = isize::MAX;
-        self.max_chunk.x = isize::MIN;
-        self.max_chunk.y = isize::MIN;
         let xu = usize::from(x);
         let yu = usize::from(y);
         if let Some(ret) = self.chunk_array[yu][xu].take() {
+            self.min_chunk.x = isize::MAX;
+            self.min_chunk.y = isize::MAX;
+            self.max_chunk.x = isize::MIN;
+            self.max_chunk.y = isize::MIN;
+            self.chunk_count -= 1;
             for (cx, cy, _) in self.chunk_array.flat_iter() {
                 let xi = isize::try_from(cx).unwrap() - 256;
                 let yi = isize::try_from(cy).unwrap() - 256;
@@ -57,6 +58,7 @@ impl ChunkMap {
     }
     #[inline]
     pub fn insert_box(&mut self, x: u16, y: u16, chunk: StdBox<Chunk>) {
+        self.chunk_count += 1;
         let xu = usize::from(x);
         let yu = usize::from(y);
         self.chunk_array[yu][xu] = Some(chunk);
