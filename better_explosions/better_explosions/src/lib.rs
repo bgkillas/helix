@@ -200,52 +200,55 @@ impl ExplosionManager {
         for (ix1, iy1) in Circumference::new(r) {
             octant(ix0, iy0, ix1, iy1, |_, ix2, iy2| {
                 let mut energy = config.ray_energy;
-                for (x, y) in LineIter::new(ix0, iy0, ix2, iy2) {
-                    let px = x % 512;
-                    let py = y % 512;
-                    let cx = x / 512;
-                    let cy = y / 512;
-                    if let Some(mut c) = chunk_map[cy][cx] {
-                        let hp_cm = hp_map[cy][cx].as_mut().unwrap();
-                        if let Some(hp) = hp_cm[py][px] {
-                            if hp.get() == usize::MAX {
-                                continue;
-                            }
-                            if let Some(new) = energy.checked_sub(hp.get()) {
-                                energy = new;
-                            } else {
-                                break;
-                            }
-                        } else {
-                            if let Some(p) = c[py][px] {
-                                if p.material.durability <= config.max_durability_to_destroy
-                                    && config.hole_enabled
-                                    && let Some(new) = energy.checked_sub(p.hp)
-                                {
-                                    hp_cm[py][px] =
-                                        Some(NonZeroUsize::new(p.hp).unwrap_or(NonZeroUsize::MAX));
+                'a: for (xi, y) in LineIter::new(ix0, iy0, ix2, iy2) {
+                    for x in xi..xi + 2 {
+                        let px = x % 512;
+                        let py = y % 512;
+                        let cx = x / 512;
+                        let cy = y / 512;
+                        if let Some(mut c) = chunk_map[cy][cx] {
+                            let hp_cm = hp_map[cy][cx].as_mut().unwrap();
+                            if let Some(hp) = hp_cm[py][px] {
+                                if hp.get() == usize::MAX {
+                                    continue 'a;
+                                }
+                                if let Some(new) = energy.checked_sub(hp.get()) {
                                     energy = new;
-                                    p.ptr.free();
                                 } else {
-                                    break;
+                                    break 'a;
                                 }
                             } else {
-                                hp_cm[py][px] = Some(NonZeroUsize::MAX);
+                                if let Some(p) = c[py][px] {
+                                    if p.material.durability <= config.max_durability_to_destroy
+                                        && config.hole_enabled
+                                        && let Some(new) = energy.checked_sub(p.hp)
+                                    {
+                                        hp_cm[py][px] = Some(
+                                            NonZeroUsize::new(p.hp).unwrap_or(NonZeroUsize::MAX),
+                                        );
+                                        energy = new;
+                                        p.ptr.free();
+                                    } else {
+                                        break 'a;
+                                    }
+                                } else {
+                                    hp_cm[py][px] = Some(NonZeroUsize::MAX);
+                                }
+                                if rng.sample(bern) {
+                                    c[py][px] = (self.construct_cell)(
+                                        grid_world,
+                                        x.cast_signed() - 512 * 256,
+                                        y.cast_signed() - 512 * 256,
+                                        cell_create,
+                                        std::ptr::null_mut(),
+                                    );
+                                } else {
+                                    c[py][px] = None;
+                                }
                             }
-                            if rng.sample(bern) {
-                                c[py][px] = (self.construct_cell)(
-                                    grid_world,
-                                    x.cast_signed() - 512 * 256,
-                                    y.cast_signed() - 512 * 256,
-                                    cell_create,
-                                    std::ptr::null_mut(),
-                                );
-                            } else {
-                                c[py][px] = None;
-                            }
+                        } else {
+                            break 'a;
                         }
-                    } else {
-                        break;
                     }
                 }
             });
