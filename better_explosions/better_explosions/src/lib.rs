@@ -14,6 +14,8 @@ use noita_api::{Cell, CellData, ConfigExplosion, GameGlobal, GridWorld, StdBox, 
 use rand::RngExt as _;
 use rand::distr::Bernoulli;
 use std::f32::consts::TAU;
+use std::mem::MaybeUninit;
+use std::num::NonZeroUsize;
 #[noita_api::lua_module]
 mod lua {
     use crate::ExplosionManager;
@@ -89,6 +91,7 @@ impl ExplosionManager {
             Bernoulli::from_ratio(u32::try_from(config.create_cell_probability).unwrap(), 100)
                 .unwrap()
         };
+        let mut radii = Vec::with_capacity(usize::from(rays));
         for ray in 0..rays {
             let theta = (f32::from(ray) + 0.5) * delta_theta;
             let (sin, cos) = theta.sin_cos();
@@ -127,6 +130,10 @@ impl ExplosionManager {
                         .min(config.explosion_radius),
                 )
             };
+            radii.push(r);
+        }
+        for (rayu, r) in radii.into_iter().enumerate() {
+            let ray = u16::try_from(rayu).unwrap();
             let rf = truncate_usize(r);
             let theta = f32::from(ray) * delta_theta;
             let (sin, cos) = theta.sin_cos();
@@ -181,6 +188,13 @@ impl ExplosionManager {
         } else {
             u32::try_from(config.create_cell_probability).unwrap()
         };
+        #[allow(clippy::type_complexity)]
+        let mut hp_map: [[Option<Box<[[Option<NonZeroUsize>; 512]; 512]>>; 512]; 512] =
+            unsafe { MaybeUninit::zeroed().assume_init() };
+        for (x, y, _) in chunk_map.flat_iter() {
+            hp_map[usize::from(y)][usize::from(x)] =
+                Some(unsafe { Box::new_zeroed().assume_init() });
+        }
         let bern = Bernoulli::from_ratio(chance, 100).unwrap();
         let r = truncate_f32u(config.explosion_radius);
         for (ix1, iy1) in Circumference::new(r) {
@@ -189,28 +203,46 @@ impl ExplosionManager {
                 for (x, y) in LineIter::new(ix0, iy0, ix2, iy2) {
                     let px = x % 512;
                     let py = y % 512;
-                    if let Some(mut c) = chunk_map[y / 512][x / 512] {
-                        if let Some(p) = c[py][px] {
-                            if p.material.durability <= config.max_durability_to_destroy
-                                && config.hole_enabled
-                                && let Some(new) = energy.checked_sub(p.hp)
-                            {
+                    let cx = x / 512;
+                    let cy = y / 512;
+                    if let Some(mut c) = chunk_map[cy][cx] {
+                        let hp_cm = hp_map[cy][cx].as_mut().unwrap();
+                        if let Some(hp) = hp_cm[py][px] {
+                            if hp.get() == usize::MAX {
+                                continue;
+                            }
+                            if let Some(new) = energy.checked_sub(hp.get()) {
                                 energy = new;
-                                p.ptr.free();
                             } else {
                                 break;
                             }
-                        }
-                        if rng.sample(bern) {
-                            c[py][px] = (self.construct_cell)(
-                                grid_world,
-                                x.cast_signed() - 512 * 256,
-                                y.cast_signed() - 512 * 256,
-                                cell_create,
-                                std::ptr::null_mut(),
-                            );
                         } else {
-                            c[py][px] = None;
+                            if let Some(p) = c[py][px] {
+                                if p.material.durability <= config.max_durability_to_destroy
+                                    && config.hole_enabled
+                                    && let Some(new) = energy.checked_sub(p.hp)
+                                {
+                                    hp_cm[py][px] =
+                                        Some(NonZeroUsize::new(p.hp).unwrap_or(NonZeroUsize::MAX));
+                                    energy = new;
+                                    p.ptr.free();
+                                } else {
+                                    break;
+                                }
+                            } else {
+                                hp_cm[py][px] = Some(NonZeroUsize::MAX);
+                            }
+                            if rng.sample(bern) {
+                                c[py][px] = (self.construct_cell)(
+                                    grid_world,
+                                    x.cast_signed() - 512 * 256,
+                                    y.cast_signed() - 512 * 256,
+                                    cell_create,
+                                    std::ptr::null_mut(),
+                                );
+                            } else {
+                                c[py][px] = None;
+                            }
                         }
                     } else {
                         break;

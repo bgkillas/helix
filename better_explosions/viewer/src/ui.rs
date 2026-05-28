@@ -59,6 +59,7 @@ impl Default for App {
 #[derive(Debug)]
 enum Wand {
     Explosive(isize, isize, f32, usize, usize),
+    ExplosiveLines(isize, isize, f32, usize, usize),
     Line(isize, isize, isize, isize),
     Fill,
     CellEater(isize, isize, f32),
@@ -73,6 +74,9 @@ impl PartialEq for Wand {
             (
                 Wand::Explosive(_, _, _, _, _),
                 Wand::Explosive(_, _, _, _, _)
+            ) | (
+                Wand::ExplosiveLines(_, _, _, _, _),
+                Wand::ExplosiveLines(_, _, _, _, _)
             ) | (Wand::Line(_, _, _, _), Wand::Line(_, _, _, _))
                 | (Wand::Fill, Wand::Fill)
                 | (Wand::CellEater(_, _, _), Wand::CellEater(_, _, _))
@@ -191,6 +195,27 @@ impl eframe::App for App {
                             },
                         );
                     }
+                    Wand::ExplosiveLines(x0, y0, r, dur, energy) => {
+                        let mut config = ConfigExplosion::default();
+                        config.explosion_radius = r;
+                        config.max_durability_to_destroy = dur;
+                        config.ray_energy = energy;
+                        let game_global = GameGlobal::global();
+                        config.create_cell_material = game_global.m_cell_factory.cell_data
+                            [usize::from(self.material)]
+                        .name
+                        .clone();
+                        config.create_cell_probability =
+                            truncate_f32(self.material_chance * 100.0).cast_unsigned();
+                        config.hole_enabled = true;
+                        ExplosionManager::default().explosion_lines(
+                            &config,
+                            noita_api::Vec2 {
+                                x: truncate_isize(x0),
+                                y: truncate_isize(y0),
+                            },
+                        );
+                    }
                     Wand::Line(ix0, iy0, ix1, iy1) => {
                         let x0 = (512 * 256 + ix0).cast_unsigned();
                         let y0 = (512 * 256 + iy0).cast_unsigned();
@@ -280,6 +305,7 @@ impl eframe::App for App {
             ComboBox::from_label("Wand")
                 .selected_text(match self.wand {
                     Wand::Explosive(_, _, _, _, _) => "Explosive",
+                    Wand::ExplosiveLines(_, _, _, _, _) => "ExplosiveLines",
                     Wand::Line(_, _, _, _) => "Line",
                     Wand::Fill => "Fill",
                     Wand::CellEater(_, _, _) => "CellEater",
@@ -293,6 +319,11 @@ impl eframe::App for App {
                         Wand::Explosive(0, 0, 0.0, 12, usize::MAX),
                         "Explosive",
                     );
+                    ui.selectable_value(
+                        &mut self.wand,
+                        Wand::ExplosiveLines(0, 0, 0.0, 12, usize::MAX),
+                        "ExplosiveLines",
+                    );
                     ui.selectable_value(&mut self.wand, Wand::Line(0, 0, 0, 0), "Line");
                     ui.selectable_value(&mut self.wand, Wand::Fill, "Fill");
                     ui.selectable_value(&mut self.wand, Wand::CellEater(0, 0, 0.0), "CellEater");
@@ -303,6 +334,18 @@ impl eframe::App for App {
             #[allow(clippy::match_same_arms)]
             match &mut self.wand {
                 Wand::Explosive(x0, y0, r, dur, energy) => {
+                    ui.label("start x");
+                    ui.add(DragValue::new(x0));
+                    ui.label("start y");
+                    ui.add(DragValue::new(y0));
+                    ui.label("radius");
+                    ui.add(DragValue::new(r));
+                    ui.label("max durability");
+                    ui.add(DragValue::new(dur));
+                    ui.label("energy");
+                    ui.add(DragValue::new(energy));
+                }
+                Wand::ExplosiveLines(x0, y0, r, dur, energy) => {
                     ui.label("start x");
                     ui.add(DragValue::new(x0));
                     ui.label("start y");
@@ -379,6 +422,7 @@ impl eframe::App for App {
                         match &mut self.wand {
                             Wand::Line(x0, y0, _, _)
                             | Wand::Explosive(x0, y0, _, _, _)
+                            | Wand::ExplosiveLines(x0, y0, _, _, _)
                             | Wand::CellEater(x0, y0, _)
                             | Wand::SquareEater(x0, y0, _) => {
                                 (*x0, *y0) = (x, y);
@@ -398,7 +442,9 @@ impl eframe::App for App {
                             Wand::Line(_, _, x1, y1) => {
                                 (*x1, *y1) = (x, y);
                             }
-                            Wand::Explosive(x0, y0, r, _, _) | Wand::CellEater(x0, y0, r) => {
+                            Wand::Explosive(x0, y0, r, _, _)
+                            | Wand::ExplosiveLines(x0, y0, r, _, _)
+                            | Wand::CellEater(x0, y0, r) => {
                                 *r = truncate_isize(x.abs_diff(*x0).cast_signed())
                                     .hypot(truncate_isize(y.abs_diff(*y0).cast_signed()));
                             }
