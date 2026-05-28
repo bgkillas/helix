@@ -14,6 +14,7 @@ use noita_api::{Cell, CellData, ConfigExplosion, GameGlobal, GridWorld, StdBox, 
 use rand::RngExt as _;
 use rand::distr::Bernoulli;
 use std::f32::consts::TAU;
+use std::mem::MaybeUninit;
 use std::num::NonZeroUsize;
 #[noita_api::lua_module]
 mod lua {
@@ -189,9 +190,15 @@ impl ExplosionManager {
         };
         let mut hp_vec: Vec<Option<NonZeroUsize>> =
             vec![None; 512 * 512 * grid_world.chunk_map.chunk_count];
-        let mut hp_map: Box<[[usize; 512]; 512]> = unsafe { Box::new_uninit().assume_init() };
+        let mut hp_map: Box<MaybeUninit<[[usize; 512]; 512]>> = Box::new_uninit();
         for (i, (x, y, _)) in grid_world.chunk_map.flat_iter().enumerate() {
-            hp_map[usize::from(y)][usize::from(x)] = i;
+            unsafe {
+                hp_map
+                    .as_mut_ptr()
+                    .cast::<usize>()
+                    .add(512 * usize::from(y) + usize::from(x))
+                    .write(i);
+            }
         }
         let bern = Bernoulli::from_ratio(chance, 100).unwrap();
         let r = truncate_f32u(config.explosion_radius);
@@ -205,7 +212,10 @@ impl ExplosionManager {
                         let cx = x / 512;
                         let cy = y / 512;
                         if let Some(mut c) = chunk_map[cy][cx] {
-                            let hp_index = 512 * 512 * hp_map[cy][cx] + 512 * py + px;
+                            let i = unsafe {
+                                hp_map.as_ptr().cast::<usize>().add(512 * cy + cx).read()
+                            };
+                            let hp_index = 512 * 512 * i + 512 * py + px;
                             if let Some(hp) = hp_vec[hp_index] {
                                 if hp.get() == usize::MAX {
                                     continue 'a;
@@ -256,10 +266,43 @@ impl ExplosionManager {
 #[bench]
 fn bench0_setup(_: &mut test::Bencher) {
     let mut game_global = GameGlobal::global();
+    #[cfg(not(miri))]
     game_global
         .m_cell_factory
         .generate_cell_data(include_str!("../../materials.xml"))
         .unwrap();
+    #[cfg(miri)]
+    game_global
+        .m_cell_factory
+        .cell_data
+        .push(CellData::default());
+    #[cfg(miri)]
+    game_global
+        .m_cell_factory
+        .cell_data
+        .push(CellData::default());
+    use noita_api::{Chunk, GameGlobal};
+    use std::hint::black_box;
+    let game_global = GameGlobal::global();
+    let mut grid_world = game_global.m_grid_world;
+    grid_world.chunk_map.insert(256, 256, Chunk::default());
+    grid_world.chunk_map.insert(255, 256, Chunk::default());
+    grid_world.chunk_map.insert(256, 255, Chunk::default());
+    grid_world.chunk_map.insert(255, 255, Chunk::default());
+    let mut config = ConfigExplosion::default();
+    config.explosion_radius = 8.0;
+    config.max_durability_to_destroy = 12;
+    config.ray_energy = usize::MAX;
+    let game_global = GameGlobal::global();
+    config.create_cell_material = game_global.m_cell_factory.cell_data[1].name.clone();
+    config.create_cell_probability = 0;
+    config.hole_enabled = true;
+    let c = black_box(config);
+    let pos = black_box(Vec2 { x: 10.0, y: 10.0 });
+    let em = ExplosionManager {
+        construct_cell: dummy,
+    };
+    em.explosion_lines(&c, pos);
 }
 #[cfg(test)]
 fn empty_explosion(
@@ -269,11 +312,7 @@ fn empty_explosion(
 ) {
     use noita_api::{Chunk, GameGlobal};
     use std::hint::black_box;
-    let mut game_global = GameGlobal::global();
-    game_global
-        .m_cell_factory
-        .generate_cell_data(include_str!("../../materials.xml"))
-        .unwrap();
+    let game_global = GameGlobal::global();
     let mut grid_world = game_global.m_grid_world;
     grid_world.chunk_map.insert(256, 256, Chunk::default());
     grid_world.chunk_map.insert(255, 256, Chunk::default());
@@ -411,6 +450,22 @@ fn bench4_032_half_wall(bencher: &mut test::Bencher) {
     half_explosion_wall(32.0, bencher, ExplosionManager::explosion);
 }
 #[bench]
+fn bench1_008_empty(bencher: &mut test::Bencher) {
+    empty_explosion(8.0, bencher, ExplosionManager::explosion);
+}
+#[bench]
+fn bench2_008_half(bencher: &mut test::Bencher) {
+    half_explosion(8.0, bencher, ExplosionManager::explosion);
+}
+#[bench]
+fn bench3_008_empty_wall(bencher: &mut test::Bencher) {
+    empty_explosion_wall(8.0, bencher, ExplosionManager::explosion);
+}
+#[bench]
+fn bench4_008_half_wall(bencher: &mut test::Bencher) {
+    half_explosion_wall(8.0, bencher, ExplosionManager::explosion);
+}
+#[bench]
 fn bench1_064_empty(bencher: &mut test::Bencher) {
     empty_explosion(64.0, bencher, ExplosionManager::explosion);
 }
@@ -473,6 +528,22 @@ fn bench3_032_empty_wall_lines(bencher: &mut test::Bencher) {
 #[bench]
 fn bench4_032_half_wall_lines(bencher: &mut test::Bencher) {
     half_explosion_wall(32.0, bencher, ExplosionManager::explosion_lines);
+}
+#[bench]
+fn bench1_008_empty_lines(bencher: &mut test::Bencher) {
+    empty_explosion(8.0, bencher, ExplosionManager::explosion_lines);
+}
+#[bench]
+fn bench2_008_half_lines(bencher: &mut test::Bencher) {
+    half_explosion(8.0, bencher, ExplosionManager::explosion_lines);
+}
+#[bench]
+fn bench3_008_empty_wall_lines(bencher: &mut test::Bencher) {
+    empty_explosion_wall(8.0, bencher, ExplosionManager::explosion_lines);
+}
+#[bench]
+fn bench4_008_half_wall_lines(bencher: &mut test::Bencher) {
+    half_explosion_wall(8.0, bencher, ExplosionManager::explosion_lines);
 }
 #[bench]
 fn bench1_064_empty_lines(bencher: &mut test::Bencher) {

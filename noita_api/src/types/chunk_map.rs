@@ -58,9 +58,11 @@ impl ChunkMap {
     }
     #[inline]
     pub fn insert_box(&mut self, x: u16, y: u16, chunk: StdBox<Chunk>) {
-        self.chunk_count += 1;
         let xu = usize::from(x);
         let yu = usize::from(y);
+        if self.chunk_array[yu][xu].is_none() {
+            self.chunk_count += 1;
+        }
         self.chunk_array[yu][xu] = Some(chunk);
         let xi = isize::try_from(x).unwrap() - 256;
         let yi = isize::try_from(y).unwrap() - 256;
