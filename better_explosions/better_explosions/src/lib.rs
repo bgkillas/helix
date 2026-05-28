@@ -191,7 +191,7 @@ impl ExplosionManager {
         #[allow(clippy::type_complexity)]
         let mut hp_map: [[Option<Box<[[Option<NonZeroUsize>; 512]; 512]>>; 512]; 512] =
             unsafe { MaybeUninit::zeroed().assume_init() };
-        for (x, y, _) in chunk_map.flat_iter() {
+        for (x, y, _) in grid_world.chunk_map.flat_iter() {
             hp_map[usize::from(y)][usize::from(x)] =
                 Some(unsafe { Box::new_zeroed().assume_init() });
         }
@@ -273,12 +273,11 @@ fn empty_explosion(
         .m_cell_factory
         .generate_cell_data(include_str!("../../materials.xml"))
         .unwrap();
-    let grid_world = game_global.m_grid_world;
-    let mut chunk_map = grid_world.chunk_map.chunk_array;
-    chunk_map[256][256] = black_box(Some(StdBox::new(Chunk::default())));
-    chunk_map[255][256] = black_box(Some(StdBox::new(Chunk::default())));
-    chunk_map[256][255] = black_box(Some(StdBox::new(Chunk::default())));
-    chunk_map[255][255] = black_box(Some(StdBox::new(Chunk::default())));
+    let mut grid_world = game_global.m_grid_world;
+    grid_world.chunk_map.insert(256, 256, Chunk::default());
+    grid_world.chunk_map.insert(255, 256, Chunk::default());
+    grid_world.chunk_map.insert(256, 255, Chunk::default());
+    grid_world.chunk_map.insert(255, 255, Chunk::default());
     let mut config = ConfigExplosion::default();
     config.explosion_radius = r;
     config.max_durability_to_destroy = 12;
@@ -326,8 +325,7 @@ fn empty_explosion_wall(
     use noita_api::{Chunk, GameGlobal};
     use std::hint::black_box;
     let game_global = GameGlobal::global();
-    let grid_world = game_global.m_grid_world;
-    let mut chunk_map = grid_world.chunk_map.chunk_array;
+    let mut grid_world = game_global.m_grid_world;
     let mut chunk1 = Chunk::default();
     let mut chunk3 = Chunk::default();
     let cell_data = StdBox::from(&game_global.m_cell_factory.cell_data[58]);
@@ -337,10 +335,10 @@ fn empty_explosion_wall(
             chunk3[y][x] = Some(Cell::new(cell_data));
         }
     }
-    chunk_map[256][256] = black_box(Some(StdBox::new(Chunk::default())));
-    chunk_map[255][256] = black_box(Some(StdBox::new(chunk1)));
-    chunk_map[256][255] = black_box(Some(StdBox::new(Chunk::default())));
-    chunk_map[255][255] = black_box(Some(StdBox::new(chunk3)));
+    grid_world.chunk_map.insert(256, 256, Chunk::default());
+    grid_world.chunk_map.insert(255, 256, chunk1);
+    grid_world.chunk_map.insert(256, 255, Chunk::default());
+    grid_world.chunk_map.insert(255, 255, chunk3);
     let mut config = ConfigExplosion::default();
     config.explosion_radius = r;
     config.max_durability_to_destroy = 12;

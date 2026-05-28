@@ -113,8 +113,7 @@ impl App {
         self.textures.clear();
         let game_global = GameGlobal::global();
         let grid_world = game_global.m_grid_world;
-        let chunk_map = grid_world.chunk_map.chunk_array;
-        for (x, y, c) in chunk_map.flat_iter() {
+        for (x, y, c) in grid_world.chunk_map.flat_iter() {
             let texture = make_texture(ui, x, y, c, true);
             self.textures.insert((x, y), texture);
         }
@@ -127,8 +126,7 @@ impl App {
         let game_global = GameGlobal::global();
         let matptr = StdBox::from(&game_global.m_cell_factory.cell_data[usize::from(mat)]);
         let grid_world = game_global.m_grid_world;
-        let chunk_map = grid_world.chunk_map.chunk_array;
-        for (_, _, mut c) in chunk_map.flat_iter() {
+        for (_, _, mut c) in grid_world.chunk_map.flat_iter() {
             for (_, _, p) in c.iter_mut() {
                 if let Some(ptr) = p {
                     ptr.ptr.free();
@@ -269,26 +267,24 @@ impl eframe::App for App {
                         let x0 = (256 + x0).cast_unsigned();
                         let y0 = (256 + y0).cast_unsigned();
                         let game_global = GameGlobal::global();
-                        let grid_world = game_global.m_grid_world;
-                        let mut chunk_map = grid_world.chunk_map.chunk_array;
-                        chunk_map[usize::from(y0)][usize::from(x0)] =
-                            Some(if let Some(chunk) = self.unloaded.remove(&(x0, y0)) {
-                                chunk
-                            } else {
-                                let mut chunk = Chunk::default();
-                                for (_, _, p) in chunk.iter_mut() {
-                                    self.paint_pixel(p);
-                                }
-                                StdBox::new(chunk)
-                            });
+                        let mut grid_world = game_global.m_grid_world;
+                        let chunk = if let Some(chunk) = self.unloaded.remove(&(x0, y0)) {
+                            chunk
+                        } else {
+                            let mut chunk = Chunk::default();
+                            for (_, _, p) in chunk.iter_mut() {
+                                self.paint_pixel(p);
+                            }
+                            StdBox::new(chunk)
+                        };
+                        grid_world.chunk_map.insert_box(x0, y0, chunk);
                     }
                     Wand::Unload(x0, y0) => {
                         let x0 = (256 + x0).cast_unsigned();
                         let y0 = (256 + y0).cast_unsigned();
                         let game_global = GameGlobal::global();
-                        let grid_world = game_global.m_grid_world;
-                        let mut chunk_map = grid_world.chunk_map.chunk_array;
-                        if let Some(chunk) = chunk_map[usize::from(y0)][usize::from(x0)].take() {
+                        let mut grid_world = game_global.m_grid_world;
+                        if let Some(chunk) = grid_world.chunk_map.remove(x0, y0) {
                             self.unloaded.insert((x0, y0), chunk);
                         }
                     }

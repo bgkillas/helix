@@ -4,18 +4,17 @@ mod ui;
 #[cfg(not(test))]
 fn main() -> eframe::Result {
     use eframe::NativeOptions;
-    use noita_api::{Chunk, GameGlobal, StdBox};
+    use noita_api::{Chunk, GameGlobal};
     let mut game_global = GameGlobal::global();
     game_global
         .m_cell_factory
         .generate_cell_data(include_str!("../../materials.xml"))
         .unwrap();
-    let grid_world = game_global.m_grid_world;
-    let mut chunk_map = grid_world.chunk_map.chunk_array;
-    chunk_map[256][256] = Some(StdBox::new(Chunk::default()));
-    chunk_map[255][256] = Some(StdBox::new(Chunk::default()));
-    chunk_map[256][255] = Some(StdBox::new(Chunk::default()));
-    chunk_map[255][255] = Some(StdBox::new(Chunk::default()));
+    let mut grid_world = game_global.m_grid_world;
+    grid_world.chunk_map.insert(256, 256, Chunk::default());
+    grid_world.chunk_map.insert(255, 256, Chunk::default());
+    grid_world.chunk_map.insert(256, 255, Chunk::default());
+    grid_world.chunk_map.insert(255, 255, Chunk::default());
     eframe::run_native(
         "explosions",
         NativeOptions::default(),

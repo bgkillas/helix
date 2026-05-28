@@ -17,6 +17,57 @@ pub struct ChunkMap {
 pub struct ChunkArray {
     pub array: [[Option<StdBox<Chunk>>; 512]; 512],
 }
+impl ChunkMap {
+    #[inline]
+    pub fn flat_iter(&self) -> impl Iterator<Item = (u16, u16, StdBox<Chunk>)> {
+        (self.min_chunk.y..=self.max_chunk.y).flat_map(move |yi| {
+            let y = usize::try_from(256 + yi).unwrap();
+            (self.min_chunk.x..=self.max_chunk.x).filter_map(move |xi| {
+                let x = usize::try_from(256 + xi).unwrap();
+                self.chunk_array[y][x]
+                    .map(|c| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), c))
+            })
+        })
+    }
+    #[inline]
+    pub fn remove(&mut self, x: u16, y: u16) -> Option<StdBox<Chunk>> {
+        self.min_chunk.x = isize::MAX;
+        self.min_chunk.y = isize::MAX;
+        self.max_chunk.x = isize::MIN;
+        self.max_chunk.y = isize::MIN;
+        let xu = usize::from(x);
+        let yu = usize::from(y);
+        if let Some(ret) = self.chunk_array[yu][xu].take() {
+            for (cx, cy, _) in self.chunk_array.flat_iter() {
+                let xi = isize::try_from(cx).unwrap() - 256;
+                let yi = isize::try_from(cy).unwrap() - 256;
+                self.min_chunk.x = self.min_chunk.x.min(xi);
+                self.min_chunk.y = self.min_chunk.y.min(yi);
+                self.max_chunk.x = self.max_chunk.x.max(xi);
+                self.max_chunk.y = self.max_chunk.y.max(yi);
+            }
+            Some(ret)
+        } else {
+            None
+        }
+    }
+    #[inline]
+    pub fn insert(&mut self, x: u16, y: u16, chunk: Chunk) {
+        self.insert_box(x, y, StdBox::new(chunk));
+    }
+    #[inline]
+    pub fn insert_box(&mut self, x: u16, y: u16, chunk: StdBox<Chunk>) {
+        let xu = usize::from(x);
+        let yu = usize::from(y);
+        self.chunk_array[yu][xu] = Some(chunk);
+        let xi = isize::try_from(x).unwrap() - 256;
+        let yi = isize::try_from(y).unwrap() - 256;
+        self.min_chunk.x = self.min_chunk.x.min(xi);
+        self.min_chunk.y = self.min_chunk.y.min(yi);
+        self.max_chunk.x = self.max_chunk.x.max(xi);
+        self.max_chunk.y = self.max_chunk.y.max(yi);
+    }
+}
 impl ChunkArray {
     #[inline]
     pub fn iter(&self) -> impl Iterator<Item = (u16, u16, Option<StdBox<Chunk>>)> {
