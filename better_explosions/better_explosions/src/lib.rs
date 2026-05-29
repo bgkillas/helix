@@ -15,7 +15,6 @@ use rand::RngExt as _;
 use rand::distr::Bernoulli;
 use std::f32::consts::TAU;
 use std::mem::MaybeUninit;
-use std::num::NonZeroUsize;
 #[noita_api::lua_module]
 mod lua {
     use crate::ExplosionManager;
@@ -188,12 +187,14 @@ impl ExplosionManager {
         } else {
             u32::try_from(config.create_cell_probability).unwrap()
         };
-        let mut hp_vec: Vec<Option<NonZeroUsize>> =
-            vec![None; 512 * 512 * grid_world.chunk_map.chunk_count];
-        let mut hp_map: Box<MaybeUninit<[[usize; 512]; 512]>> = Box::new_uninit();
+        let mut hp_map: Vec<(usize, usize)> =
+            Vec::with_capacity(512 * 512 * grid_world.chunk_map.chunk_count);
+        let mut hp_vec: Vec<usize> =
+            Vec::with_capacity(512 * 512 * grid_world.chunk_map.chunk_count);
+        let mut chunk_indexes: Box<MaybeUninit<[[usize; 512]; 512]>> = Box::new_uninit();
         for (i, (x, y, _)) in grid_world.chunk_map.flat_iter().enumerate() {
             unsafe {
-                hp_map
+                chunk_indexes
                     .as_mut_ptr()
                     .cast::<usize>()
                     .add(512 * usize::from(y) + usize::from(x))
@@ -213,14 +214,18 @@ impl ExplosionManager {
                         let cy = y / 512;
                         if let Some(mut c) = chunk_map[cy][cx] {
                             let i = unsafe {
-                                hp_map.as_ptr().cast::<usize>().add(512 * cy + cx).read()
+                                chunk_indexes
+                                    .as_ptr()
+                                    .cast::<usize>()
+                                    .add(512 * cy + cx)
+                                    .read()
                             };
                             let hp_index = 512 * 512 * i + 512 * py + px;
-                            if let Some(hp) = hp_vec[hp_index] {
-                                if hp.get() == usize::MAX {
-                                    continue 'a;
-                                }
-                                if let Some(new) = energy.checked_sub(hp.get()) {
+                            let map_index = unsafe { hp_vec.as_ptr().add(hp_index).read() };
+                            if let Some((i, hp)) = hp_map.get(map_index).copied()
+                                && i == hp_index
+                            {
+                                if let Some(new) = energy.checked_sub(hp) {
                                     energy = new;
                                 } else {
                                     break 'a;
@@ -231,16 +236,20 @@ impl ExplosionManager {
                                         && config.hole_enabled
                                         && let Some(new) = energy.checked_sub(p.hp)
                                     {
-                                        hp_vec[hp_index] = Some(
-                                            NonZeroUsize::new(p.hp).unwrap_or(NonZeroUsize::MAX),
-                                        );
+                                        unsafe {
+                                            hp_vec.as_mut_ptr().add(hp_index).write(hp_map.len());
+                                        }
+                                        hp_map.push((hp_index, p.hp));
                                         energy = new;
                                         p.ptr.free();
                                     } else {
                                         break 'a;
                                     }
                                 } else {
-                                    hp_vec[hp_index] = Some(NonZeroUsize::MAX);
+                                    unsafe {
+                                        hp_vec.as_mut_ptr().add(hp_index).write(hp_map.len());
+                                    }
+                                    hp_map.push((hp_index, 0));
                                 }
                                 if rng.sample(bern) {
                                     c[py][px] = (self.construct_cell)(
