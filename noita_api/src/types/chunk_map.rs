@@ -13,6 +13,33 @@ pub struct ChunkMap {
     pub min_pixel: Vec2<isize>,
     pub max_pixel: Vec2<isize>,
 }
+impl Default for ChunkMap {
+    #[inline]
+    fn default() -> Self {
+        Self {
+            len: 0,
+            unknown: 0,
+            chunk_array: StdBox::new(ChunkArray::default()),
+            chunk_count: 0,
+            min_chunk: Vec2 {
+                x: isize::MAX,
+                y: isize::MAX,
+            },
+            max_chunk: Vec2 {
+                x: isize::MIN,
+                y: isize::MIN,
+            },
+            min_pixel: Vec2 {
+                x: isize::MAX,
+                y: isize::MAX,
+            },
+            max_pixel: Vec2 {
+                x: isize::MIN,
+                y: isize::MIN,
+            },
+        }
+    }
+}
 #[repr(transparent)]
 pub struct ChunkArray {
     pub array: [[Option<StdBox<Chunk>>; 512]; 512],
@@ -28,6 +55,26 @@ impl ChunkMap {
                     .map(|c| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), c))
             })
         })
+    }
+    #[inline]
+    pub fn clear(&mut self) {
+        for yi in self.min_chunk.y..=self.max_chunk.y {
+            let y = (yi + 256).cast_unsigned();
+            for xi in self.min_chunk.x..=self.max_chunk.x {
+                let x = (xi + 256).cast_unsigned();
+                if let Some(mut n) = self.chunk_array[y][x].take() {
+                    for (_, _, p) in n.flat_iter() {
+                        p.ptr.free();
+                    }
+                    n.ptr.free();
+                }
+            }
+        }
+        self.min_chunk.x = isize::MAX;
+        self.min_chunk.y = isize::MAX;
+        self.max_chunk.x = isize::MIN;
+        self.max_chunk.y = isize::MIN;
+        self.chunk_count = 0;
     }
     #[inline]
     pub fn remove(&mut self, x: u16, y: u16) -> Option<StdBox<Chunk>> {
@@ -60,7 +107,12 @@ impl ChunkMap {
     pub fn insert_box(&mut self, x: u16, y: u16, chunk: StdBox<Chunk>) {
         let xu = usize::from(x);
         let yu = usize::from(y);
-        if self.chunk_array[yu][xu].is_none() {
+        if let Some(mut n) = self.chunk_array[yu][xu] {
+            for (_, _, p) in n.flat_iter() {
+                p.ptr.free();
+            }
+            n.ptr.free();
+        } else {
             self.chunk_count += 1;
         }
         self.chunk_array[yu][xu] = Some(chunk);

@@ -139,7 +139,7 @@ impl<T> StdVec<T> {
     #[inline]
     pub fn free(&mut self) {
         if let Some(ptr) = NonNull::new(self.start) {
-            StdPtr::from(ptr).free();
+            StdPtr::from(ptr).free_array(self.capacity());
         }
     }
 }

@@ -1,6 +1,6 @@
 use crate::{
-    AABB, BiomeModifiersVTable, ChunkArray, ChunkMap, GridWorldThreadedVTable, GridWorldVTable,
-    StdBox, StdVec, Vec2,
+    AABB, BiomeModifiersVTable, ChunkMap, GridWorldThreadedVTable, GridWorldVTable, StdBox, StdVec,
+    Vec2,
 };
 use std::ptr;
 #[repr(C)]
@@ -54,16 +54,7 @@ impl Default for GridWorld {
             unkown2: 0,
             unk_counter: 0,
             world_update_count: 0,
-            chunk_map: ChunkMap {
-                len: 0,
-                unknown: 0,
-                chunk_array: StdBox::new(ChunkArray::default()),
-                chunk_count: 0,
-                min_chunk: Vec2::default(),
-                max_chunk: Vec2::default(),
-                min_pixel: Vec2::default(),
-                max_pixel: Vec2::default(),
-            },
+            chunk_map: ChunkMap::default(),
             unknown2: [0; 40],
             m_thread_impl: ptr::null_mut(),
         }

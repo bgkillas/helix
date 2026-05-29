@@ -1,5 +1,4 @@
 use std::alloc::{Allocator as _, Global, Layout};
-use std::arch::asm;
 use std::ptr::NonNull;
 pub struct UninitMap<T> {
     indices: NonNull<[usize]>,
@@ -26,11 +25,12 @@ impl<T: Copy> UninitMap<T> {
         slice[index].write(self.list.len());
         self.list.push((index, value));
     }
+    #[cfg(not(miri))]
     pub fn get(&self, index: usize) -> Option<T> {
         let slice = unsafe { self.indices.as_uninit_slice_mut() };
         let mut val = slice[index];
         unsafe {
-            asm!(
+            std::arch::asm!(
                 "/* {} */",
                 inout(reg) * val.as_mut_ptr(),
                 options(nostack, pure, nomem)
@@ -44,6 +44,10 @@ impl<T: Copy> UninitMap<T> {
         } else {
             None
         }
+    }
+    #[cfg(miri)]
+    pub fn get(&self, _: usize) -> Option<T> {
+        None
     }
 }
 impl<T> Drop for UninitMap<T> {
