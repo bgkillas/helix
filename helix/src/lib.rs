@@ -8,7 +8,7 @@ use crate::world_sync::WorldSync;
 use crate::world_write::{ChunkWrite, WorldWrite};
 use bevy_tangled::{Client, ClientTrait as _};
 use noita_api::WorldSeed;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use tokio::runtime::Runtime;
 const DEFAULT_PORT: u16 = 5463;
 pub(crate) struct Context {
@@ -18,7 +18,7 @@ pub(crate) struct Context {
     pub world_init: bool,
     pub world_sync: Option<WorldSync>,
     pub world_write: WorldWrite,
-    pub seen_chunks: HashMap<ChunkPos, bool>,
+    pub seen_chunks: FxHashMap<ChunkPos, bool>,
 }
 impl Context {
     pub fn is_connected(&self) -> bool {
@@ -176,7 +176,7 @@ impl Default for Context {
             world_init: false,
             world_sync: None,
             world_write: WorldWrite::default(),
-            seen_chunks: HashMap::new(),
+            seen_chunks: FxHashMap::default(),
         }
     }
 }

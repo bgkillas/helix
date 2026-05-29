@@ -18,6 +18,7 @@ bevy_tangled = {git = "https://github.com/bgkillas/bevy_tangled", version = "0.2
 bitcode = {git="https://github.com/SoftbearStudios/bitcode", version="0.6.7", branch = "large_c_style_enums"}
 tokio = {version = "1.52.3", features = ["full"]}
 rand = "0.10.1"
+rustc-hash = "2.1.2"
 
 [lints]
 workspace = true

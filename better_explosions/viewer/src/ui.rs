@@ -10,7 +10,7 @@ use egui::{
 };
 use noita_api::{Cell, Chunk, ConfigExplosion, GameGlobal, StdBox};
 use rand::RngExt as _;
-use std::collections::HashMap;
+use rustc_hash::{FxBuildHasher, FxHashMap};
 #[allow(unused)]
 pub struct App {
     wand: Wand,
@@ -18,8 +18,8 @@ pub struct App {
     material: u16,
     material_chance: f32,
     update_textures: bool,
-    unloaded: HashMap<(u16, u16), StdBox<Chunk>>,
-    textures: HashMap<(u16, u16), TextureHandle>,
+    unloaded: FxHashMap<(u16, u16), StdBox<Chunk>>,
+    textures: FxHashMap<(u16, u16), TextureHandle>,
     zoom: f32,
     offset: Pos2,
 }
@@ -30,7 +30,7 @@ enum Menu {
 }
 impl Default for App {
     fn default() -> Self {
-        let mut unloaded = HashMap::with_capacity(512);
+        let mut unloaded = FxHashMap::with_capacity_and_hasher(512, FxBuildHasher);
         unloaded.insert((257, 257), StdBox::new(Chunk::default()));
         unloaded.insert((256, 257), StdBox::new(Chunk::default()));
         unloaded.insert((255, 257), StdBox::new(Chunk::default()));
@@ -50,7 +50,7 @@ impl Default for App {
             material_chance: 0.0,
             update_textures: true,
             unloaded,
-            textures: HashMap::with_capacity(512),
+            textures: FxHashMap::with_capacity_and_hasher(512, FxBuildHasher),
             zoom: 1.0,
             offset: Pos2::new(256.0, 256.0),
         }

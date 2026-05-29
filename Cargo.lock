@@ -1848,6 +1848,7 @@ dependencies = [
  "bitcode 0.6.7",
  "noita_api",
  "rand 0.10.1",
+ "rustc-hash 2.1.2",
  "tokio",
 ]
 
@@ -4545,6 +4546,7 @@ dependencies = [
  "egui",
  "noita_api",
  "rand 0.10.1",
+ "rustc-hash 2.1.2",
 ]
 
 [[package]]
