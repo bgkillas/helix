@@ -216,58 +216,96 @@ impl ExplosionManager {
                 let dx = truncate_usize(ix2.abs_diff(ix0));
                 let m = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
                 let hp_f = |hp| -> usize { truncate_f32u(truncate_usize(hp) * m) };
-                'a: for (xi, y) in LineIter::new(ix0, iy0, ix2, iy2) {
-                    for x in xi..xi + 2 {
-                        let px = x % 512;
-                        let py = y % 512;
-                        let cx = x / 512;
-                        let cy = y / 512;
-                        let i = unsafe {
-                            chunk_indexes
-                                .as_ptr()
-                                .cast::<usize>()
-                                .add(512 * cy + cx)
-                                .read()
-                        };
-                        let hp_index = 512 * 512 * i + 512 * py + px;
-                        if let Some(hp) = hp_map.get(hp_index) {
-                            if let Some(new) = energy.checked_sub(hp_f(hp)) {
-                                energy = new;
-                            } else {
-                                break 'a;
-                            }
-                        } else if let Some(mut c) = chunk_map[cy][cx] {
-                            if let Some(p) = c[py][px] {
-                                if p.material.durability <= config.max_durability_to_destroy
-                                    && config.hole_enabled
-                                {
-                                    let hp = hp_f(p.hp);
-                                    if let Some(new) = energy.checked_sub(hp) {
-                                        hp_map.insert(hp_index, p.hp);
-                                        energy = new;
-                                        p.ptr.free();
-                                    } else {
-                                        break 'a;
-                                    }
+                for (mut x, y) in LineIter::new(ix0, iy0, ix2, iy2) {
+                    let mut px = x % 512;
+                    let mut py = y % 512;
+                    let mut cx = x / 512;
+                    let mut cy = y / 512;
+                    let mut i = unsafe {
+                        chunk_indexes
+                            .as_ptr()
+                            .cast::<usize>()
+                            .add(512 * cy + cx)
+                            .read()
+                    };
+                    let mut hp_index = 512 * 512 * i + 512 * py + px;
+                    if let Some(hp) = hp_map.get(hp_index) {
+                        if let Some(new) = energy.checked_sub(hp_f(hp)) {
+                            energy = new;
+                        } else {
+                            break;
+                        }
+                    } else if let Some(mut c) = chunk_map[cy][cx] {
+                        if let Some(p) = c[py][px] {
+                            if p.material.durability <= config.max_durability_to_destroy
+                                && config.hole_enabled
+                            {
+                                let hp = hp_f(p.hp);
+                                if let Some(new) = energy.checked_sub(hp) {
+                                    hp_map.insert(hp_index, p.hp);
+                                    energy = new;
+                                    p.ptr.free();
                                 } else {
-                                    break 'a;
+                                    break;
                                 }
                             } else {
-                                hp_map.insert(hp_index, 0);
-                            }
-                            if rng.sample(bern) {
-                                c[py][px] = (self.construct_cell)(
-                                    grid_world,
-                                    x.cast_signed() - 512 * 256,
-                                    y.cast_signed() - 512 * 256,
-                                    cell_create,
-                                    std::ptr::null_mut(),
-                                );
-                            } else {
-                                c[py][px] = None;
+                                break;
                             }
                         } else {
-                            break 'a;
+                            hp_map.insert(hp_index, 0);
+                        }
+                        if rng.sample(bern) {
+                            c[py][px] = (self.construct_cell)(
+                                grid_world,
+                                x.cast_signed() - 512 * 256,
+                                y.cast_signed() - 512 * 256,
+                                cell_create,
+                                std::ptr::null_mut(),
+                            );
+                        } else {
+                            c[py][px] = None;
+                        }
+                    } else {
+                        break;
+                    }
+                    x += 1;
+                    px = x % 512;
+                    py = y % 512;
+                    cx = x / 512;
+                    cy = y / 512;
+                    i = unsafe {
+                        chunk_indexes
+                            .as_ptr()
+                            .cast::<usize>()
+                            .add(512 * cy + cx)
+                            .read()
+                    };
+                    hp_index = 512 * 512 * i + 512 * py + px;
+                    if hp_map.get(hp_index).is_none()
+                        && let Some(mut c) = chunk_map[cy][cx]
+                    {
+                        if let Some(p) = c[py][px] {
+                            if p.material.durability <= config.max_durability_to_destroy
+                                && config.hole_enabled
+                            {
+                                hp_map.insert(hp_index, p.hp);
+                                p.ptr.free();
+                            } else {
+                                continue;
+                            }
+                        } else {
+                            hp_map.insert(hp_index, 0);
+                        }
+                        if rng.sample(bern) {
+                            c[py][px] = (self.construct_cell)(
+                                grid_world,
+                                x.cast_signed() - 512 * 256,
+                                y.cast_signed() - 512 * 256,
+                                cell_create,
+                                std::ptr::null_mut(),
+                            );
+                        } else {
+                            c[py][px] = None;
                         }
                     }
                 }
