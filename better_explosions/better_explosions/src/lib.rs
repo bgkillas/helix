@@ -1,15 +1,20 @@
 #![feature(sync_unsafe_cell)]
 #![feature(test)]
+#![feature(allocator_api)]
+#![feature(ptr_as_uninit)]
+#![feature(slice_ptr_get)]
 extern crate test;
 pub mod arc;
 pub mod circle;
 pub mod circumference;
 pub mod line;
 pub mod octant;
+mod uninit_map;
 use crate::arc::ArcIter;
 use crate::circumference::Circumference;
 use crate::line::LineIter;
 use crate::octant::octant;
+use crate::uninit_map::UninitMap;
 use noita_api::{Cell, CellData, ConfigExplosion, GameGlobal, GridWorld, StdBox, Vec2, this_call};
 use rand::RngExt as _;
 use rand::distr::Bernoulli;
@@ -187,10 +192,7 @@ impl ExplosionManager {
         } else {
             u32::try_from(config.create_cell_probability).unwrap()
         };
-        let mut hp_map: Vec<(usize, usize)> =
-            Vec::with_capacity(512 * 512 * grid_world.chunk_map.chunk_count);
-        let mut hp_vec: Vec<usize> =
-            Vec::with_capacity(512 * 512 * grid_world.chunk_map.chunk_count);
+        let mut hp_map = UninitMap::new(512 * 512 * grid_world.chunk_map.chunk_count);
         let mut chunk_indexes: Box<MaybeUninit<[[usize; 512]; 512]>> = Box::new_uninit();
         for (i, (x, y, _)) in grid_world.chunk_map.flat_iter().enumerate() {
             unsafe {
@@ -221,10 +223,7 @@ impl ExplosionManager {
                                     .read()
                             };
                             let hp_index = 512 * 512 * i + 512 * py + px;
-                            let map_index = unsafe { hp_vec.as_ptr().add(hp_index).read() };
-                            if let Some((i, hp)) = hp_map.get(map_index).copied()
-                                && i == hp_index
-                            {
+                            if let Some(hp) = hp_map.get(hp_index) {
                                 if let Some(new) = energy.checked_sub(hp) {
                                     energy = new;
                                 } else {
@@ -236,20 +235,14 @@ impl ExplosionManager {
                                         && config.hole_enabled
                                         && let Some(new) = energy.checked_sub(p.hp)
                                     {
-                                        unsafe {
-                                            hp_vec.as_mut_ptr().add(hp_index).write(hp_map.len());
-                                        }
-                                        hp_map.push((hp_index, p.hp));
+                                        hp_map.insert(hp_index, p.hp);
                                         energy = new;
                                         p.ptr.free();
                                     } else {
                                         break 'a;
                                     }
                                 } else {
-                                    unsafe {
-                                        hp_vec.as_mut_ptr().add(hp_index).write(hp_map.len());
-                                    }
-                                    hp_map.push((hp_index, 0));
+                                    hp_map.insert(hp_index, 0);
                                 }
                                 if rng.sample(bern) {
                                     c[py][px] = (self.construct_cell)(
