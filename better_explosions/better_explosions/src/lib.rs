@@ -105,16 +105,20 @@ impl ExplosionManager {
                 (iy0.cast_signed() + round_f32(sin * config.explosion_radius)).cast_unsigned();
             let mut energy = config.ray_energy;
             let (mut ix2, mut iy2) = (ix1, iy1);
+            let dy = truncate_usize(iy1.abs_diff(iy0));
+            let dx = truncate_usize(ix1.abs_diff(ix0));
+            let m = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
+            let hp_f = |hp| -> usize { truncate_f32u(truncate_usize(hp) * m) };
             for (x, y) in LineIter::new(ix0, iy0, ix1, iy1) {
                 let px = x % 512;
                 let py = y % 512;
                 if let Some(c) = chunk_map[y / 512][x / 512] {
                     if let Some(p) = c[py][px] {
-                        if energy > p.hp
-                            && p.material.durability <= config.max_durability_to_destroy
+                        if p.material.durability <= config.max_durability_to_destroy
                             && config.hole_enabled
+                            && let Some(new) = energy.checked_sub(hp_f(p.hp))
                         {
-                            energy -= p.hp;
+                            energy = new;
                         } else {
                             (ix2, iy2) = (x, y);
                             break;
@@ -208,6 +212,10 @@ impl ExplosionManager {
         for (ix1, iy1) in Circumference::new(r) {
             octant(ix0, iy0, ix1, iy1, |_, ix2, iy2| {
                 let mut energy = config.ray_energy;
+                let dy = truncate_usize(iy2.abs_diff(iy0));
+                let dx = truncate_usize(ix2.abs_diff(ix0));
+                let m = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
+                let hp_f = |hp| -> usize { truncate_f32u(truncate_usize(hp) * m) };
                 'a: for (xi, y) in LineIter::new(ix0, iy0, ix2, iy2) {
                     for x in xi..xi + 2 {
                         let px = x % 512;
@@ -224,7 +232,7 @@ impl ExplosionManager {
                             };
                             let hp_index = 512 * 512 * i + 512 * py + px;
                             if let Some(hp) = hp_map.get(hp_index) {
-                                if let Some(new) = energy.checked_sub(hp) {
+                                if let Some(new) = energy.checked_sub(hp_f(hp)) {
                                     energy = new;
                                 } else {
                                     break 'a;
@@ -233,7 +241,7 @@ impl ExplosionManager {
                                 if let Some(p) = c[py][px] {
                                     if p.material.durability <= config.max_durability_to_destroy
                                         && config.hole_enabled
-                                        && let Some(new) = energy.checked_sub(p.hp)
+                                        && let Some(new) = energy.checked_sub(hp_f(p.hp))
                                     {
                                         hp_map.insert(hp_index, p.hp);
                                         energy = new;

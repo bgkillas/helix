@@ -1,6 +1,6 @@
 pub struct Circumference {
-    x: usize,
-    y: usize,
+    x: isize,
+    y: isize,
     error: isize,
 }
 impl Iterator for Circumference {
@@ -12,13 +12,13 @@ impl Iterator for Circumference {
         } else {
             let (x, y) = (self.x, self.y);
             self.y += 1;
-            self.error += self.y.cast_signed();
-            let e = self.error - x.cast_signed();
+            self.error += self.y;
+            let e = self.error - x;
             if e.is_positive() {
                 self.error = e;
                 self.x -= 1;
             }
-            Some((x, y))
+            Some((x.cast_unsigned(), y.cast_unsigned()))
         }
     }
 }
@@ -27,7 +27,7 @@ impl Circumference {
     #[must_use]
     pub fn new(r: usize) -> Self {
         Self {
-            x: r,
+            x: r.cast_signed(),
             y: 0,
             error: r.cast_signed() / 16,
         }
