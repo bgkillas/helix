@@ -222,27 +222,27 @@ impl ExplosionManager {
                         let py = y % 512;
                         let cx = x / 512;
                         let cy = y / 512;
-                        if let Some(mut c) = chunk_map[cy][cx] {
-                            let i = unsafe {
-                                chunk_indexes
-                                    .as_ptr()
-                                    .cast::<usize>()
-                                    .add(512 * cy + cx)
-                                    .read()
-                            };
-                            let hp_index = 512 * 512 * i + 512 * py + px;
-                            if let Some(hp) = hp_map.get(hp_index) {
-                                if let Some(new) = energy.checked_sub(hp_f(hp)) {
-                                    energy = new;
-                                } else {
-                                    break 'a;
-                                }
+                        let i = unsafe {
+                            chunk_indexes
+                                .as_ptr()
+                                .cast::<usize>()
+                                .add(512 * cy + cx)
+                                .read()
+                        };
+                        let hp_index = 512 * 512 * i + 512 * py + px;
+                        if let Some(hp) = hp_map.get(hp_index) {
+                            if let Some(new) = energy.checked_sub(hp_f(hp)) {
+                                energy = new;
                             } else {
-                                if let Some(p) = c[py][px] {
-                                    if p.material.durability <= config.max_durability_to_destroy
-                                        && config.hole_enabled
-                                        && let Some(new) = energy.checked_sub(hp_f(p.hp))
-                                    {
+                                break 'a;
+                            }
+                        } else if let Some(mut c) = chunk_map[cy][cx] {
+                            if let Some(p) = c[py][px] {
+                                if p.material.durability <= config.max_durability_to_destroy
+                                    && config.hole_enabled
+                                {
+                                    let hp = hp_f(p.hp);
+                                    if let Some(new) = energy.checked_sub(hp) {
                                         hp_map.insert(hp_index, p.hp);
                                         energy = new;
                                         p.ptr.free();
@@ -250,19 +250,21 @@ impl ExplosionManager {
                                         break 'a;
                                     }
                                 } else {
-                                    hp_map.insert(hp_index, 0);
+                                    break 'a;
                                 }
-                                if rng.sample(bern) {
-                                    c[py][px] = (self.construct_cell)(
-                                        grid_world,
-                                        x.cast_signed() - 512 * 256,
-                                        y.cast_signed() - 512 * 256,
-                                        cell_create,
-                                        std::ptr::null_mut(),
-                                    );
-                                } else {
-                                    c[py][px] = None;
-                                }
+                            } else {
+                                hp_map.insert(hp_index, 0);
+                            }
+                            if rng.sample(bern) {
+                                c[py][px] = (self.construct_cell)(
+                                    grid_world,
+                                    x.cast_signed() - 512 * 256,
+                                    y.cast_signed() - 512 * 256,
+                                    cell_create,
+                                    std::ptr::null_mut(),
+                                );
+                            } else {
+                                c[py][px] = None;
                             }
                         } else {
                             break 'a;
