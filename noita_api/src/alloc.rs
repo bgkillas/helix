@@ -21,8 +21,6 @@ unsafe extern "C" {
     #[link_name = "??3@YAXPAX@Z"]
     fn operator_delete(ptr: *mut c_void); //0x00f0_7504
 }
-#[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
-const ALLOC: Global = Global;
 #[repr(transparent)]
 #[assert_size_with(0x4, ())]
 pub struct StdPtr<T: Sized> {
@@ -89,7 +87,7 @@ impl<T: Sized> StdPtr<T> {
     #[inline]
     pub fn malloc() -> Self {
         let layout = Layout::new::<T>();
-        let ptr = ALLOC.allocate(layout).unwrap().cast();
+        let ptr = Global.allocate(layout).unwrap().cast();
         Self { ptr }
     }
     #[must_use]
@@ -104,7 +102,7 @@ impl<T: Sized> StdPtr<T> {
     #[inline]
     pub fn malloc_array(n: usize) -> Self {
         let layout = Layout::array::<T>(n).unwrap();
-        let ptr = ALLOC.allocate(layout).unwrap().cast();
+        let ptr = Global.allocate(layout).unwrap().cast();
         Self { ptr }
     }
     #[cfg(all(target_os = "windows", target_pointer_width = "32", feature = "log"))]
@@ -133,13 +131,13 @@ impl<T: Sized> StdPtr<T> {
     #[inline]
     pub fn free(&mut self) {
         let layout = Layout::new::<T>();
-        unsafe { ALLOC.deallocate(self.ptr.cast(), layout) };
+        unsafe { Global.deallocate(self.ptr.cast(), layout) };
     }
     #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
     #[inline]
     pub fn free_array(&mut self, n: usize) {
         let layout = Layout::array::<T>(n).unwrap();
-        unsafe { ALLOC.deallocate(self.ptr.cast(), layout) };
+        unsafe { Global.deallocate(self.ptr.cast(), layout) };
     }
     #[must_use]
     #[inline]
