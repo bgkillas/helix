@@ -17,7 +17,7 @@ impl Default for ChunkMap {
     #[inline]
     fn default() -> Self {
         Self {
-            len: 0,
+            len: 512,
             unknown: 0,
             chunk_array: StdBox::new(ChunkArray::default()),
             chunk_count: 0,
