@@ -15,6 +15,7 @@ use rustc_hash::{FxBuildHasher, FxHashMap};
 pub struct App {
     wand: Wand,
     menu: Menu,
+    em: ExplosionManager,
     material: u16,
     material_chance: f32,
     update_textures: bool,
@@ -46,6 +47,7 @@ impl Default for App {
         Self {
             wand: Wand::Explosive(0, 0, 0.0, 12, usize::MAX),
             menu: Menu::Map,
+            em: ExplosionManager::default(),
             material: 58,
             material_chance: 0.0,
             update_textures: true,
@@ -185,7 +187,7 @@ impl eframe::App for App {
                         config.create_cell_probability =
                             truncate_f32(self.material_chance * 100.0).cast_unsigned();
                         config.hole_enabled = true;
-                        ExplosionManager::default().explosion(
+                        self.em.explosion(
                             &config,
                             noita_api::Vec2 {
                                 x: truncate_isize(x0),
@@ -206,7 +208,7 @@ impl eframe::App for App {
                         config.create_cell_probability =
                             truncate_f32(self.material_chance * 100.0).cast_unsigned();
                         config.hole_enabled = true;
-                        ExplosionManager::default().explosion_lines(
+                        self.em.explosion_lines(
                             &config,
                             noita_api::Vec2 {
                                 x: truncate_isize(x0),

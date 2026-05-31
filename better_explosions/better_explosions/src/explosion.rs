@@ -8,6 +8,7 @@ use noita_api::{ConfigExplosion, GameGlobal, StdBox, Vec2};
 use rand::RngExt as _;
 use rand::distr::Bernoulli;
 use std::f32::consts::TAU;
+use std::hint::cold_path;
 use std::mem::MaybeUninit;
 impl ExplosionManager {
     #[inline]
@@ -225,6 +226,7 @@ impl ExplosionManager {
                     if hp_map.get(hp_index).is_none()
                         && let Some(mut c) = chunk_map[cy][cx]
                     {
+                        cold_path();
                         if let Some(p) = c[py][px] {
                             if p.material.durability <= config.max_durability_to_destroy
                                 && config.hole_enabled
