@@ -8,7 +8,6 @@ use noita_api::{ConfigExplosion, GameGlobal, StdBox, Vec2};
 use rand::RngExt as _;
 use rand::distr::Bernoulli;
 use std::f32::consts::TAU;
-use std::hint::cold_path;
 use std::mem::MaybeUninit;
 impl ExplosionManager {
     #[inline]
@@ -59,8 +58,10 @@ impl ExplosionManager {
                 let py = y % 512;
                 if let Some(c) = chunk_map[y / 512][x / 512] {
                     if let Some(p) = c[py][px] {
+                        if !config.hole_enabled {
+                            break;
+                        }
                         if p.material.durability <= config.max_durability_to_destroy
-                            && config.hole_enabled
                             && let Some(new) = energy.checked_sub(hp_f(p.hp))
                         {
                             energy = new;
@@ -101,7 +102,9 @@ impl ExplosionManager {
                 let py = y % 512;
                 if let Some(mut c) = chunk_map[y / 512][x / 512] {
                     if let Some(p) = c[py][px] {
-                        if p.material.durability > config.max_durability_to_destroy {
+                        if p.material.durability > config.max_durability_to_destroy
+                            || !config.hole_enabled
+                        {
                             continue;
                         }
                         p.ptr.free();
@@ -184,8 +187,10 @@ impl ExplosionManager {
                         }
                     } else if let Some(mut c) = chunk_map[cy][cx] {
                         if let Some(p) = c[py][px] {
+                            if !config.hole_enabled {
+                                break;
+                            }
                             if p.material.durability <= config.max_durability_to_destroy
-                                && config.hole_enabled
                                 && let Some(new) = energy.checked_sub(hp_f(p.hp))
                             {
                                 hp_map.insert(hp_index, p.hp);
@@ -226,11 +231,11 @@ impl ExplosionManager {
                     if hp_map.get(hp_index).is_none()
                         && let Some(mut c) = chunk_map[cy][cx]
                     {
-                        cold_path();
                         if let Some(p) = c[py][px] {
-                            if p.material.durability <= config.max_durability_to_destroy
-                                && config.hole_enabled
-                            {
+                            if !config.hole_enabled {
+                                continue;
+                            }
+                            if p.material.durability <= config.max_durability_to_destroy {
                                 hp_map.insert(hp_index, p.hp);
                                 p.ptr.free();
                             } else {
