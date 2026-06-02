@@ -1,12 +1,14 @@
 use crate::{Cell, StdBox, Vec2};
 use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, DerefMut};
+pub type Chunk = StdBox<ChunkArrayGeneric<Option<Cell<()>>>>;
+pub type ChunkArray = StdBox<ChunkArrayGeneric<Option<StdBox<Chunk>>>>;
 #[repr(C)]
 #[derive(Debug)]
 pub struct ChunkMap {
     pub len: usize,
     pub unknown: isize,
-    pub chunk_array: StdBox<ChunkArray>,
+    pub chunk_array: StdBox<ChunkArrayGeneric<Option<StdBox<Chunk>>>>,
     pub chunk_count: usize,
     pub min_chunk: Vec2<isize>,
     pub max_chunk: Vec2<isize>,
@@ -19,7 +21,7 @@ impl Default for ChunkMap {
         Self {
             len: 512,
             unknown: 0,
-            chunk_array: StdBox::new(ChunkArray::default()),
+            chunk_array: StdBox::default(),
             chunk_count: 0,
             min_chunk: Vec2 {
                 x: isize::MAX,
@@ -41,8 +43,8 @@ impl Default for ChunkMap {
     }
 }
 #[repr(transparent)]
-pub struct ChunkArray {
-    pub array: [[Option<StdBox<Chunk>>; 512]; 512],
+pub struct ChunkArrayGeneric<T> {
+    pub array: [[T; 512]; 512],
 }
 impl ChunkMap {
     #[inline]
@@ -124,9 +126,9 @@ impl ChunkMap {
         self.max_chunk.y = self.max_chunk.y.max(yi);
     }
 }
-impl ChunkArray {
+impl<T: Copy> ChunkArrayGeneric<T> {
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = (u16, u16, Option<StdBox<Chunk>>)> {
+    pub fn iter(&self) -> impl Iterator<Item = (u16, u16, T)> {
         self.array.iter().enumerate().flat_map(|(y, yc)| {
             yc.iter()
                 .copied()
@@ -135,28 +137,30 @@ impl ChunkArray {
         })
     }
     #[inline]
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (u16, u16, &mut Option<StdBox<Chunk>>)> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (u16, u16, &mut T)> {
         self.array.iter_mut().enumerate().flat_map(|(y, yc)| {
             yc.iter_mut()
                 .enumerate()
                 .map(move |(x, xc)| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), xc))
         })
     }
+}
+impl<T: Copy> ChunkArrayGeneric<Option<T>> {
     #[inline]
-    pub fn flat_iter(&self) -> impl Iterator<Item = (u16, u16, StdBox<Chunk>)> {
+    pub fn flat_iter(&self) -> impl Iterator<Item = (u16, u16, T)> {
         self.iter().filter_map(|(x, y, oc)| oc.map(|c| (x, y, c)))
     }
 }
-impl Default for ChunkArray {
+impl<T> Default for ChunkArrayGeneric<Option<T>> {
     #[inline]
     #[allow(clippy::large_stack_arrays)]
     fn default() -> Self {
         Self {
-            array: [[None; 512]; 512],
+            array: [const { [const { None }; 512] }; 512],
         }
     }
 }
-impl Debug for ChunkArray {
+impl<T: Copy> Debug for ChunkArrayGeneric<Option<T>> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_list()
@@ -164,66 +168,16 @@ impl Debug for ChunkArray {
             .finish()
     }
 }
-impl Deref for ChunkArray {
-    type Target = [[Option<StdBox<Chunk>>; 512]; 512];
+impl<T> Deref for ChunkArrayGeneric<T> {
+    type Target = [[T; 512]; 512];
     #[inline]
     fn deref(&self) -> &Self::Target {
         &self.array
     }
 }
-impl DerefMut for ChunkArray {
+impl<T> DerefMut for ChunkArrayGeneric<T> {
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.array
-    }
-}
-#[repr(transparent)]
-#[derive(Debug)]
-pub struct Chunk {
-    pub data: StdBox<[[Option<Cell<()>>; 512]; 512]>,
-}
-impl Chunk {
-    #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = (u16, u16, Option<Cell<()>>)> {
-        self.data.iter().enumerate().flat_map(|(y, yc)| {
-            yc.iter()
-                .copied()
-                .enumerate()
-                .map(move |(x, xc)| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), xc))
-        })
-    }
-    #[inline]
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (u16, u16, &mut Option<Cell<()>>)> {
-        self.data.iter_mut().enumerate().flat_map(|(y, yc)| {
-            yc.iter_mut()
-                .enumerate()
-                .map(move |(x, xc)| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), xc))
-        })
-    }
-    #[inline]
-    pub fn flat_iter(&self) -> impl Iterator<Item = (u16, u16, Cell<()>)> {
-        self.iter().filter_map(|(x, y, oc)| oc.map(|c| (x, y, c)))
-    }
-}
-impl Default for Chunk {
-    #[inline]
-    #[allow(clippy::large_stack_arrays)]
-    fn default() -> Self {
-        Self {
-            data: StdBox::new([[None; 512]; 512]),
-        }
-    }
-}
-impl Deref for Chunk {
-    type Target = [[Option<Cell<()>>; 512]; 512];
-    #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.data
-    }
-}
-impl DerefMut for Chunk {
-    #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.data
     }
 }

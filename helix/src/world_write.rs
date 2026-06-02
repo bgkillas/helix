@@ -31,7 +31,7 @@ impl WorldWrite {
         for chunk in chunks {
             if let Some(mut real_chunk) = map.chunk_array[chunk.pos.y][chunk.pos.x] {
                 for ((sx, sy, pixel), new) in
-                    get_section_mut_enumerate(usize::from(chunk.pos.section), &mut real_chunk.data)
+                    get_section_mut_enumerate(usize::from(chunk.pos.section), &mut real_chunk)
                         .zip(chunk.pixel_run.iter())
                         .filter(|((_, _, p), n)| {
                             *n != Pixel::MAX

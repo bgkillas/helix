@@ -769,7 +769,6 @@ fn get_global_type(global_const: &Ident, type_name: &TokenStream, is_ptr_ptr: bo
         }
         type_static.push(token);
     }
-    let type_static = TokenStream::from_iter(type_static);
     quote! {
         impl #type_name {
             #[inline]
@@ -780,7 +779,7 @@ fn get_global_type(global_const: &Ident, type_name: &TokenStream, is_ptr_ptr: bo
             #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
             pub fn global() -> StdBox<Self> {
                 _ = #global_const;
-                static GLOBAL: std::sync::LazyLock<StdBox<#type_name>> = std::sync::LazyLock::new(||StdBox::new(#type_static::default()));
+                static GLOBAL: std::sync::LazyLock<StdBox<#type_name>> = std::sync::LazyLock::default();
                 *GLOBAL
             }
         }

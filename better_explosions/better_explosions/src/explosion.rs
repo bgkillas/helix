@@ -1,12 +1,13 @@
-use crate::ExplosionManager;
 use crate::arc::ArcIter;
 use crate::circumference::Circumference;
 use crate::line::LineIter;
 use crate::octant::octant;
 use crate::uninit_map::UninitMap;
-use noita_api::{ConfigExplosion, GameGlobal, StdBox, Vec2};
+use crate::{ExplosionManager, LineContinue, LineContinueRef};
+use noita_api::{ChunkArray, ConfigExplosion, GameGlobal, StdBox, Vec2};
 use rand::RngExt as _;
 use rand::distr::Bernoulli;
+use rand::rngs::ThreadRng;
 use std::f32::consts::TAU;
 use std::mem::MaybeUninit;
 impl ExplosionManager {
@@ -123,6 +124,24 @@ impl ExplosionManager {
                 }
             }
         }
+    }
+    #[inline]
+    pub fn explosion_line(&self, mut line: LineContinue) {
+        let mut rng = rand::rng();
+        let game_global = GameGlobal::global();
+        let grid_world = game_global.m_grid_world;
+        let chunk_map = grid_world.chunk_map.chunk_array;
+        self.explosion_line_ref(line.as_ref(), &mut rng, chunk_map);
+    }
+    #[inline]
+    #[allow(clippy::needless_pass_by_value)]
+    #[allow(unused_variables)]
+    pub fn explosion_line_ref(
+        &self,
+        line: LineContinueRef<'_>,
+        rng: &mut ThreadRng,
+        chunk_map: ChunkArray,
+    ) {
     }
     #[inline]
     pub fn explosion_lines(&self, config: &ConfigExplosion, pos: Vec2<f32>) {

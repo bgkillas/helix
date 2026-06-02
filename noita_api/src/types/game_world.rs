@@ -10,8 +10,7 @@ pub struct GameWorld {
 }
 impl GameWorld {
     pub(crate) fn global() -> StdBox<Self> {
-        static GLOBAL: std::sync::LazyLock<StdBox<GameWorld>> =
-            std::sync::LazyLock::new(|| StdBox::new(GameWorld::default()));
+        static GLOBAL: std::sync::LazyLock<StdBox<GameWorld>> = std::sync::LazyLock::default();
         *GLOBAL
     }
 }
@@ -22,7 +21,7 @@ impl Default for GameWorld {
             cam: AABB::default(),
             unknown1: [0; 13],
             grid_world: GridWorld::global(),
-            pixel_scenes: StdBox::new(StdVec::default()),
+            pixel_scenes: StdBox::default(),
         }
     }
 }

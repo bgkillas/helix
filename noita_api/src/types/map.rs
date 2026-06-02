@@ -19,7 +19,7 @@ pub struct StdMap<K, V> {
 impl<K: Default, V: Default> Default for StdMap<K, V> {
     #[inline]
     fn default() -> Self {
-        let mut root = StdBox::new(UninitStdMapNode::<K, V>::default());
+        let mut root: StdBox<UninitStdMapNode<K, V>> = StdBox::default();
         root.left = Some(root);
         root.parent = Some(root);
         root.right = Some(root);

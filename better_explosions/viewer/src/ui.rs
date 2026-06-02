@@ -32,18 +32,18 @@ enum Menu {
 impl Default for App {
     fn default() -> Self {
         let mut unloaded = FxHashMap::with_capacity_and_hasher(512, FxBuildHasher);
-        unloaded.insert((257, 257), StdBox::new(Chunk::default()));
-        unloaded.insert((256, 257), StdBox::new(Chunk::default()));
-        unloaded.insert((255, 257), StdBox::new(Chunk::default()));
-        unloaded.insert((254, 257), StdBox::new(Chunk::default()));
-        unloaded.insert((254, 256), StdBox::new(Chunk::default()));
-        unloaded.insert((254, 255), StdBox::new(Chunk::default()));
-        unloaded.insert((254, 254), StdBox::new(Chunk::default()));
-        unloaded.insert((255, 254), StdBox::new(Chunk::default()));
-        unloaded.insert((256, 254), StdBox::new(Chunk::default()));
-        unloaded.insert((257, 254), StdBox::new(Chunk::default()));
-        unloaded.insert((257, 255), StdBox::new(Chunk::default()));
-        unloaded.insert((257, 256), StdBox::new(Chunk::default()));
+        unloaded.insert((257, 257), StdBox::default());
+        unloaded.insert((256, 257), StdBox::default());
+        unloaded.insert((255, 257), StdBox::default());
+        unloaded.insert((254, 257), StdBox::default());
+        unloaded.insert((254, 256), StdBox::default());
+        unloaded.insert((254, 255), StdBox::default());
+        unloaded.insert((254, 254), StdBox::default());
+        unloaded.insert((255, 254), StdBox::default());
+        unloaded.insert((256, 254), StdBox::default());
+        unloaded.insert((257, 254), StdBox::default());
+        unloaded.insert((257, 255), StdBox::default());
+        unloaded.insert((257, 256), StdBox::default());
         Self {
             wand: Wand::Explosive(0, 0, 0.0, 12, usize::MAX),
             menu: Menu::Map,

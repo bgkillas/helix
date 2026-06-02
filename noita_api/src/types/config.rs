@@ -3,7 +3,7 @@ use crate::{
     ConfigGridCosmeticParticleVTable, StdBox, StdString, ValueRange, Vec2,
 };
 #[repr(C)]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ConfigExplosion {
     pub vftable: Option<StdBox<ConfigExplosionVTable>>,
     pub never_cache: bool,
@@ -89,7 +89,7 @@ pub struct ConfigExplosion {
     pub impl_delay_frame: isize,
 }
 #[repr(C)]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ConfigDamageCritical {
     pub vftable: Option<StdBox<ConfigDamageCriticalVTable>>,
     pub chance: isize,

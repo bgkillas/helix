@@ -27,8 +27,7 @@ pub struct GridWorld {
 }
 impl GridWorld {
     pub(crate) fn global() -> StdBox<Self> {
-        static GLOBAL: std::sync::LazyLock<StdBox<GridWorld>> =
-            std::sync::LazyLock::new(|| StdBox::new(GridWorld::default()));
+        static GLOBAL: std::sync::LazyLock<StdBox<GridWorld>> = std::sync::LazyLock::default();
         *GLOBAL
     }
 }

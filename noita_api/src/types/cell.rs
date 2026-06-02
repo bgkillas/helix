@@ -39,7 +39,7 @@ impl Default for Cell<()> {
     #[inline]
     fn default() -> Self {
         Self {
-            ptr: StdBox::new(CellInner::default()),
+            ptr: StdBox::default(),
         }
     }
 }
@@ -47,13 +47,13 @@ impl Default for CellInner<()> {
     #[inline]
     fn default() -> Self {
         Self {
-            vtable: StdBox::new(CellVTable::default()),
+            vtable: StdBox::default(),
             hp: 0,
             unknown1: [0; 2],
             is_burning: false,
             temperature_of_fire: 0,
             unknown2: [0; 2],
-            material: StdBox::new(CellData::default()),
+            material: StdBox::default(),
             data: (),
         }
     }

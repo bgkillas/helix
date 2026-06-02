@@ -30,7 +30,7 @@ impl Default for GameGlobal {
             unknown1: 0,
             m_game_world: GameWorld::global(),
             m_grid_world: GridWorld::global(),
-            m_textures: StdBox::new(Textures::default()),
+            m_textures: StdBox::default(),
             m_cell_factory: CellFactory::global(),
             unknown2: 0,
             unknown3: [0; 4],

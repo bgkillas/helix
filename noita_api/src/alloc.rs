@@ -31,8 +31,8 @@ pub struct StdPtr<T: Sized> {
 pub struct StdBox<T: Sized> {
     pub ptr: StdPtr<T>,
 }
-unsafe impl<T> Send for StdBox<T> {}
-unsafe impl<T> Sync for StdBox<T> {}
+unsafe impl<T> Send for StdPtr<T> {}
+unsafe impl<T> Sync for StdPtr<T> {}
 #[repr(transparent)]
 #[assert_size_with(0x4, ())]
 pub struct MaybeStdBox<T: Sized> {
@@ -198,6 +198,12 @@ impl<T> PartialEq for StdPtr<T> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.ptr == other.ptr
+    }
+}
+impl<T: Default> Default for StdBox<T> {
+    #[inline]
+    fn default() -> Self {
+        StdBox::new(T::default())
     }
 }
 impl<T> Debug for StdPtr<T> {

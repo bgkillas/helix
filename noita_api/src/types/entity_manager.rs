@@ -26,7 +26,7 @@ impl Default for EntityManager {
             entities: StdVec::default(),
             entity_buckets,
             component_buffers: StdVec::default(),
-            event_manager: StdBox::new(EventManager::default()),
+            event_manager: StdBox::default(),
         }
     }
 }

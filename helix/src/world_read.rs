@@ -40,7 +40,7 @@ impl Context {
             for x in aabb.top_left.x / 512..=aabb.bottom_right.x / 512 {
                 if let Some(chunk) = map.chunk_array[y][x] {
                     for (section, priority, chunk_section) in
-                        get_sections(aabb, inner_aabb, x, y, chunk.data.as_ref())
+                        get_sections(aabb, inner_aabb, x, y, chunk.as_ref())
                     {
                         let mut pixel_run = PixelRunBuilder::default();
                         pixel_run.extend(chunk_section);

@@ -4,6 +4,8 @@
     not(all(target_os = "windows", target_pointer_width = "32")),
     feature(allocator_api)
 )]
+#![feature(const_default)]
+#![feature(const_trait_impl)]
 pub mod alloc;
 pub mod damage;
 pub mod explosion;

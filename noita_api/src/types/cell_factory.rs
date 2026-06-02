@@ -22,8 +22,7 @@ pub struct CellFactory {
 }
 impl CellFactory {
     pub(crate) fn global() -> StdBox<Self> {
-        static GLOBAL: std::sync::LazyLock<StdBox<CellFactory>> =
-            std::sync::LazyLock::new(|| StdBox::new(CellFactory::default()));
+        static GLOBAL: std::sync::LazyLock<StdBox<CellFactory>> = std::sync::LazyLock::default();
         *GLOBAL
     }
     #[inline]
@@ -138,7 +137,7 @@ impl Default for CellFactory {
             req_reactions: StdVec::default(),
             materials_by_tag: StdMap::default(),
             unknown3: StdVec::default(),
-            fire_cell_data: StdBox::new(CellData::default()),
+            fire_cell_data: StdBox::default(),
             unknown4: [0; 4],
             fire_material_id: 0,
         }
