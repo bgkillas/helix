@@ -1,4 +1,4 @@
-use crate::{ExplosionManager, dummy};
+use crate::ExplosionManager;
 use noita_api::{Cell, Chunk, ConfigExplosion, GameGlobal, StdBox, Vec2};
 use std::hint::black_box;
 #[bench]
@@ -37,9 +37,7 @@ fn bench0_setup(_: &mut test::Bencher) {
     config.hole_enabled = true;
     let c = black_box(config);
     let pos = black_box(Vec2 { x: 10.0, y: 10.0 });
-    let em = ExplosionManager {
-        construct_cell: dummy,
-    };
+    let em = ExplosionManager::default();
     em.explosion_lines(&c, pos);
     grid_world.chunk_map.clear();
 }
@@ -65,9 +63,7 @@ fn empty_explosion(
     config.hole_enabled = true;
     let c = black_box(config);
     let pos = black_box(Vec2 { x: 10.0, y: 10.0 });
-    let em = ExplosionManager {
-        construct_cell: dummy,
-    };
+    let em = ExplosionManager::default();
     bencher.iter(|| f(&em, &c, pos));
     grid_world.chunk_map.clear();
 }
@@ -93,9 +89,7 @@ fn half_explosion(
     config.hole_enabled = true;
     let c = black_box(config);
     let pos = black_box(Vec2 { x: 10.0, y: 10.0 });
-    let em = ExplosionManager {
-        construct_cell: dummy,
-    };
+    let em = ExplosionManager::default();
     bencher.iter(|| f(&em, &c, pos));
     grid_world.chunk_map.clear();
 }
@@ -130,9 +124,7 @@ fn empty_explosion_wall(
     config.hole_enabled = true;
     let c = black_box(config);
     let pos = black_box(Vec2 { x: 10.0, y: 10.0 });
-    let em = ExplosionManager {
-        construct_cell: dummy,
-    };
+    let em = ExplosionManager::default();
     bencher.iter(|| f(&em, &c, pos));
     grid_world.chunk_map.clear();
 }
@@ -167,9 +159,7 @@ fn half_explosion_wall(
     config.hole_enabled = true;
     let c = black_box(config);
     let pos = black_box(Vec2 { x: 10.0, y: 10.0 });
-    let em = ExplosionManager {
-        construct_cell: dummy,
-    };
+    let em = ExplosionManager::default();
     bencher.iter(|| f(&em, &c, pos));
     grid_world.chunk_map.clear();
 }

@@ -12,7 +12,7 @@ pub mod circumference;
 pub mod explosion;
 pub mod line;
 pub mod octant;
-mod uninit_map;
+pub mod uninit_map;
 use crate::line::LineIter;
 use noita_api::{Cell, CellData, ChunkArrayGeneric, ConfigExplosion, GridWorld, StdBox, this_call};
 use rand::distr::Bernoulli;

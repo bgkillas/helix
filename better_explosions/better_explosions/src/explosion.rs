@@ -228,10 +228,13 @@ impl ExplosionManager {
     ) {
         let hp_f = |hp| -> usize { truncate_f32u(truncate_usize(hp) * line.mult) };
         for (mut x, y) in line.line {
-            let mut px = x % 512;
-            let py = y % 512;
             let mut cx = x / 512;
             let cy = y / 512;
+            let Some(mut c) = chunk_map[cy][cx] else {
+                break;
+            };
+            let mut px = x % 512;
+            let py = y % 512;
             let mut i = unsafe {
                 chunk_indices
                     .as_ptr()
@@ -247,7 +250,7 @@ impl ExplosionManager {
                 } else {
                     break;
                 }
-            } else if let Some(mut c) = chunk_map[cy][cx] {
+            } else {
                 if let Some(p) = c[py][px] {
                     if !line.config.hole_enabled
                         || p.material.durability > line.config.max_durability_to_destroy
@@ -274,12 +277,15 @@ impl ExplosionManager {
                 } else {
                     c[py][px] = None;
                 }
-            } else {
-                break;
             }
             x += 1;
-            px = x % 512;
             cx = x / 512;
+            if let Some(d) = chunk_map[cy][cx] {
+                c = d;
+            } else {
+                continue;
+            }
+            px = x % 512;
             i = unsafe {
                 chunk_indices
                     .as_ptr()
@@ -289,9 +295,7 @@ impl ExplosionManager {
                     .assume_init()
             };
             hp_index = 512 * 512 * i + 512 * py + px;
-            if hp_map.get(hp_index).is_none()
-                && let Some(mut c) = chunk_map[cy][cx]
-            {
+            if hp_map.get(hp_index).is_none() {
                 if let Some(p) = c[py][px] {
                     if !line.config.hole_enabled
                         || p.material.durability > line.config.max_durability_to_destroy
