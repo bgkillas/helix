@@ -131,16 +131,10 @@ impl ExplosionManager {
         let grid_world = game_global.m_grid_world;
         let chunk_map = grid_world.chunk_map.chunk_array;
         let mut hp_map = UninitMap::new(512 * 512 * grid_world.chunk_map.chunk_count);
-        let mut chunk_indices: Box<MaybeUninit<[[MaybeUninit<usize>; 512]; 512]>> =
-            Box::new_uninit();
+        let mut chunk_indices: Box<[[MaybeUninit<usize>; 512]; 512]> =
+            unsafe { Box::new_uninit().assume_init() };
         for (i, (x, y, _)) in grid_world.chunk_map.flat_iter().enumerate() {
-            unsafe {
-                chunk_indices
-                    .as_mut_ptr()
-                    .cast::<MaybeUninit<usize>>()
-                    .add(512 * usize::from(y) + usize::from(x))
-                    .write(MaybeUninit::new(i));
-            }
+            chunk_indices[usize::from(y)][usize::from(x)].write(i);
         }
         for (x, y, _) in chunk_map.iter() {
             if let Some(v) = self.lines[usize::from(y)][usize::from(x)].take() {
@@ -178,16 +172,10 @@ impl ExplosionManager {
             u32::try_from(config.create_cell_probability).unwrap()
         };
         let mut hp_map = UninitMap::new(512 * 512 * grid_world.chunk_map.chunk_count);
-        let mut chunk_indices: Box<MaybeUninit<[[MaybeUninit<usize>; 512]; 512]>> =
-            Box::new_uninit();
+        let mut chunk_indices: Box<[[MaybeUninit<usize>; 512]; 512]> =
+            unsafe { Box::new_uninit().assume_init() };
         for (i, (x, y, _)) in grid_world.chunk_map.flat_iter().enumerate() {
-            unsafe {
-                chunk_indices
-                    .as_mut_ptr()
-                    .cast::<MaybeUninit<usize>>()
-                    .add(512 * usize::from(y) + usize::from(x))
-                    .write(MaybeUninit::new(i));
-            }
+            chunk_indices[usize::from(y)][usize::from(x)].write(i);
         }
         let bern = Bernoulli::from_ratio(chance, 100).unwrap();
         let r = truncate_f32u(config.explosion_radius);
@@ -224,7 +212,7 @@ impl ExplosionManager {
         grid_world: StdBox<GridWorld>,
         chunk_map: ChunkArray,
         hp_map: &mut UninitMap<usize>,
-        chunk_indices: &mut MaybeUninit<[[MaybeUninit<usize>; 512]; 512]>,
+        chunk_indices: &mut [[MaybeUninit<usize>; 512]; 512],
     ) {
         let hp_f = |hp| -> usize { truncate_f32u(truncate_usize(hp) * line.mult) };
         for (mut x, y) in line.line {
@@ -235,14 +223,7 @@ impl ExplosionManager {
             };
             let mut px = x % 512;
             let py = y % 512;
-            let mut i = unsafe {
-                chunk_indices
-                    .as_ptr()
-                    .cast::<MaybeUninit<usize>>()
-                    .add(512 * cy + cx)
-                    .read()
-                    .assume_init()
-            };
+            let mut i = unsafe { chunk_indices[cy][cx].assume_init() };
             let mut hp_index = 512 * 512 * i + 512 * py + px;
             if let Some(hp) = hp_map.get(hp_index) {
                 if let Some(new) = line.energy.checked_sub(hp_f(hp)) {
@@ -286,14 +267,7 @@ impl ExplosionManager {
                 continue;
             }
             px = x % 512;
-            i = unsafe {
-                chunk_indices
-                    .as_ptr()
-                    .cast::<MaybeUninit<usize>>()
-                    .add(512 * cy + cx)
-                    .read()
-                    .assume_init()
-            };
+            i = unsafe { chunk_indices[cy][cx].assume_init() };
             hp_index = 512 * 512 * i + 512 * py + px;
             if hp_map.get(hp_index).is_none() {
                 if let Some(p) = c[py][px] {
