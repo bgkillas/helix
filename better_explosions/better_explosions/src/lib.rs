@@ -16,6 +16,8 @@ pub mod uninit_map;
 use crate::line::LineIter;
 use noita_api::{Cell, CellData, ChunkArrayGeneric, ConfigExplosion, GridWorld, StdBox, this_call};
 use rand::distr::Bernoulli;
+use std::mem;
+use std::mem::MaybeUninit;
 #[noita_api::lua_module]
 mod lua {
     use crate::ExplosionManager;
@@ -29,7 +31,11 @@ mod lua {
             pos: StdBox<Vec2<f32>>,
             _: isize,
         ) {
-            self.explosion(&config, *pos);
+            self.explosion_lines(&config, *pos);
+        }
+        #[lua_function]
+        fn update(&mut self) {
+            self.explosion_chunk_update();
         }
     }
 }
@@ -82,13 +88,22 @@ extern "C" fn dummy(
 }
 impl Default for ExplosionManager {
     #[inline]
+    #[allow(clippy::missing_transmute_annotations)]
     fn default() -> Self {
+        let mut lines_uninit: Box<ChunkArrayGeneric<MaybeUninit<Option<Vec<LineContinue>>>>> = unsafe {
+            mem::transmute(Box::<ChunkArrayGeneric<Option<Vec<LineContinue>>>>::new_uninit())
+        };
+        for arr in &mut lines_uninit.array {
+            for val in arr {
+                val.write(None);
+            }
+        }
         Self {
             #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
             construct_cell: dummy,
             #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
             construct_cell: noita_api::get_construct_cell(),
-            lines: Box::default(),
+            lines: unsafe { mem::transmute(lines_uninit) },
         }
     }
 }
