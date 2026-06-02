@@ -4,7 +4,7 @@ use crate::line::LineIter;
 use crate::octant::octant;
 use crate::uninit_map::UninitMap;
 use crate::{ExplosionManager, LineContinue, LineContinueRef};
-use noita_api::{ChunkArray, ConfigExplosion, GameGlobal, GridWorld, StdBox, Vec2};
+use noita_api::{CellType, ChunkArray, ConfigExplosion, GameGlobal, GridWorld, StdBox, Vec2};
 use rand::RngExt as _;
 use rand::distr::Bernoulli;
 use rand::rngs::ThreadRng;
@@ -62,6 +62,9 @@ impl ExplosionManager {
                     break;
                 };
                 if let Some(p) = c[py][px] {
+                    if matches!(p.material.cell_type, CellType::Solid) {
+                        continue;
+                    }
                     if !config.hole_enabled
                         || p.material.durability > config.max_durability_to_destroy
                     {
@@ -104,6 +107,7 @@ impl ExplosionManager {
                     if let Some(p) = c[py][px] {
                         if p.material.durability > config.max_durability_to_destroy
                             || !config.hole_enabled
+                            || matches!(p.material.cell_type, CellType::Solid)
                         {
                             continue;
                         }
@@ -245,6 +249,9 @@ impl ExplosionManager {
                 }
             } else {
                 if let Some(p) = c[py][px] {
+                    if matches!(p.material.cell_type, CellType::Solid) {
+                        continue;
+                    }
                     if !line.config.hole_enabled
                         || p.material.durability > line.config.max_durability_to_destroy
                     {
@@ -285,6 +292,7 @@ impl ExplosionManager {
                 if let Some(p) = c[py][px] {
                     if !line.config.hole_enabled
                         || p.material.durability > line.config.max_durability_to_destroy
+                        || matches!(p.material.cell_type, CellType::Solid)
                     {
                         continue;
                     }
