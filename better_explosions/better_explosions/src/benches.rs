@@ -40,6 +40,7 @@ fn bench0_setup(_: &mut test::Bencher) {
     let mut em = ExplosionManager::default();
     em.explosion(&c, pos);
     em.explosion_lines(&c, pos);
+    em.explosion_chunk_update();
     grid_world.chunk_map.clear();
 }
 #[cfg(test)]
@@ -66,6 +67,39 @@ fn empty_explosion(
     let pos = black_box(Vec2 { x: 10.0, y: 10.0 });
     let mut em = ExplosionManager::default();
     bencher.iter(|| f(&mut em, &c, pos));
+    grid_world.chunk_map.clear();
+}
+#[cfg(test)]
+fn empty_explosion_unloaded(
+    r: f32,
+    bencher: &mut test::Bencher,
+    f: fn(&mut ExplosionManager, &ConfigExplosion, Vec2<f32>),
+) {
+    let game_global = GameGlobal::global();
+    let mut grid_world = game_global.m_grid_world;
+    grid_world.chunk_map.insert(256, 256, Chunk::default());
+    grid_world.chunk_map.insert(256, 255, Chunk::default());
+    let c1 = StdBox::default();
+    let c2 = StdBox::default();
+    let mut config = ConfigExplosion::default();
+    config.explosion_radius = r;
+    config.max_durability_to_destroy = 12;
+    config.ray_energy = usize::MAX;
+    let game_global = GameGlobal::global();
+    config.create_cell_material = game_global.m_cell_factory.cell_data[1].name.clone();
+    config.create_cell_probability = 0;
+    config.hole_enabled = true;
+    let c = black_box(config);
+    let pos = black_box(Vec2 { x: 10.0, y: 10.0 });
+    let mut em = ExplosionManager::default();
+    bencher.iter(|| {
+        f(&mut em, &c, pos);
+        grid_world.chunk_map.insert_box(255, 256, c1);
+        grid_world.chunk_map.insert_box(255, 255, c2);
+        em.explosion_chunk_update();
+        grid_world.chunk_map.remove(255, 256);
+        grid_world.chunk_map.remove(255, 255);
+    });
     grid_world.chunk_map.clear();
 }
 #[cfg(test)]
@@ -171,6 +205,11 @@ fn bench1_200_empty(bencher: &mut test::Bencher) {
 }
 #[cfg(not(miri))]
 #[bench]
+fn bench1_200_empty_unloaded(bencher: &mut test::Bencher) {
+    empty_explosion_unloaded(200.0, bencher, ExplosionManager::explosion);
+}
+#[cfg(not(miri))]
+#[bench]
 fn bench2_200_half(bencher: &mut test::Bencher) {
     half_explosion(200.0, bencher, ExplosionManager::explosion);
 }
@@ -188,6 +227,11 @@ fn bench4_200_half_wall(bencher: &mut test::Bencher) {
 #[bench]
 fn bench1_032_empty(bencher: &mut test::Bencher) {
     empty_explosion(32.0, bencher, ExplosionManager::explosion);
+}
+#[cfg(not(miri))]
+#[bench]
+fn bench1_032_empty_unloaded(bencher: &mut test::Bencher) {
+    empty_explosion_unloaded(32.0, bencher, ExplosionManager::explosion);
 }
 #[cfg(not(miri))]
 #[bench]
@@ -209,6 +253,10 @@ fn bench1_008_empty(bencher: &mut test::Bencher) {
     empty_explosion(8.0, bencher, ExplosionManager::explosion);
 }
 #[bench]
+fn bench1_008_empty_unloaded(bencher: &mut test::Bencher) {
+    empty_explosion_unloaded(8.0, bencher, ExplosionManager::explosion);
+}
+#[bench]
 fn bench2_008_half(bencher: &mut test::Bencher) {
     half_explosion(8.0, bencher, ExplosionManager::explosion);
 }
@@ -224,6 +272,11 @@ fn bench4_008_half_wall(bencher: &mut test::Bencher) {
 #[bench]
 fn bench1_064_empty(bencher: &mut test::Bencher) {
     empty_explosion(64.0, bencher, ExplosionManager::explosion);
+}
+#[cfg(not(miri))]
+#[bench]
+fn bench1_064_empty_unloaded(bencher: &mut test::Bencher) {
+    empty_explosion_unloaded(64.0, bencher, ExplosionManager::explosion);
 }
 #[cfg(not(miri))]
 #[bench]
@@ -247,6 +300,11 @@ fn bench1_480_empty(bencher: &mut test::Bencher) {
 }
 #[cfg(not(miri))]
 #[bench]
+fn bench1_480_empty_unloaded(bencher: &mut test::Bencher) {
+    empty_explosion_unloaded(480.0, bencher, ExplosionManager::explosion);
+}
+#[cfg(not(miri))]
+#[bench]
 fn bench2_480_half(bencher: &mut test::Bencher) {
     half_explosion(480.0, bencher, ExplosionManager::explosion);
 }
@@ -264,6 +322,11 @@ fn bench4_480_half_wall(bencher: &mut test::Bencher) {
 #[bench]
 fn bench1_200_empty_lines(bencher: &mut test::Bencher) {
     empty_explosion(200.0, bencher, ExplosionManager::explosion_lines);
+}
+#[cfg(not(miri))]
+#[bench]
+fn bench1_200_empty_unloaded_lines(bencher: &mut test::Bencher) {
+    empty_explosion_unloaded(200.0, bencher, ExplosionManager::explosion_lines);
 }
 #[cfg(not(miri))]
 #[bench]
@@ -287,6 +350,11 @@ fn bench1_032_empty_lines(bencher: &mut test::Bencher) {
 }
 #[cfg(not(miri))]
 #[bench]
+fn bench1_032_empty_unloaded_lines(bencher: &mut test::Bencher) {
+    empty_explosion_unloaded(32.0, bencher, ExplosionManager::explosion_lines);
+}
+#[cfg(not(miri))]
+#[bench]
 fn bench2_032_half_lines(bencher: &mut test::Bencher) {
     half_explosion(32.0, bencher, ExplosionManager::explosion_lines);
 }
@@ -303,6 +371,10 @@ fn bench4_032_half_wall_lines(bencher: &mut test::Bencher) {
 #[bench]
 fn bench1_008_empty_lines(bencher: &mut test::Bencher) {
     empty_explosion(8.0, bencher, ExplosionManager::explosion_lines);
+}
+#[bench]
+fn bench1_008_empty_unloaded_lines(bencher: &mut test::Bencher) {
+    empty_explosion_unloaded(8.0, bencher, ExplosionManager::explosion_lines);
 }
 #[bench]
 fn bench2_008_half_lines(bencher: &mut test::Bencher) {
@@ -323,6 +395,11 @@ fn bench1_064_empty_lines(bencher: &mut test::Bencher) {
 }
 #[cfg(not(miri))]
 #[bench]
+fn bench1_064_empty_unloaded_lines(bencher: &mut test::Bencher) {
+    empty_explosion_unloaded(64.0, bencher, ExplosionManager::explosion_lines);
+}
+#[cfg(not(miri))]
+#[bench]
 fn bench2_064_half_lines(bencher: &mut test::Bencher) {
     half_explosion(64.0, bencher, ExplosionManager::explosion_lines);
 }
@@ -340,6 +417,11 @@ fn bench4_064_half_wall_lines(bencher: &mut test::Bencher) {
 #[bench]
 fn bench1_480_empty_lines(bencher: &mut test::Bencher) {
     empty_explosion(480.0, bencher, ExplosionManager::explosion_lines);
+}
+#[cfg(not(miri))]
+#[bench]
+fn bench1_480_empty_unloaded_lines(bencher: &mut test::Bencher) {
+    empty_explosion_unloaded(480.0, bencher, ExplosionManager::explosion_lines);
 }
 #[cfg(not(miri))]
 #[bench]
