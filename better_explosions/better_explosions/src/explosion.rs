@@ -176,7 +176,7 @@ impl ExplosionManager {
                     let dx = truncate_usize(line.line.dx.abs().cast_unsigned());
                     let dy = truncate_usize(line.line.dy.abs().cast_unsigned());
                     let mult = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
-                    self.explosion_line_ref(
+                    self.explosion_line(
                         line,
                         &mut rng,
                         grid_world,
@@ -227,7 +227,7 @@ impl ExplosionManager {
                 let dy = truncate_usize(iy2.abs_diff(iy0));
                 let dx = truncate_usize(ix2.abs_diff(ix0));
                 let mult = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
-                self.explosion_line_ref(
+                self.explosion_line(
                     LineContinue {
                         line: LineIter::new(ix0, iy0, ix2, iy2),
                         config: config_arc.clone(),
@@ -248,7 +248,7 @@ impl ExplosionManager {
     }
     #[inline]
     #[allow(clippy::too_many_arguments)]
-    pub fn explosion_line_ref(
+    pub fn explosion_line(
         &mut self,
         mut line: LineContinue,
         rng: &mut ThreadRng,

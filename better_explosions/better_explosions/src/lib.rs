@@ -14,7 +14,9 @@ pub mod line;
 pub mod octant;
 pub mod uninit_map;
 use crate::explosion::{ExplosionManager, LineContinue};
-use noita_api::{Cell, CellData, ChunkArrayGeneric, GridWorld, StdBox};
+use noita_api::ChunkArrayGeneric;
+#[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
+use noita_api::{Cell, CellData, GridWorld, StdBox};
 use std::mem;
 use std::mem::MaybeUninit;
 #[noita_api::lua_module]

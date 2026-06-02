@@ -45,7 +45,7 @@ impl Default for App {
         unloaded.insert((257, 255), StdBox::default());
         unloaded.insert((257, 256), StdBox::default());
         Self {
-            wand: Wand::Explosive(0, 0, 0.0, 12, usize::MAX),
+            wand: Wand::ExplosiveLines(0, 0, 0.0, 12, usize::MAX),
             menu: Menu::Map,
             em: ExplosionManager::default(),
             material: 58,
