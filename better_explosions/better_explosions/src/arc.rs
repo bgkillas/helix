@@ -21,7 +21,7 @@ impl Iterator for ArcIter {
         } else if let Some((_, _, hy)) = self.high_line.next() {
             let (_, lx, ly) = self.low_line.next().unwrap();
             self.range_x = lx.cast_signed();
-            if self.high_line.sy == -1 {
+            if self.high_line.dy.is_negative() {
                 self.range_y_end = ly.cast_signed();
                 self.range_y_start = hy.cast_signed();
             } else {
@@ -30,10 +30,14 @@ impl Iterator for ArcIter {
             }
             Some(self.next_range())
         } else if let Some((_, lx, ly)) = self.low_line.next() {
-            self.hx += self.low_line.sx;
+            if self.low_line.dx.is_negative() {
+                self.hx -= 1;
+            } else {
+                self.hx += 1;
+            }
             let yy = self.r2 - (self.hx - self.x0).pow(2);
             self.range_x = lx.cast_signed();
-            if self.high_line.sy == -1 {
+            if self.high_line.dy.is_negative() {
                 self.range_y_end = ly.cast_signed();
                 self.range_y_start = self.y0 - yy.isqrt();
             } else {

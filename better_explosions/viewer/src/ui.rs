@@ -1,5 +1,5 @@
-use better_explosions::ExplosionManager;
 use better_explosions::circle::Circle;
+use better_explosions::explosion::ExplosionManager;
 use better_explosions::line::LineIter;
 use eframe::Frame;
 use eframe::emath::{Pos2, Rect, Vec2};

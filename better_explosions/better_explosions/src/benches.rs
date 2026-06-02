@@ -1,6 +1,19 @@
 use crate::ExplosionManager;
+use crate::line::LineIter;
 use noita_api::{Cell, Chunk, ConfigExplosion, GameGlobal, StdBox, Vec2};
 use std::hint::black_box;
+#[bench]
+fn bench0_line1(bencher: &mut test::Bencher) {
+    bencher.iter(|| LineIter::new(0, 0, 512, 256).last());
+}
+#[bench]
+fn bench0_line0_short(bencher: &mut test::Bencher) {
+    bencher.iter(|| LineIter::new(0, 0, 16, 8).last());
+}
+#[bench]
+fn bench0_line2_long(bencher: &mut test::Bencher) {
+    bencher.iter(|| LineIter::new(0, 0, 4096, 2048).last());
+}
 #[bench]
 fn bench0_setup(_: &mut test::Bencher) {
     let mut game_global = GameGlobal::global();

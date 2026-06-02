@@ -3,13 +3,29 @@ use crate::circumference::Circumference;
 use crate::line::LineIter;
 use crate::octant::octant;
 use crate::uninit_map::UninitMap;
-use crate::{ExplosionManager, LineContinue, LineContinueRef};
-use noita_api::{CellType, ChunkArray, ConfigExplosion, GameGlobal, GridWorld, StdBox, Vec2};
+use noita_api::{
+    Cell, CellData, CellType, ChunkArray, ChunkArrayGeneric, ConfigExplosion, GameGlobal,
+    GridWorld, StdBox, Vec2, this_call,
+};
 use rand::RngExt as _;
 use rand::distr::Bernoulli;
 use rand::rngs::ThreadRng;
 use std::f32::consts::TAU;
 use std::mem::MaybeUninit;
+use std::rc::Rc;
+pub struct ExplosionManager {
+    pub construct_cell: this_call!(
+        fn(StdBox<GridWorld>, isize, isize, StdBox<CellData>, *mut ()) -> Option<Cell<()>>
+    ),
+    pub lines: Box<ChunkArrayGeneric<Option<Vec<LineContinue>>>>,
+}
+unsafe impl Send for ExplosionManager {}
+unsafe impl Sync for ExplosionManager {}
+pub struct LineContinue {
+    pub line: LineIter,
+    pub config: Rc<ConfigExplosion>,
+    pub energy: usize,
+}
 impl ExplosionManager {
     #[inline]
     pub fn explosion(&mut self, config: &ConfigExplosion, pos: Vec2<f32>) {
@@ -143,13 +159,33 @@ impl ExplosionManager {
         for (x, y, _) in chunk_map.iter() {
             if let Some(v) = self.lines[usize::from(y)][usize::from(x)].take() {
                 for line in v {
+                    let cell_create_id = game_global
+                        .m_cell_factory
+                        .material_ids
+                        .get(&line.config.create_cell_material)
+                        .copied()
+                        .unwrap_or_default();
+                    let cell_create =
+                        StdBox::from(&game_global.m_cell_factory.cell_data[cell_create_id]);
+                    let chance = if cell_create_id == 0 {
+                        0
+                    } else {
+                        u32::try_from(line.config.create_cell_probability).unwrap()
+                    };
+                    let bern = Bernoulli::from_ratio(chance, 100).unwrap();
+                    let dx = truncate_usize(line.line.dx.abs().cast_unsigned());
+                    let dy = truncate_usize(line.line.dy.abs().cast_unsigned());
+                    let mult = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
                     self.explosion_line_ref(
-                        line.as_ref(),
+                        line,
                         &mut rng,
                         grid_world,
                         chunk_map,
                         &mut hp_map,
                         &mut chunk_indices,
+                        bern,
+                        mult,
+                        cell_create,
                         false,
                     );
                 }
@@ -176,33 +212,35 @@ impl ExplosionManager {
         } else {
             u32::try_from(config.create_cell_probability).unwrap()
         };
+        let bern = Bernoulli::from_ratio(chance, 100).unwrap();
         let mut hp_map = UninitMap::new(512 * 512 * grid_world.chunk_map.chunk_count);
         let mut chunk_indices: Box<[[MaybeUninit<usize>; 512]; 512]> =
             unsafe { Box::new_uninit().assume_init() };
         for (i, (x, y, _)) in grid_world.chunk_map.flat_iter().enumerate() {
             chunk_indices[usize::from(y)][usize::from(x)].write(i);
         }
-        let bern = Bernoulli::from_ratio(chance, 100).unwrap();
         let r = truncate_f32u(config.explosion_radius);
+        let config_arc = Rc::new(config.clone());
+        let energy = config.ray_energy;
         for (ix1, iy1) in Circumference::new(r) {
             octant(ix0, iy0, ix1, iy1, |_, ix2, iy2| {
                 let dy = truncate_usize(iy2.abs_diff(iy0));
                 let dx = truncate_usize(ix2.abs_diff(ix0));
                 let mult = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
                 self.explosion_line_ref(
-                    LineContinueRef {
+                    LineContinue {
                         line: LineIter::new(ix0, iy0, ix2, iy2),
-                        config,
-                        cell_create,
-                        bern,
-                        energy: config.ray_energy,
-                        mult,
+                        config: config_arc.clone(),
+                        energy,
                     },
                     &mut rng,
                     grid_world,
                     chunk_map,
                     &mut hp_map,
                     &mut chunk_indices,
+                    bern,
+                    mult,
+                    cell_create,
                     true,
                 );
             });
@@ -212,29 +250,24 @@ impl ExplosionManager {
     #[allow(clippy::too_many_arguments)]
     pub fn explosion_line_ref(
         &mut self,
-        mut line: LineContinueRef<'_>,
+        mut line: LineContinue,
         rng: &mut ThreadRng,
         grid_world: StdBox<GridWorld>,
         chunk_map: ChunkArray,
         hp_map: &mut UninitMap<usize>,
         chunk_indices: &mut [[MaybeUninit<usize>; 512]; 512],
+        bern: Bernoulli,
+        mult: f32,
+        cell_create: StdBox<CellData>,
         is_initial: bool,
     ) {
-        let hp_f = |hp| -> usize { truncate_f32u(truncate_usize(hp) * line.mult) };
         while let Some((case, mut x, y)) = line.line.next() {
             let mut cx = x / 512;
             let cy = y / 512;
             let Some(mut c) = chunk_map[cy][cx] else {
                 let vec = self.lines[cy][cx].get_or_insert_with(|| Vec::with_capacity(512));
                 line.line.back(case);
-                vec.push(LineContinue {
-                    line: line.line,
-                    config: line.config.clone(),
-                    cell_create: line.cell_create,
-                    bern: line.bern,
-                    energy: line.energy,
-                    mult: line.mult,
-                });
+                vec.push(line);
                 break;
             };
             let mut px = x % 512;
@@ -242,7 +275,10 @@ impl ExplosionManager {
             let mut i = unsafe { chunk_indices[cy][cx].assume_init() };
             let mut hp_index = 512 * 512 * i + 512 * py + px;
             if let Some(hp) = hp_map.get(hp_index) {
-                if let Some(new) = line.energy.checked_sub(hp_f(hp)) {
+                if let Some(new) = line
+                    .energy
+                    .checked_sub(truncate_f32u(truncate_usize(hp) * mult))
+                {
                     line.energy = new;
                 } else {
                     break;
@@ -257,7 +293,10 @@ impl ExplosionManager {
                     {
                         break;
                     }
-                    let Some(new) = line.energy.checked_sub(hp_f(p.hp)) else {
+                    let Some(new) = line
+                        .energy
+                        .checked_sub(truncate_f32u(truncate_usize(p.hp) * mult))
+                    else {
                         break;
                     };
                     hp_map.insert(hp_index, p.hp);
@@ -266,12 +305,12 @@ impl ExplosionManager {
                 } else {
                     hp_map.insert(hp_index, 0);
                 }
-                if rng.sample(line.bern) {
+                if rng.sample(bern) {
                     c[py][px] = (self.construct_cell)(
                         grid_world,
                         x.cast_signed() - 512 * 256,
                         y.cast_signed() - 512 * 256,
-                        line.cell_create,
+                        cell_create,
                         std::ptr::null_mut(),
                     );
                 } else {
@@ -301,12 +340,12 @@ impl ExplosionManager {
                 } else {
                     hp_map.insert(hp_index, 0);
                 }
-                if rng.sample(line.bern) {
+                if rng.sample(bern) {
                     c[py][px] = (self.construct_cell)(
                         grid_world,
                         x.cast_signed() - 512 * 256,
                         y.cast_signed() - 512 * 256,
-                        line.cell_create,
+                        cell_create,
                         std::ptr::null_mut(),
                     );
                 } else {
@@ -336,12 +375,12 @@ impl ExplosionManager {
                     } else {
                         hp_map.insert(hp_index, 0);
                     }
-                    if rng.sample(line.bern) {
+                    if rng.sample(bern) {
                         c[py][px] = (self.construct_cell)(
                             grid_world,
                             x.cast_signed() - 512 * 256,
                             y.cast_signed() - 512 * 256,
-                            line.cell_create,
+                            cell_create,
                             std::ptr::null_mut(),
                         );
                     } else {
