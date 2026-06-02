@@ -126,12 +126,11 @@ impl ChunkMap {
         self.max_chunk.y = self.max_chunk.y.max(yi);
     }
 }
-impl<T: Copy> ChunkArrayGeneric<T> {
+impl<T> ChunkArrayGeneric<T> {
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = (u16, u16, T)> {
+    pub fn iter(&self) -> impl Iterator<Item = (u16, u16, &T)> {
         self.array.iter().enumerate().flat_map(|(y, yc)| {
             yc.iter()
-                .copied()
                 .enumerate()
                 .map(move |(x, xc)| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), xc))
         })
@@ -145,10 +144,16 @@ impl<T: Copy> ChunkArrayGeneric<T> {
         })
     }
 }
-impl<T: Copy> ChunkArrayGeneric<Option<T>> {
+impl<T> ChunkArrayGeneric<Option<T>> {
     #[inline]
-    pub fn flat_iter(&self) -> impl Iterator<Item = (u16, u16, T)> {
-        self.iter().filter_map(|(x, y, oc)| oc.map(|c| (x, y, c)))
+    pub fn flat_iter(&self) -> impl Iterator<Item = (u16, u16, &T)> {
+        self.iter()
+            .filter_map(|(x, y, oc)| oc.as_ref().map(|c| (x, y, c)))
+    }
+    #[inline]
+    pub fn flat_iter_mut(&mut self) -> impl Iterator<Item = (u16, u16, &mut T)> {
+        self.iter_mut()
+            .filter_map(|(x, y, oc)| oc.as_mut().map(|c| (x, y, c)))
     }
 }
 impl<T> Default for ChunkArrayGeneric<Option<T>> {
@@ -160,7 +165,7 @@ impl<T> Default for ChunkArrayGeneric<Option<T>> {
         }
     }
 }
-impl<T: Copy> Debug for ChunkArrayGeneric<Option<T>> {
+impl<T> Debug for ChunkArrayGeneric<Option<T>> {
     #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_list()

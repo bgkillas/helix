@@ -3,8 +3,8 @@ use crate::circumference::Circumference;
 use crate::line::LineIter;
 use crate::octant::octant;
 use crate::uninit_map::UninitMap;
-use crate::{ExplosionManager, LineContinue, LineContinueRef};
-use noita_api::{ChunkArray, ConfigExplosion, GameGlobal, StdBox, Vec2};
+use crate::{ExplosionManager, LineContinueRef};
+use noita_api::{ChunkArray, ConfigExplosion, GameGlobal, GridWorld, StdBox, Vec2};
 use rand::RngExt as _;
 use rand::distr::Bernoulli;
 use rand::rngs::ThreadRng;
@@ -57,23 +57,22 @@ impl ExplosionManager {
             for (x, y) in LineIter::new(ix0, iy0, ix1, iy1) {
                 let px = x % 512;
                 let py = y % 512;
-                if let Some(c) = chunk_map[y / 512][x / 512] {
-                    if let Some(p) = c[py][px] {
-                        if !config.hole_enabled {
-                            break;
-                        }
-                        if p.material.durability <= config.max_durability_to_destroy
-                            && let Some(new) = energy.checked_sub(hp_f(p.hp))
-                        {
-                            energy = new;
-                        } else {
-                            (ix2, iy2) = (x, y);
-                            break;
-                        }
-                    }
-                } else {
+                let Some(c) = chunk_map[y / 512][x / 512] else {
                     (ix2, iy2) = (x, y);
                     break;
+                };
+                if let Some(p) = c[py][px] {
+                    if !config.hole_enabled
+                        || p.material.durability > config.max_durability_to_destroy
+                    {
+                        (ix2, iy2) = (x, y);
+                        break;
+                    }
+                    let Some(new) = energy.checked_sub(hp_f(p.hp)) else {
+                        (ix2, iy2) = (x, y);
+                        break;
+                    };
+                    energy = new;
                 }
             }
             let r = if (ix2, iy2) == (ix1, iy1) {
@@ -126,22 +125,37 @@ impl ExplosionManager {
         }
     }
     #[inline]
-    pub fn explosion_line(&self, mut line: LineContinue) {
+    pub fn explosion_chunk_update(&mut self) {
         let mut rng = rand::rng();
         let game_global = GameGlobal::global();
         let grid_world = game_global.m_grid_world;
         let chunk_map = grid_world.chunk_map.chunk_array;
-        self.explosion_line_ref(line.as_ref(), &mut rng, chunk_map);
-    }
-    #[inline]
-    #[allow(clippy::needless_pass_by_value)]
-    #[allow(unused_variables)]
-    pub fn explosion_line_ref(
-        &self,
-        line: LineContinueRef<'_>,
-        rng: &mut ThreadRng,
-        chunk_map: ChunkArray,
-    ) {
+        let mut hp_map = UninitMap::new(512 * 512 * grid_world.chunk_map.chunk_count);
+        let mut chunk_indices: Box<MaybeUninit<[[MaybeUninit<usize>; 512]; 512]>> =
+            Box::new_uninit();
+        for (i, (x, y, _)) in grid_world.chunk_map.flat_iter().enumerate() {
+            unsafe {
+                chunk_indices
+                    .as_mut_ptr()
+                    .cast::<MaybeUninit<usize>>()
+                    .add(512 * usize::from(y) + usize::from(x))
+                    .write(MaybeUninit::new(i));
+            }
+        }
+        for (x, y, _) in chunk_map.iter() {
+            if let Some(v) = self.lines[usize::from(y)][usize::from(x)].take() {
+                for mut line in v {
+                    self.explosion_line_ref(
+                        line.as_ref(),
+                        &mut rng,
+                        grid_world,
+                        chunk_map,
+                        &mut hp_map,
+                        &mut chunk_indices,
+                    );
+                }
+            }
+        }
     }
     #[inline]
     pub fn explosion_lines(&self, config: &ConfigExplosion, pos: Vec2<f32>) {
@@ -164,11 +178,11 @@ impl ExplosionManager {
             u32::try_from(config.create_cell_probability).unwrap()
         };
         let mut hp_map = UninitMap::new(512 * 512 * grid_world.chunk_map.chunk_count);
-        let mut chunk_indexes: Box<MaybeUninit<[[MaybeUninit<usize>; 512]; 512]>> =
+        let mut chunk_indices: Box<MaybeUninit<[[MaybeUninit<usize>; 512]; 512]>> =
             Box::new_uninit();
         for (i, (x, y, _)) in grid_world.chunk_map.flat_iter().enumerate() {
             unsafe {
-                chunk_indexes
+                chunk_indices
                     .as_mut_ptr()
                     .cast::<MaybeUninit<usize>>()
                     .add(512 * usize::from(y) + usize::from(x))
@@ -179,104 +193,128 @@ impl ExplosionManager {
         let r = truncate_f32u(config.explosion_radius);
         for (ix1, iy1) in Circumference::new(r) {
             octant(ix0, iy0, ix1, iy1, |_, ix2, iy2| {
-                let mut energy = config.ray_energy;
                 let dy = truncate_usize(iy2.abs_diff(iy0));
                 let dx = truncate_usize(ix2.abs_diff(ix0));
-                let m = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
-                let hp_f = |hp| -> usize { truncate_f32u(truncate_usize(hp) * m) };
-                for (mut x, y) in LineIter::new(ix0, iy0, ix2, iy2) {
-                    let mut px = x % 512;
-                    let py = y % 512;
-                    let mut cx = x / 512;
-                    let cy = y / 512;
-                    let mut i = unsafe {
-                        chunk_indexes
-                            .as_ptr()
-                            .cast::<MaybeUninit<usize>>()
-                            .add(512 * cy + cx)
-                            .read()
-                            .assume_init()
-                    };
-                    let mut hp_index = 512 * 512 * i + 512 * py + px;
-                    if let Some(hp) = hp_map.get(hp_index) {
-                        if let Some(new) = energy.checked_sub(hp_f(hp)) {
-                            energy = new;
-                        } else {
-                            break;
-                        }
-                    } else if let Some(mut c) = chunk_map[cy][cx] {
-                        if let Some(p) = c[py][px] {
-                            if !config.hole_enabled {
-                                break;
-                            }
-                            if p.material.durability <= config.max_durability_to_destroy
-                                && let Some(new) = energy.checked_sub(hp_f(p.hp))
-                            {
-                                hp_map.insert(hp_index, p.hp);
-                                energy = new;
-                                p.ptr.free();
-                            } else {
-                                break;
-                            }
-                        } else {
-                            hp_map.insert(hp_index, 0);
-                        }
-                        if rng.sample(bern) {
-                            c[py][px] = (self.construct_cell)(
-                                grid_world,
-                                x.cast_signed() - 512 * 256,
-                                y.cast_signed() - 512 * 256,
-                                cell_create,
-                                std::ptr::null_mut(),
-                            );
-                        } else {
-                            c[py][px] = None;
-                        }
-                    } else {
+                let mult = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
+                self.explosion_line_ref(
+                    LineContinueRef {
+                        line: &mut LineIter::new(ix0, iy0, ix2, iy2),
+                        config,
+                        cell_create,
+                        bern,
+                        energy: config.ray_energy,
+                        mult,
+                    },
+                    &mut rng,
+                    grid_world,
+                    chunk_map,
+                    &mut hp_map,
+                    &mut chunk_indices,
+                );
+            });
+        }
+    }
+    #[inline]
+    #[allow(clippy::needless_pass_by_value)]
+    #[allow(unused_variables)]
+    pub fn explosion_line_ref(
+        &self,
+        mut line: LineContinueRef<'_>,
+        rng: &mut ThreadRng,
+        grid_world: StdBox<GridWorld>,
+        chunk_map: ChunkArray,
+        hp_map: &mut UninitMap<usize>,
+        chunk_indices: &mut MaybeUninit<[[MaybeUninit<usize>; 512]; 512]>,
+    ) {
+        let hp_f = |hp| -> usize { truncate_f32u(truncate_usize(hp) * line.mult) };
+        for (mut x, y) in line.line {
+            let mut px = x % 512;
+            let py = y % 512;
+            let mut cx = x / 512;
+            let cy = y / 512;
+            let mut i = unsafe {
+                chunk_indices
+                    .as_ptr()
+                    .cast::<MaybeUninit<usize>>()
+                    .add(512 * cy + cx)
+                    .read()
+                    .assume_init()
+            };
+            let mut hp_index = 512 * 512 * i + 512 * py + px;
+            if let Some(hp) = hp_map.get(hp_index) {
+                if let Some(new) = line.energy.checked_sub(hp_f(hp)) {
+                    line.energy = new;
+                } else {
+                    break;
+                }
+            } else if let Some(mut c) = chunk_map[cy][cx] {
+                if let Some(p) = c[py][px] {
+                    if !line.config.hole_enabled
+                        || p.material.durability > line.config.max_durability_to_destroy
+                    {
                         break;
                     }
-                    x += 1;
-                    px = x % 512;
-                    cx = x / 512;
-                    i = unsafe {
-                        chunk_indexes
-                            .as_ptr()
-                            .cast::<MaybeUninit<usize>>()
-                            .add(512 * cy + cx)
-                            .read()
-                            .assume_init()
+                    let Some(new) = line.energy.checked_sub(hp_f(p.hp)) else {
+                        break;
                     };
-                    hp_index = 512 * 512 * i + 512 * py + px;
-                    if hp_map.get(hp_index).is_none()
-                        && let Some(mut c) = chunk_map[cy][cx]
-                    {
-                        if let Some(p) = c[py][px] {
-                            if !config.hole_enabled {
-                                continue;
-                            }
-                            if p.material.durability <= config.max_durability_to_destroy {
-                                hp_map.insert(hp_index, p.hp);
-                                p.ptr.free();
-                            } else {
-                                continue;
-                            }
-                        } else {
-                            hp_map.insert(hp_index, 0);
-                        }
-                        if rng.sample(bern) {
-                            c[py][px] = (self.construct_cell)(
-                                grid_world,
-                                x.cast_signed() - 512 * 256,
-                                y.cast_signed() - 512 * 256,
-                                cell_create,
-                                std::ptr::null_mut(),
-                            );
-                        } else {
-                            c[py][px] = None;
-                        }
-                    }
+                    hp_map.insert(hp_index, p.hp);
+                    line.energy = new;
+                    p.ptr.free();
+                } else {
+                    hp_map.insert(hp_index, 0);
                 }
-            });
+                if rng.sample(line.bern) {
+                    c[py][px] = (self.construct_cell)(
+                        grid_world,
+                        x.cast_signed() - 512 * 256,
+                        y.cast_signed() - 512 * 256,
+                        line.cell_create,
+                        std::ptr::null_mut(),
+                    );
+                } else {
+                    c[py][px] = None;
+                }
+            } else {
+                break;
+            }
+            x += 1;
+            px = x % 512;
+            cx = x / 512;
+            i = unsafe {
+                chunk_indices
+                    .as_ptr()
+                    .cast::<MaybeUninit<usize>>()
+                    .add(512 * cy + cx)
+                    .read()
+                    .assume_init()
+            };
+            hp_index = 512 * 512 * i + 512 * py + px;
+            if hp_map.get(hp_index).is_none()
+                && let Some(mut c) = chunk_map[cy][cx]
+            {
+                if let Some(p) = c[py][px] {
+                    if !line.config.hole_enabled
+                        || p.material.durability > line.config.max_durability_to_destroy
+                    {
+                        continue;
+                    }
+                    hp_map.insert(hp_index, p.hp);
+                    p.ptr.free();
+                } else {
+                    hp_map.insert(hp_index, 0);
+                }
+                if rng.sample(line.bern) {
+                    c[py][px] = (self.construct_cell)(
+                        grid_world,
+                        x.cast_signed() - 512 * 256,
+                        y.cast_signed() - 512 * 256,
+                        line.cell_create,
+                        std::ptr::null_mut(),
+                    );
+                } else {
+                    c[py][px] = None;
+                }
+            }
         }
     }
 }
