@@ -224,7 +224,7 @@ impl eframe::App for App {
                         let game_global = GameGlobal::global();
                         let grid_world = game_global.m_grid_world;
                         let chunk_map = grid_world.chunk_map.chunk_array;
-                        for (x, y) in LineIter::new(x0, y0, x1, y1) {
+                        for (_, x, y) in LineIter::new(x0, y0, x1, y1) {
                             let px = x % 512;
                             let py = y % 512;
                             if let Some(mut c) = chunk_map[y / 512][x / 512] {
@@ -280,6 +280,7 @@ impl eframe::App for App {
                             StdBox::new(chunk)
                         };
                         grid_world.chunk_map.insert_box(x0, y0, chunk);
+                        self.em.explosion_chunk_update();
                     }
                     Wand::Unload(x0, y0) => {
                         let x0 = (256 + x0).cast_unsigned();

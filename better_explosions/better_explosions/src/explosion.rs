@@ -3,7 +3,7 @@ use crate::circumference::Circumference;
 use crate::line::LineIter;
 use crate::octant::octant;
 use crate::uninit_map::UninitMap;
-use crate::{ExplosionManager, LineContinueRef};
+use crate::{ExplosionManager, LineContinue, LineContinueRef};
 use noita_api::{ChunkArray, ConfigExplosion, GameGlobal, GridWorld, StdBox, Vec2};
 use rand::RngExt as _;
 use rand::distr::Bernoulli;
@@ -12,14 +12,14 @@ use std::f32::consts::TAU;
 use std::mem::MaybeUninit;
 impl ExplosionManager {
     #[inline]
-    pub fn explosion(&self, config: &ConfigExplosion, pos: Vec2<f32>) {
+    pub fn explosion(&mut self, config: &ConfigExplosion, pos: Vec2<f32>) {
         let r = truncate_f32u(config.explosion_radius);
         let n = (8 * r.div_ceil(16)).max((((r * 63) / 10) / 16) & !7);
         let rays: u16 = u16::try_from(n).unwrap();
         self.explosion_with_rays(config, pos, rays);
     }
     #[inline]
-    pub fn explosion_with_rays(&self, config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) {
+    pub fn explosion_with_rays(&mut self, config: &ConfigExplosion, pos: Vec2<f32>, rays: u16) {
         let mut rng = rand::rng();
         let game_global = GameGlobal::global();
         let cell_create_id = game_global
@@ -54,7 +54,7 @@ impl ExplosionManager {
             let dx = truncate_usize(ix1.abs_diff(ix0));
             let m = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
             let hp_f = |hp| -> usize { truncate_f32u(truncate_usize(hp) * m) };
-            for (x, y) in LineIter::new(ix0, iy0, ix1, iy1) {
+            for (_, x, y) in LineIter::new(ix0, iy0, ix1, iy1) {
                 let px = x % 512;
                 let py = y % 512;
                 let Some(c) = chunk_map[y / 512][x / 512] else {
@@ -138,7 +138,7 @@ impl ExplosionManager {
         }
         for (x, y, _) in chunk_map.iter() {
             if let Some(v) = self.lines[usize::from(y)][usize::from(x)].take() {
-                for mut line in v {
+                for line in v {
                     self.explosion_line_ref(
                         line.as_ref(),
                         &mut rng,
@@ -146,13 +146,14 @@ impl ExplosionManager {
                         chunk_map,
                         &mut hp_map,
                         &mut chunk_indices,
+                        false,
                     );
                 }
             }
         }
     }
     #[inline]
-    pub fn explosion_lines(&self, config: &ConfigExplosion, pos: Vec2<f32>) {
+    pub fn explosion_lines(&mut self, config: &ConfigExplosion, pos: Vec2<f32>) {
         let mut rng = rand::rng();
         let game_global = GameGlobal::global();
         let cell_create_id = game_global
@@ -186,7 +187,7 @@ impl ExplosionManager {
                 let mult = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
                 self.explosion_line_ref(
                     LineContinueRef {
-                        line: &mut LineIter::new(ix0, iy0, ix2, iy2),
+                        line: LineIter::new(ix0, iy0, ix2, iy2),
                         config,
                         cell_create,
                         bern,
@@ -198,27 +199,38 @@ impl ExplosionManager {
                     chunk_map,
                     &mut hp_map,
                     &mut chunk_indices,
+                    true,
                 );
             });
         }
     }
     #[inline]
-    #[allow(clippy::needless_pass_by_value)]
-    #[allow(unused_variables)]
+    #[allow(clippy::too_many_arguments)]
     pub fn explosion_line_ref(
-        &self,
+        &mut self,
         mut line: LineContinueRef<'_>,
         rng: &mut ThreadRng,
         grid_world: StdBox<GridWorld>,
         chunk_map: ChunkArray,
         hp_map: &mut UninitMap<usize>,
         chunk_indices: &mut [[MaybeUninit<usize>; 512]; 512],
+        is_initial: bool,
     ) {
         let hp_f = |hp| -> usize { truncate_f32u(truncate_usize(hp) * line.mult) };
-        for (mut x, y) in line.line {
+        while let Some((case, mut x, y)) = line.line.next() {
             let mut cx = x / 512;
             let cy = y / 512;
             let Some(mut c) = chunk_map[cy][cx] else {
+                let vec = self.lines[cy][cx].get_or_insert_with(|| Vec::with_capacity(512));
+                line.line.back(case);
+                vec.push(LineContinue {
+                    line: line.line,
+                    config: line.config.clone(),
+                    cell_create: line.cell_create,
+                    bern: line.bern,
+                    energy: line.energy,
+                    mult: line.mult,
+                });
                 break;
             };
             let mut px = x % 512;
@@ -291,6 +303,42 @@ impl ExplosionManager {
                     );
                 } else {
                     c[py][px] = None;
+                }
+            }
+            if !is_initial {
+                x -= 2;
+                cx = x / 512;
+                if let Some(d) = chunk_map[cy][cx] {
+                    c = d;
+                } else {
+                    continue;
+                }
+                px = x % 512;
+                i = unsafe { chunk_indices[cy][cx].assume_init() };
+                hp_index = 512 * 512 * i + 512 * py + px;
+                if hp_map.get(hp_index).is_none() {
+                    if let Some(p) = c[py][px] {
+                        if !line.config.hole_enabled
+                            || p.material.durability > line.config.max_durability_to_destroy
+                        {
+                            continue;
+                        }
+                        hp_map.insert(hp_index, p.hp);
+                        p.ptr.free();
+                    } else {
+                        hp_map.insert(hp_index, 0);
+                    }
+                    if rng.sample(line.bern) {
+                        c[py][px] = (self.construct_cell)(
+                            grid_world,
+                            x.cast_signed() - 512 * 256,
+                            y.cast_signed() - 512 * 256,
+                            line.cell_create,
+                            std::ptr::null_mut(),
+                        );
+                    } else {
+                        c[py][px] = None;
+                    }
                 }
             }
         }

@@ -11,33 +11,90 @@ pub struct LineIter {
     error: isize,
     first: bool,
 }
+#[derive(Debug)]
+pub enum StepCase {
+    Start,
+    Dx,
+    Dy,
+    Both,
+}
 impl Iterator for LineIter {
-    type Item = (usize, usize);
+    type Item = (StepCase, usize, usize);
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.first {
             self.first = false;
-            return Some((self.x0.cast_unsigned(), self.y0.cast_unsigned()));
+            return Some((
+                StepCase::Start,
+                self.x0.cast_unsigned(),
+                self.y0.cast_unsigned(),
+            ));
         }
-        let error = self.error;
-        if error >= self.dy {
-            if self.x0 == self.x1 {
-                return None;
+        match (self.error >= self.dy, self.error <= self.dx) {
+            (true, true) => {
+                if self.x0 == self.x1 || self.y0 == self.y1 {
+                    return None;
+                }
+                self.error += 2 * (self.dx + self.dy);
+                self.x0 += self.sx;
+                self.y0 += self.sy;
+                Some((
+                    StepCase::Both,
+                    self.x0.cast_unsigned(),
+                    self.y0.cast_unsigned(),
+                ))
             }
-            self.error += 2 * self.dy;
-            self.x0 += self.sx;
-        }
-        if error <= self.dx {
-            if self.y0 == self.y1 {
-                return None;
+            (true, false) => {
+                if self.x0 == self.x1 {
+                    return None;
+                }
+                self.error += 2 * self.dy;
+                self.x0 += self.sx;
+                Some((
+                    StepCase::Dx,
+                    self.x0.cast_unsigned(),
+                    self.y0.cast_unsigned(),
+                ))
             }
-            self.error += 2 * self.dx;
-            self.y0 += self.sy;
+            (false, true) => {
+                if self.y0 == self.y1 {
+                    return None;
+                }
+                self.error += 2 * self.dx;
+                self.y0 += self.sy;
+                Some((
+                    StepCase::Dy,
+                    self.x0.cast_unsigned(),
+                    self.y0.cast_unsigned(),
+                ))
+            }
+            (false, false) => unreachable!(),
         }
-        Some((self.x0.cast_unsigned(), self.y0.cast_unsigned()))
     }
 }
 impl LineIter {
+    #[inline]
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn back(&mut self, case: StepCase) {
+        match case {
+            StepCase::Start => {
+                self.first = true;
+            }
+            StepCase::Dx => {
+                self.x0 -= self.sx;
+                self.error -= 2 * self.dy;
+            }
+            StepCase::Dy => {
+                self.y0 -= self.sy;
+                self.error -= 2 * self.dx;
+            }
+            StepCase::Both => {
+                self.x0 -= self.sx;
+                self.y0 -= self.sy;
+                self.error -= 2 * (self.dx + self.dy);
+            }
+        }
+    }
     #[inline]
     #[must_use]
     pub fn new(x0: usize, y0: usize, x1: usize, y1: usize) -> Self {
@@ -71,26 +128,26 @@ impl LineIter {
 fn test_line() {
     let arr = [(3, 2), (4, 2), (5, 3), (6, 3), (7, 4), (8, 4)];
     let mut iter = arr.iter().copied();
-    for (x, y) in LineIter::new(3, 2, 8, 4) {
+    for (_, x, y) in LineIter::new(3, 2, 8, 4) {
         let (nx, ny) = iter.next().unwrap();
         assert_eq!(x, nx, "{x} {y} {nx} {ny}");
         assert_eq!(y, ny, "{x} {y} {nx} {ny}");
     }
     let mut iter = arr.iter().copied().rev();
-    for (x, y) in LineIter::new(8, 4, 3, 2) {
+    for (_, x, y) in LineIter::new(8, 4, 3, 2) {
         let (nx, ny) = iter.next().unwrap();
         assert_eq!(x, nx, "{x} {y} {nx} {ny}");
         assert_eq!(y, ny, "{x} {y} {nx} {ny}");
     }
     let arr = [(2, 3), (2, 4), (3, 5), (3, 6), (4, 7), (4, 8)];
     let mut iter = arr.iter().copied();
-    for (x, y) in LineIter::new(2, 3, 4, 8) {
+    for (_, x, y) in LineIter::new(2, 3, 4, 8) {
         let (nx, ny) = iter.next().unwrap();
         assert_eq!(x, nx, "{x} {y} {nx} {ny}");
         assert_eq!(y, ny, "{x} {y} {nx} {ny}");
     }
     let mut iter = arr.iter().copied().rev();
-    for (x, y) in LineIter::new(4, 8, 2, 3) {
+    for (_, x, y) in LineIter::new(4, 8, 2, 3) {
         let (nx, ny) = iter.next().unwrap();
         assert_eq!(x, nx, "{x} {y} {nx} {ny}");
         assert_eq!(y, ny, "{x} {y} {nx} {ny}");
@@ -101,9 +158,9 @@ fn test_line() {
                 if i == k || (j == 0 && k == 8) {
                     continue;
                 }
-                let mut iter_a = LineIter::new(i, 0, j, 8);
-                let mut iter_b = LineIter::new(j, 8, 0, k);
-                let mut iter_c = LineIter::new(0, k, i, 0);
+                let mut iter_a = LineIter::new(i, 0, j, 8).map(|(_, x, y)| (x, y));
+                let mut iter_b = LineIter::new(j, 8, 0, k).map(|(_, x, y)| (x, y));
+                let mut iter_c = LineIter::new(0, k, i, 0).map(|(_, x, y)| (x, y));
                 let start_a = iter_a.next();
                 let start_b = iter_b.next();
                 let start_c = iter_c.next();

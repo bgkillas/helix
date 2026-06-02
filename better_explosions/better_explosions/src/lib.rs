@@ -50,9 +50,9 @@ pub struct LineContinue {
 impl LineContinue {
     #[inline]
     #[must_use]
-    pub fn as_ref(&mut self) -> LineContinueRef<'_> {
+    pub fn as_ref(&self) -> LineContinueRef<'_> {
         LineContinueRef {
-            line: &mut self.line,
+            line: self.line.clone(),
             config: &self.config,
             cell_create: self.cell_create,
             bern: self.bern,
@@ -62,7 +62,7 @@ impl LineContinue {
     }
 }
 pub struct LineContinueRef<'a> {
-    pub line: &'a mut LineIter,
+    pub line: LineIter,
     pub config: &'a ConfigExplosion,
     pub cell_create: StdBox<CellData>,
     pub bern: Bernoulli,
@@ -88,7 +88,7 @@ impl Default for ExplosionManager {
             construct_cell: dummy,
             #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
             construct_cell: noita_api::get_construct_cell(),
-            lines: unsafe { Box::new_zeroed().assume_init() },
+            lines: Box::default(),
         }
     }
 }

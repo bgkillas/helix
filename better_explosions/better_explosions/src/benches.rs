@@ -37,7 +37,8 @@ fn bench0_setup(_: &mut test::Bencher) {
     config.hole_enabled = true;
     let c = black_box(config);
     let pos = black_box(Vec2 { x: 10.0, y: 10.0 });
-    let em = ExplosionManager::default();
+    let mut em = ExplosionManager::default();
+    em.explosion(&c, pos);
     em.explosion_lines(&c, pos);
     grid_world.chunk_map.clear();
 }
@@ -45,7 +46,7 @@ fn bench0_setup(_: &mut test::Bencher) {
 fn empty_explosion(
     r: f32,
     bencher: &mut test::Bencher,
-    f: fn(&ExplosionManager, &ConfigExplosion, Vec2<f32>),
+    f: fn(&mut ExplosionManager, &ConfigExplosion, Vec2<f32>),
 ) {
     let game_global = GameGlobal::global();
     let mut grid_world = game_global.m_grid_world;
@@ -63,15 +64,15 @@ fn empty_explosion(
     config.hole_enabled = true;
     let c = black_box(config);
     let pos = black_box(Vec2 { x: 10.0, y: 10.0 });
-    let em = ExplosionManager::default();
-    bencher.iter(|| f(&em, &c, pos));
+    let mut em = ExplosionManager::default();
+    bencher.iter(|| f(&mut em, &c, pos));
     grid_world.chunk_map.clear();
 }
 #[cfg(test)]
 fn half_explosion(
     r: f32,
     bencher: &mut test::Bencher,
-    f: fn(&ExplosionManager, &ConfigExplosion, Vec2<f32>),
+    f: fn(&mut ExplosionManager, &ConfigExplosion, Vec2<f32>),
 ) {
     let game_global = GameGlobal::global();
     let mut grid_world = game_global.m_grid_world;
@@ -89,15 +90,15 @@ fn half_explosion(
     config.hole_enabled = true;
     let c = black_box(config);
     let pos = black_box(Vec2 { x: 10.0, y: 10.0 });
-    let em = ExplosionManager::default();
-    bencher.iter(|| f(&em, &c, pos));
+    let mut em = ExplosionManager::default();
+    bencher.iter(|| f(&mut em, &c, pos));
     grid_world.chunk_map.clear();
 }
 #[cfg(test)]
 fn empty_explosion_wall(
     r: f32,
     bencher: &mut test::Bencher,
-    f: fn(&ExplosionManager, &ConfigExplosion, Vec2<f32>),
+    f: fn(&mut ExplosionManager, &ConfigExplosion, Vec2<f32>),
 ) {
     let game_global = GameGlobal::global();
     let mut grid_world = game_global.m_grid_world;
@@ -124,15 +125,15 @@ fn empty_explosion_wall(
     config.hole_enabled = true;
     let c = black_box(config);
     let pos = black_box(Vec2 { x: 10.0, y: 10.0 });
-    let em = ExplosionManager::default();
-    bencher.iter(|| f(&em, &c, pos));
+    let mut em = ExplosionManager::default();
+    bencher.iter(|| f(&mut em, &c, pos));
     grid_world.chunk_map.clear();
 }
 #[cfg(test)]
 fn half_explosion_wall(
     r: f32,
     bencher: &mut test::Bencher,
-    f: fn(&ExplosionManager, &ConfigExplosion, Vec2<f32>),
+    f: fn(&mut ExplosionManager, &ConfigExplosion, Vec2<f32>),
 ) {
     let game_global = GameGlobal::global();
     let mut grid_world = game_global.m_grid_world;
@@ -159,8 +160,8 @@ fn half_explosion_wall(
     config.hole_enabled = true;
     let c = black_box(config);
     let pos = black_box(Vec2 { x: 10.0, y: 10.0 });
-    let em = ExplosionManager::default();
-    bencher.iter(|| f(&em, &c, pos));
+    let mut em = ExplosionManager::default();
+    bencher.iter(|| f(&mut em, &c, pos));
     grid_world.chunk_map.clear();
 }
 #[cfg(not(miri))]

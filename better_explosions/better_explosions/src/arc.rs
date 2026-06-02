@@ -18,8 +18,8 @@ impl Iterator for ArcIter {
     fn next(&mut self) -> Option<Self::Item> {
         if self.range_y_end >= self.range_y_start {
             Some(self.next_range())
-        } else if let Some((_, hy)) = self.high_line.next() {
-            let (lx, ly) = self.low_line.next().unwrap();
+        } else if let Some((_, _, hy)) = self.high_line.next() {
+            let (_, lx, ly) = self.low_line.next().unwrap();
             self.range_x = lx.cast_signed();
             if self.high_line.sy == -1 {
                 self.range_y_end = ly.cast_signed();
@@ -29,7 +29,7 @@ impl Iterator for ArcIter {
                 self.range_y_end = hy.cast_signed();
             }
             Some(self.next_range())
-        } else if let Some((lx, ly)) = self.low_line.next() {
+        } else if let Some((_, lx, ly)) = self.low_line.next() {
             self.hx += self.low_line.sx;
             let yy = self.r2 - (self.hx - self.x0).pow(2);
             self.range_x = lx.cast_signed();
@@ -110,7 +110,11 @@ impl ArcIter {
 #[cfg(feature = "test")]
 #[test]
 fn test() {
-    use crate::round_f32;
+    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::as_conversions)]
+    fn round_f32(f: f32) -> isize {
+        f.round() as isize
+    }
     use image::RgbImage;
     use std::f32::consts::TAU;
     let r: u16 = 256;
