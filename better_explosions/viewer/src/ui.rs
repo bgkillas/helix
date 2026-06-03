@@ -145,6 +145,20 @@ impl App {
             }
         }
     }
+    pub fn fill_rand(&mut self) {
+        let game_global = GameGlobal::global();
+        let grid_world = game_global.m_grid_world;
+        for (_, _, mut c) in grid_world.chunk_map.flat_iter() {
+            for (_, _, p) in c.iter_mut() {
+                self.paint_pixel(p);
+            }
+        }
+        for ((_, _), mut c) in self.unloaded.iter().map(|(a, b)| (*a, *b)) {
+            for (_, _, p) in c.iter_mut() {
+                self.paint_pixel(p);
+            }
+        }
+    }
 }
 fn make_texture(
     ui: &mut Ui,
@@ -232,9 +246,7 @@ impl eframe::App for App {
                             }
                         }
                     }
-                    Wand::Fill => {
-                        self.fill(self.material);
-                    }
+                    Wand::Fill => self.fill_rand(),
                     Wand::CellEater(x0, y0, r) => {
                         let x0 = (512 * 256 + x0).cast_unsigned();
                         let y0 = (512 * 256 + y0).cast_unsigned();
