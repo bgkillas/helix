@@ -18,6 +18,7 @@ pub struct ExplosionManager {
         fn(StdBox<GridWorld>, isize, isize, StdBox<CellData>, *mut ()) -> Option<Cell<()>>
     ),
     pub lines: Box<ChunkArrayGeneric<Option<Vec<LineContinue>>>>,
+    pub unlaoded_explosions: Vec<Unloaded>,
 }
 unsafe impl Send for ExplosionManager {}
 unsafe impl Sync for ExplosionManager {}
@@ -25,6 +26,9 @@ pub struct LineContinue {
     pub line: LineIter,
     pub config: Rc<ConfigExplosion>,
     pub energy: usize,
+}
+pub struct Unloaded {
+    pub config: ConfigExplosion,
 }
 impl ExplosionManager {
     #[inline]
