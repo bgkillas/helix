@@ -3,13 +3,13 @@ use crate::line::LineIter;
 pub struct ArcIter {
     low_line: LineIter,
     high_line: LineIter,
-    range_x: isize,
-    range_y_start: isize,
-    range_y_end: isize,
-    x0: isize,
-    y0: isize,
-    hx: isize,
-    r2: isize,
+    range_x: usize,
+    range_y_start: usize,
+    range_y_end: usize,
+    x0: usize,
+    y0: usize,
+    hx: usize,
+    r2: usize,
     steep: bool,
 }
 impl Iterator for ArcIter {
@@ -20,13 +20,13 @@ impl Iterator for ArcIter {
             Some(self.next_range())
         } else if let Some((_, _, hy)) = self.high_line.next() {
             let (_, lx, ly) = self.low_line.next().unwrap();
-            self.range_x = lx.cast_signed();
+            self.range_x = lx;
             if self.high_line.dy.is_negative() {
-                self.range_y_end = ly.cast_signed();
-                self.range_y_start = hy.cast_signed();
+                self.range_y_end = ly;
+                self.range_y_start = hy;
             } else {
-                self.range_y_start = ly.cast_signed();
-                self.range_y_end = hy.cast_signed();
+                self.range_y_start = ly;
+                self.range_y_end = hy;
             }
             Some(self.next_range())
         } else if let Some((_, lx, ly)) = self.low_line.next() {
@@ -35,13 +35,13 @@ impl Iterator for ArcIter {
             } else {
                 self.hx += 1;
             }
-            let yy = self.r2 - (self.hx - self.x0).pow(2);
-            self.range_x = lx.cast_signed();
+            let yy = self.r2 - self.hx.abs_diff(self.x0).pow(2);
+            self.range_x = lx;
             if self.high_line.dy.is_negative() {
-                self.range_y_end = ly.cast_signed();
+                self.range_y_end = ly;
                 self.range_y_start = self.y0 - yy.isqrt();
             } else {
-                self.range_y_start = ly.cast_signed();
+                self.range_y_start = ly;
                 self.range_y_end = self.y0 + yy.isqrt();
             }
             Some(self.next_range())
@@ -54,36 +54,15 @@ impl ArcIter {
     #[inline]
     #[must_use]
     pub fn new(
-        x0: usize,
-        y0: usize,
-        x1: usize,
-        y1: usize,
-        x2: usize,
-        y2: usize,
+        mut x0: usize,
+        mut y0: usize,
+        mut x1: usize,
+        mut y1: usize,
+        mut x2: usize,
+        mut y2: usize,
         r2: usize,
     ) -> Self {
-        Self::newi(
-            x0.cast_signed(),
-            y0.cast_signed(),
-            x1.cast_signed(),
-            y1.cast_signed(),
-            x2.cast_signed(),
-            y2.cast_signed(),
-            r2.cast_signed(),
-        )
-    }
-    #[inline]
-    #[must_use]
-    pub fn newi(
-        mut x0: isize,
-        mut y0: isize,
-        mut x1: isize,
-        mut y1: isize,
-        mut x2: isize,
-        mut y2: isize,
-        r2: isize,
-    ) -> Self {
-        let steep = (y2 - y0).abs() > (x2 - x0).abs() || (y1 - y0).abs() > (x1 - x0).abs();
+        let steep = y2.abs_diff(y0) > x2.abs_diff(x0) || y1.abs_diff(y0) > x1.abs_diff(x0);
         if steep {
             (x0, y0) = (y0, x0);
             (x1, y1, x2, y2) = (y2, x2, y1, x1);
@@ -92,8 +71,8 @@ impl ArcIter {
             (x1, y1, x2, y2) = (x2, y2, x1, y1);
         }
         Self {
-            low_line: LineIter::newi(x0, y0, x1, y1),
-            high_line: LineIter::newi(x0, y0, x2, y2),
+            low_line: LineIter::new(x0, y0, x1, y1),
+            high_line: LineIter::new(x0, y0, x2, y2),
             range_x: 0,
             range_y_start: 1,
             range_y_end: 0,
@@ -105,9 +84,9 @@ impl ArcIter {
         }
     }
     fn next_range(&mut self) -> (usize, usize) {
-        let y = self.range_y_start.cast_unsigned();
+        let y = self.range_y_start;
         self.range_y_start += 1;
-        let x = self.range_x.cast_unsigned();
+        let x = self.range_x;
         if self.steep { (y, x) } else { (x, y) }
     }
 }

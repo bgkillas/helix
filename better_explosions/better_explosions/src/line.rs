@@ -1,9 +1,9 @@
 #[derive(Debug, Clone)]
 pub struct LineIter {
-    pub x0: isize,
-    pub y0: isize,
-    pub x1: isize,
-    pub y1: isize,
+    pub x0: usize,
+    pub y0: usize,
+    pub x1: usize,
+    pub y1: usize,
     pub dx: isize,
     pub dy: isize,
     pub error: isize,
@@ -22,11 +22,7 @@ impl Iterator for LineIter {
     fn next(&mut self) -> Option<Self::Item> {
         if self.first {
             self.first = false;
-            return Some((
-                StepCase::Start,
-                self.x0.cast_unsigned(),
-                self.y0.cast_unsigned(),
-            ));
+            return Some((StepCase::Start, self.x0, self.y0));
         }
         match (self.error >= -self.dy.abs(), self.error <= self.dx.abs()) {
             (true, true) => {
@@ -36,11 +32,7 @@ impl Iterator for LineIter {
                 self.error += 2 * (self.dx.abs() - self.dy.abs());
                 self.sx();
                 self.sy();
-                Some((
-                    StepCase::Both,
-                    self.x0.cast_unsigned(),
-                    self.y0.cast_unsigned(),
-                ))
+                Some((StepCase::Both, self.x0, self.y0))
             }
             (true, false) => {
                 if self.x0 == self.x1 {
@@ -48,11 +40,7 @@ impl Iterator for LineIter {
                 }
                 self.error -= 2 * self.dy.abs();
                 self.sx();
-                Some((
-                    StepCase::Dx,
-                    self.x0.cast_unsigned(),
-                    self.y0.cast_unsigned(),
-                ))
+                Some((StepCase::Dx, self.x0, self.y0))
             }
             (false, true) => {
                 if self.y0 == self.y1 {
@@ -60,11 +48,7 @@ impl Iterator for LineIter {
                 }
                 self.error += 2 * self.dx.abs();
                 self.sy();
-                Some((
-                    StepCase::Dy,
-                    self.x0.cast_unsigned(),
-                    self.y0.cast_unsigned(),
-                ))
+                Some((StepCase::Dy, self.x0, self.y0))
             }
             (false, false) => unreachable!(),
         }
@@ -124,18 +108,8 @@ impl LineIter {
     #[inline]
     #[must_use]
     pub fn new(x0: usize, y0: usize, x1: usize, y1: usize) -> Self {
-        Self::newi(
-            x0.cast_signed(),
-            y0.cast_signed(),
-            x1.cast_signed(),
-            y1.cast_signed(),
-        )
-    }
-    #[inline]
-    #[must_use]
-    pub fn newi(x0: isize, y0: isize, x1: isize, y1: isize) -> Self {
-        let dx = x1 - x0;
-        let dy = y1 - y0;
+        let dx = x1.cast_signed() - x0.cast_signed();
+        let dy = y1.cast_signed() - y0.cast_signed();
         Self {
             x0,
             y0,
@@ -145,48 +119,6 @@ impl LineIter {
             dy,
             error: 2 * (dx.abs() - dy.abs()),
             first: true,
-        }
-    }
-    #[inline]
-    #[must_use]
-    pub fn new_error(
-        x0: usize,
-        y0: usize,
-        x1: usize,
-        y1: usize,
-        error: isize,
-        first: bool,
-    ) -> Self {
-        Self::newi_error(
-            x0.cast_signed(),
-            y0.cast_signed(),
-            x1.cast_signed(),
-            y1.cast_signed(),
-            error,
-            first,
-        )
-    }
-    #[inline]
-    #[must_use]
-    pub fn newi_error(
-        x0: isize,
-        y0: isize,
-        x1: isize,
-        y1: isize,
-        error: isize,
-        first: bool,
-    ) -> Self {
-        let dx = x1 - x0;
-        let dy = y1 - y0;
-        Self {
-            x0,
-            y0,
-            x1,
-            y1,
-            dx,
-            dy,
-            error,
-            first,
         }
     }
 }
