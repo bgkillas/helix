@@ -1,6 +1,6 @@
 use crate::arc::ArcIter;
 use crate::circumference::Circumference;
-use crate::line::LineIter;
+use crate::line::{LineIter, StepCase};
 use crate::octant::octant;
 use crate::uninit_map::UninitMap;
 use noita_api::{
@@ -186,7 +186,6 @@ impl ExplosionManager {
                         bern,
                         mult,
                         cell_create,
-                        false,
                     );
                 }
             }
@@ -241,7 +240,6 @@ impl ExplosionManager {
                     bern,
                     mult,
                     cell_create,
-                    true,
                 );
             });
         }
@@ -259,11 +257,11 @@ impl ExplosionManager {
         bern: Bernoulli,
         mult: f32,
         cell_create: StdBox<CellData>,
-        is_initial: bool,
     ) {
-        while let Some((case, mut x, y)) = line.line.next() {
+        let steep = line.line.dy.abs() > line.line.dx.abs();
+        while let Some((case, mut x, mut y)) = line.line.next() {
             let mut cx = x / 512;
-            let cy = y / 512;
+            let mut cy = y / 512;
             let Some(mut c) = chunk_map[cy][cx] else {
                 let vec = self.lines[cy][cx].get_or_insert_with(|| Vec::with_capacity(512));
                 line.line.back(case);
@@ -271,7 +269,7 @@ impl ExplosionManager {
                 break;
             };
             let mut px = x % 512;
-            let py = y % 512;
+            let mut py = y % 512;
             let mut i = unsafe { chunk_indices[cy][cx].assume_init() };
             let mut hp_index = 512 * 512 * i + 512 * py + px;
             if let Some(hp) = hp_map.get(hp_index) {
@@ -317,14 +315,30 @@ impl ExplosionManager {
                     c[py][px] = None;
                 }
             }
-            x += 1;
-            cx = x / 512;
+            if matches!(case, StepCase::Both) {
+                if steep {
+                    if line.line.dy.is_negative() {
+                        y += 1;
+                    } else {
+                        y -= 1;
+                    }
+                    cy = y / 512;
+                    py = y % 512;
+                } else {
+                    if line.line.dx.is_negative() {
+                        x += 1;
+                    } else {
+                        x -= 1;
+                    }
+                    cx = x / 512;
+                    px = x % 512;
+                }
+            }
             if let Some(d) = chunk_map[cy][cx] {
                 c = d;
             } else {
                 continue;
             }
-            px = x % 512;
             i = unsafe { chunk_indices[cy][cx].assume_init() };
             hp_index = 512 * 512 * i + 512 * py + px;
             if hp_map.get(hp_index).is_none() {
@@ -350,42 +364,6 @@ impl ExplosionManager {
                     );
                 } else {
                     c[py][px] = None;
-                }
-            }
-            if !is_initial {
-                x -= 2;
-                cx = x / 512;
-                if let Some(d) = chunk_map[cy][cx] {
-                    c = d;
-                } else {
-                    continue;
-                }
-                px = x % 512;
-                i = unsafe { chunk_indices[cy][cx].assume_init() };
-                hp_index = 512 * 512 * i + 512 * py + px;
-                if hp_map.get(hp_index).is_none() {
-                    if let Some(p) = c[py][px] {
-                        if !line.config.hole_enabled
-                            || p.material.durability > line.config.max_durability_to_destroy
-                        {
-                            continue;
-                        }
-                        hp_map.insert(hp_index, p.hp);
-                        p.ptr.free();
-                    } else {
-                        hp_map.insert(hp_index, 0);
-                    }
-                    if rng.sample(bern) {
-                        c[py][px] = (self.construct_cell)(
-                            grid_world,
-                            x.cast_signed() - 512 * 256,
-                            y.cast_signed() - 512 * 256,
-                            cell_create,
-                            std::ptr::null_mut(),
-                        );
-                    } else {
-                        c[py][px] = None;
-                    }
                 }
             }
         }
@@ -415,19 +393,45 @@ fn truncate_usize(f: usize) -> f32 {
 #[cfg(feature = "test")]
 #[test]
 pub fn lines_colors() {
-    let ix0 = 0;
-    let iy0 = 0;
+    let ix0 = 68;
+    let iy0 = 68;
     let r: u16 = 64;
-    let mut image = image::RgbImage::new(u32::from(r) + 8, u32::from(r) + 8);
+    let mut image = image::RgbImage::new(2 * u32::from(r) + 8, 2 * u32::from(r) + 8);
     for (i, (ix1, iy1)) in Circumference::new(usize::from(r)).enumerate() {
-        for (_, x, y) in LineIter::new(ix0, iy0, ix1, iy1) {
-            let p = &mut image
-                .get_pixel_mut(x.try_into().unwrap(), y.try_into().unwrap())
-                .0;
-            p[0] = 128 + 32 * u8::try_from(i % 4).unwrap();
-            p[1] = 128 + 32 * u8::try_from(i % 4).unwrap();
-            p[2] = 128 + 32 * u8::try_from(i % 4).unwrap();
-        }
+        octant(ix0, iy0, ix1, iy1, |o, ix2, iy2| {
+            for (case, x, y) in LineIter::new(ix0, iy0, ix2, iy2) {
+                let mut p = &mut image
+                    .get_pixel_mut(x.try_into().unwrap(), y.try_into().unwrap())
+                    .0;
+                p[0] = 128 + 32 * u8::try_from(i % 4).unwrap();
+                p[1] = 128 + 32 * u8::try_from(i % 4).unwrap();
+                p[2] = 128 + 32 * u8::try_from(i % 4).unwrap();
+                if matches!(case, crate::line::StepCase::Both) {
+                    if o == 1 || o == 2 || o == 5 || o == 6 {
+                        p = &mut image
+                            .get_pixel_mut(
+                                x.try_into().unwrap(),
+                                if o == 1 || o == 2 { y - 1 } else { y + 1 }
+                                    .try_into()
+                                    .unwrap(),
+                            )
+                            .0;
+                    } else {
+                        p = &mut image
+                            .get_pixel_mut(
+                                if o == 0 || o == 7 { x - 1 } else { x + 1 }
+                                    .try_into()
+                                    .unwrap(),
+                                y.try_into().unwrap(),
+                            )
+                            .0;
+                    }
+                    p[0] = 128 + 32 * u8::try_from(i % 4).unwrap();
+                    p[1] = 128 + 32 * u8::try_from(i % 4).unwrap();
+                    p[2] = 128 + 32 * u8::try_from(i % 4).unwrap();
+                }
+            }
+        })
     }
     image.save("../../test_line.png").unwrap();
 }
