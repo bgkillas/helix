@@ -57,6 +57,22 @@ impl<T: Copy> UninitMap<T> {
     pub fn get(&self, _: usize) -> Option<T> {
         None
     }
+    #[inline]
+    pub fn clear(&mut self) {
+        self.list.clear();
+    }
+    #[inline]
+    pub fn keys(&self) -> impl Iterator<Item = usize> {
+        self.list.iter().map(|(i, _)| *i)
+    }
+    #[inline]
+    pub fn values(&self) -> impl Iterator<Item = T> {
+        self.list.iter().map(|(_, v)| *v)
+    }
+    #[inline]
+    pub fn iter(&self) -> impl Iterator<Item = (usize, T)> {
+        self.list.iter().copied()
+    }
 }
 impl<T> Drop for UninitMap<T> {
     #[inline]
@@ -120,5 +136,29 @@ impl<T: Copy, const N: usize> UninitMapArray<T, N> {
     #[must_use]
     pub fn get(&self, _: usize) -> Option<T> {
         None
+    }
+    #[inline]
+    pub fn clear(&mut self) {
+        self.len = 0;
+    }
+    #[inline]
+    pub fn keys(&self) -> impl Iterator<Item = usize> {
+        self.list[..self.len]
+            .iter()
+            .map(|m| unsafe { m.assume_init() })
+            .map(|(i, _)| i)
+    }
+    #[inline]
+    pub fn values(&self) -> impl Iterator<Item = T> {
+        self.list[..self.len]
+            .iter()
+            .map(|m| unsafe { m.assume_init() })
+            .map(|(_, v)| v)
+    }
+    #[inline]
+    pub fn iter(&self) -> impl Iterator<Item = (usize, T)> {
+        self.list[..self.len]
+            .iter()
+            .map(|m| unsafe { m.assume_init() })
     }
 }

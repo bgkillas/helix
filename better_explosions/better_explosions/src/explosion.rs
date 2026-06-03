@@ -412,3 +412,22 @@ fn truncate_f32u(f: f32) -> usize {
 fn truncate_usize(f: usize) -> f32 {
     f as f32
 }
+#[cfg(feature = "test")]
+#[test]
+pub fn lines_colors() {
+    let ix0 = 0;
+    let iy0 = 0;
+    let r: u16 = 64;
+    let mut image = image::RgbImage::new(u32::from(r) + 8, u32::from(r) + 8);
+    for (i, (ix1, iy1)) in Circumference::new(usize::from(r)).enumerate() {
+        for (_, x, y) in LineIter::new(ix0, iy0, ix1, iy1) {
+            let p = &mut image
+                .get_pixel_mut(x.try_into().unwrap(), y.try_into().unwrap())
+                .0;
+            p[0] = 128 + 32 * u8::try_from(i % 4).unwrap();
+            p[1] = 128 + 32 * u8::try_from(i % 4).unwrap();
+            p[2] = 128 + 32 * u8::try_from(i % 4).unwrap();
+        }
+    }
+    image.save("../../test_line.png").unwrap();
+}
