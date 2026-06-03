@@ -64,12 +64,11 @@ impl ExplosionManager {
                 (ix0.cast_signed() + round_f32(cos * config.explosion_radius)).cast_unsigned();
             let iy1 =
                 (iy0.cast_signed() + round_f32(sin * config.explosion_radius)).cast_unsigned();
-            let mut energy = config.ray_energy;
-            let (mut ix2, mut iy2) = (ix1, iy1);
             let dy = truncate_usize(iy1.abs_diff(iy0));
             let dx = truncate_usize(ix1.abs_diff(ix0));
-            let m = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
-            let hp_f = |hp| -> usize { truncate_f32u(truncate_usize(hp) * m) };
+            let mult = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
+            let mut energy = truncate_f32u(truncate_usize(config.ray_energy) / mult);
+            let (mut ix2, mut iy2) = (ix1, iy1);
             for (_, x, y) in LineIter::new(ix0, iy0, ix1, iy1) {
                 let px = x % 512;
                 let py = y % 512;
@@ -87,7 +86,7 @@ impl ExplosionManager {
                         (ix2, iy2) = (x, y);
                         break;
                     }
-                    let Some(new) = energy.checked_sub(hp_f(p.hp)) else {
+                    let Some(new) = energy.checked_sub(p.hp) else {
                         (ix2, iy2) = (x, y);
                         break;
                     };
@@ -173,9 +172,6 @@ impl ExplosionManager {
                         u32::try_from(line.config.create_cell_probability).unwrap()
                     };
                     let bern = Bernoulli::from_ratio(chance, 100).unwrap();
-                    let dx = truncate_usize(line.line.dx.abs().cast_unsigned());
-                    let dy = truncate_usize(line.line.dy.abs().cast_unsigned());
-                    let mult = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
                     self.explosion_line(
                         line,
                         &mut rng,
@@ -184,7 +180,6 @@ impl ExplosionManager {
                         &mut hp_map,
                         &mut chunk_indices,
                         bern,
-                        mult,
                         cell_create,
                     );
                 }
@@ -230,7 +225,7 @@ impl ExplosionManager {
                     LineContinue {
                         line: LineIter::new(ix0, iy0, ix2, iy2),
                         config: config_arc.clone(),
-                        energy,
+                        energy: truncate_f32u(truncate_usize(energy) / mult),
                     },
                     &mut rng,
                     grid_world,
@@ -238,7 +233,6 @@ impl ExplosionManager {
                     &mut hp_map,
                     &mut chunk_indices,
                     bern,
-                    mult,
                     cell_create,
                 );
             });
@@ -255,7 +249,6 @@ impl ExplosionManager {
         hp_map: &mut UninitMap<usize>,
         chunk_indices: &mut [[MaybeUninit<usize>; 512]; 512],
         bern: Bernoulli,
-        mult: f32,
         cell_create: StdBox<CellData>,
     ) {
         let steep = line.line.dy.abs() > line.line.dx.abs();
@@ -273,10 +266,7 @@ impl ExplosionManager {
             let mut i = unsafe { chunk_indices[cy][cx].assume_init() };
             let mut hp_index = 512 * 512 * i + 512 * py + px;
             if let Some(hp) = hp_map.get(hp_index) {
-                if let Some(new) = line
-                    .energy
-                    .checked_sub(truncate_f32u(truncate_usize(hp) * mult))
-                {
+                if let Some(new) = line.energy.checked_sub(hp) {
                     line.energy = new;
                 } else {
                     break;
@@ -291,10 +281,7 @@ impl ExplosionManager {
                     {
                         break;
                     }
-                    let Some(new) = line
-                        .energy
-                        .checked_sub(truncate_f32u(truncate_usize(p.hp) * mult))
-                    else {
+                    let Some(new) = line.energy.checked_sub(p.hp) else {
                         break;
                     };
                     hp_map.insert(hp_index, p.hp);
