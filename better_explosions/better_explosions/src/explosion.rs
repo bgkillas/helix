@@ -18,7 +18,6 @@ pub struct ExplosionManager {
         fn(StdBox<GridWorld>, isize, isize, StdBox<CellData>, *mut ()) -> Option<Cell<()>>
     ),
     pub lines: Box<ChunkArrayGeneric<Option<Vec<LineContinue>>>>,
-    pub unlaoded_explosions: Vec<Unloaded>,
 }
 unsafe impl Send for ExplosionManager {}
 unsafe impl Sync for ExplosionManager {}
@@ -26,9 +25,6 @@ pub struct LineContinue {
     pub line: LineIter,
     pub config: Rc<ConfigExplosion>,
     pub energy: usize,
-}
-pub struct Unloaded {
-    pub config: ConfigExplosion,
 }
 impl ExplosionManager {
     #[inline]
@@ -306,24 +302,25 @@ impl ExplosionManager {
                     c[py][px] = None;
                 }
             }
-            if matches!(case, StepCase::Both) {
-                if steep {
-                    if line.line.dy.is_negative() {
-                        y += 1;
-                    } else {
-                        y -= 1;
-                    }
-                    cy = y / 512;
-                    py = y % 512;
+            if !matches!(case, StepCase::Both) {
+                continue;
+            }
+            if steep {
+                if line.line.dy.is_negative() {
+                    y += 1;
                 } else {
-                    if line.line.dx.is_negative() {
-                        x += 1;
-                    } else {
-                        x -= 1;
-                    }
-                    cx = x / 512;
-                    px = x % 512;
+                    y -= 1;
                 }
+                cy = y / 512;
+                py = y % 512;
+            } else {
+                if line.line.dx.is_negative() {
+                    x += 1;
+                } else {
+                    x -= 1;
+                }
+                cx = x / 512;
+                px = x % 512;
             }
             if let Some(d) = chunk_map[cy][cx] {
                 c = d;
