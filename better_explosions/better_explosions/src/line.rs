@@ -8,6 +8,8 @@ pub struct LineIter {
     pub dy_neg: bool,
     pub dx_abs: isize,
     pub dy_abs: isize,
+    pub dx_abs_div2: isize,
+    pub dy_abs_div2: isize,
     pub error: isize,
     pub first: bool,
 }
@@ -26,12 +28,15 @@ impl Iterator for LineIter {
             self.first = false;
             return Some((StepCase::Start, self.x0, self.y0));
         }
-        match (self.error >= self.dy_abs, self.error <= self.dx_abs) {
+        match (
+            self.error >= self.dy_abs_div2,
+            self.error <= self.dx_abs_div2,
+        ) {
             (true, true) => {
                 if self.x0 == self.x1 || self.y0 == self.y1 {
                     return None;
                 }
-                self.error += 2 * (self.dx_abs + self.dy_abs);
+                self.error += self.dx_abs + self.dy_abs;
                 self.sx();
                 self.sy();
                 Some((StepCase::Both, self.x0, self.y0))
@@ -40,7 +45,7 @@ impl Iterator for LineIter {
                 if self.x0 == self.x1 {
                     return None;
                 }
-                self.error += 2 * self.dy_abs;
+                self.error += self.dy_abs;
                 self.sx();
                 Some((StepCase::Dx, self.x0, self.y0))
             }
@@ -48,7 +53,7 @@ impl Iterator for LineIter {
                 if self.y0 == self.y1 {
                     return None;
                 }
-                self.error += 2 * self.dx_abs;
+                self.error += self.dx_abs;
                 self.sy();
                 Some((StepCase::Dy, self.x0, self.y0))
             }
@@ -66,16 +71,16 @@ impl LineIter {
             }
             StepCase::Dx => {
                 self.nsx();
-                self.error -= 2 * self.dy_abs;
+                self.error -= self.dy_abs;
             }
             StepCase::Dy => {
                 self.nsy();
-                self.error -= 2 * self.dx_abs;
+                self.error -= self.dx_abs;
             }
             StepCase::Both => {
                 self.nsx();
                 self.nsy();
-                self.error -= 2 * (self.dx_abs + self.dy_abs);
+                self.error -= self.dx_abs + self.dy_abs;
             }
         }
     }
@@ -124,7 +129,9 @@ impl LineIter {
             dy_neg: dy.is_negative(),
             dx_abs,
             dy_abs,
-            error: 2 * (dx_abs + dy_abs),
+            dx_abs_div2: dx_abs / 2,
+            dy_abs_div2: dy_abs / 2,
+            error: dx_abs + dy_abs,
             first: true,
         }
     }
