@@ -3,8 +3,10 @@
 mod ui;
 #[cfg(not(test))]
 fn main() -> eframe::Result {
+    use better_explosions::explosion::ExplosionManager;
     use eframe::NativeOptions;
-    use noita_api::{Chunk, GameGlobal};
+    use noita_api::{Chunk, ConfigExplosion, GameGlobal};
+    use std::env::args;
     let mut game_global = GameGlobal::global();
     game_global
         .m_cell_factory
@@ -15,6 +17,29 @@ fn main() -> eframe::Result {
     grid_world.chunk_map.insert(255, 256, Chunk::default());
     grid_world.chunk_map.insert(256, 255, Chunk::default());
     grid_world.chunk_map.insert(255, 255, Chunk::default());
+    let mut args = args();
+    if let Some(r) = args.nth(1).and_then(|s| s.parse::<u16>().ok())
+        && let Some(n) = args.next().and_then(|s| s.parse::<u128>().ok())
+    {
+        let mut config = ConfigExplosion::default();
+        config.explosion_radius = f32::from(r);
+        config.max_durability_to_destroy = 12;
+        config.ray_energy = usize::MAX;
+        let game_global = GameGlobal::global();
+        config.create_cell_material = game_global.m_cell_factory.cell_data[0].name.clone();
+        config.create_cell_probability = 0;
+        config.hole_enabled = true;
+        let mut em = ExplosionManager::default();
+        for _ in 0..16 {
+            em.explosion_lines(&config, noita_api::Vec2 { x: 0.0, y: 0.0 });
+        }
+        let tmr = std::time::Instant::now();
+        for _ in 0..n {
+            em.explosion_lines(&config, noita_api::Vec2 { x: 0.0, y: 0.0 });
+        }
+        println!("{}", tmr.elapsed().as_nanos() / n);
+        return Ok(());
+    }
     eframe::run_native(
         "explosions",
         NativeOptions::default(),

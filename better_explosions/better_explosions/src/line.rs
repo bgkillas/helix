@@ -4,8 +4,10 @@ pub struct LineIter {
     pub y0: usize,
     pub x1: usize,
     pub y1: usize,
-    pub dx: isize,
-    pub dy: isize,
+    pub dx_neg: bool,
+    pub dy_neg: bool,
+    pub dx_abs: isize,
+    pub dy_abs: isize,
     pub error: isize,
     pub first: bool,
 }
@@ -24,12 +26,12 @@ impl Iterator for LineIter {
             self.first = false;
             return Some((StepCase::Start, self.x0, self.y0));
         }
-        match (self.error >= -self.dy.abs(), self.error <= self.dx.abs()) {
+        match (self.error >= self.dy_abs, self.error <= self.dx_abs) {
             (true, true) => {
                 if self.x0 == self.x1 || self.y0 == self.y1 {
                     return None;
                 }
-                self.error += 2 * (self.dx.abs() - self.dy.abs());
+                self.error += 2 * (self.dx_abs + self.dy_abs);
                 self.sx();
                 self.sy();
                 Some((StepCase::Both, self.x0, self.y0))
@@ -38,7 +40,7 @@ impl Iterator for LineIter {
                 if self.x0 == self.x1 {
                     return None;
                 }
-                self.error -= 2 * self.dy.abs();
+                self.error += 2 * self.dy_abs;
                 self.sx();
                 Some((StepCase::Dx, self.x0, self.y0))
             }
@@ -46,7 +48,7 @@ impl Iterator for LineIter {
                 if self.y0 == self.y1 {
                     return None;
                 }
-                self.error += 2 * self.dx.abs();
+                self.error += 2 * self.dx_abs;
                 self.sy();
                 Some((StepCase::Dy, self.x0, self.y0))
             }
@@ -64,42 +66,42 @@ impl LineIter {
             }
             StepCase::Dx => {
                 self.nsx();
-                self.error += 2 * self.dy.abs();
+                self.error -= 2 * self.dy_abs;
             }
             StepCase::Dy => {
                 self.nsy();
-                self.error -= 2 * self.dx.abs();
+                self.error -= 2 * self.dx_abs;
             }
             StepCase::Both => {
                 self.nsx();
                 self.nsy();
-                self.error -= 2 * (self.dx.abs() - self.dy.abs());
+                self.error -= 2 * (self.dx_abs + self.dy_abs);
             }
         }
     }
     fn sy(&mut self) {
-        if self.dy.is_negative() {
+        if self.dy_neg {
             self.y0 -= 1;
         } else {
             self.y0 += 1;
         }
     }
     fn sx(&mut self) {
-        if self.dx.is_negative() {
+        if self.dx_neg {
             self.x0 -= 1;
         } else {
             self.x0 += 1;
         }
     }
     fn nsy(&mut self) {
-        if self.dy.is_negative() {
+        if self.dy_neg {
             self.y0 += 1;
         } else {
             self.y0 -= 1;
         }
     }
     fn nsx(&mut self) {
-        if self.dx.is_negative() {
+        if self.dx_neg {
             self.x0 += 1;
         } else {
             self.x0 -= 1;
@@ -107,17 +109,22 @@ impl LineIter {
     }
     #[inline]
     #[must_use]
+    #[allow(clippy::similar_names)]
     pub fn new(x0: usize, y0: usize, x1: usize, y1: usize) -> Self {
         let dx = x1.cast_signed() - x0.cast_signed();
         let dy = y1.cast_signed() - y0.cast_signed();
+        let dx_abs = dx.abs();
+        let dy_abs = -dy.abs();
         Self {
             x0,
             y0,
             x1,
             y1,
-            dx,
-            dy,
-            error: 2 * (dx.abs() - dy.abs()),
+            dx_neg: dx.is_negative(),
+            dy_neg: dy.is_negative(),
+            dx_abs,
+            dy_abs,
+            error: 2 * (dx_abs + dy_abs),
             first: true,
         }
     }

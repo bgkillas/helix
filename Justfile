@@ -1,7 +1,7 @@
-run:
-    cd better_explosions/viewer && cargo run
-run_rel:
-    cd better_explosions/viewer && cargo run --release
+run r="" n="":
+    cd better_explosions/viewer && cargo run -- {{r}} {{n}}
+run_rel r="" n="":
+    cd better_explosions/viewer && cargo run --release -- {{r}} {{n}}
 build:
     cargo build --target=i686-pc-windows-gnu
 build_rel:

@@ -251,7 +251,6 @@ impl ExplosionManager {
         bern: Bernoulli,
         cell_create: StdBox<CellData>,
     ) {
-        let steep = line.line.dy.abs() > line.line.dx.abs();
         while let Some((case, mut x, mut y)) = line.line.next() {
             let mut cx = x / 512;
             let mut cy = y / 512;
@@ -266,11 +265,10 @@ impl ExplosionManager {
             let mut i = unsafe { chunk_indices[cy][cx].assume_init() };
             let mut hp_index = 512 * 512 * i + 512 * py + px;
             if let Some(hp) = hp_map.get(hp_index) {
-                if let Some(new) = line.energy.checked_sub(hp) {
-                    line.energy = new;
-                } else {
+                let Some(new) = line.energy.checked_sub(hp) else {
                     break;
-                }
+                };
+                line.energy = new;
             } else {
                 if let Some(p) = c[py][px] {
                     if matches!(p.material.cell_type, CellType::Solid) {
@@ -305,8 +303,8 @@ impl ExplosionManager {
             if !matches!(case, StepCase::Both) {
                 continue;
             }
-            if steep {
-                if line.line.dy.is_negative() {
+            if line.line.dy_abs > line.line.dx_abs {
+                if line.line.dy_neg {
                     y += 1;
                 } else {
                     y -= 1;
@@ -314,7 +312,7 @@ impl ExplosionManager {
                 cy = y / 512;
                 py = y % 512;
             } else {
-                if line.line.dx.is_negative() {
+                if line.line.dx_neg {
                     x += 1;
                 } else {
                     x -= 1;
