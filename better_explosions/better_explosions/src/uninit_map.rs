@@ -1,11 +1,12 @@
 use std::alloc::{Allocator as _, Global, Layout};
 use std::mem::MaybeUninit;
+use std::ptr;
 use std::ptr::NonNull;
 pub struct UninitMap<T> {
     indices: NonNull<[usize]>,
     list: Vec<(usize, T)>,
 }
-impl<T: Copy> UninitMap<T> {
+impl<T> UninitMap<T> {
     #[inline]
     #[must_use]
     pub fn new(n: usize) -> Self {
@@ -32,7 +33,7 @@ impl<T: Copy> UninitMap<T> {
     #[cfg(not(miri))]
     #[inline]
     #[must_use]
-    pub fn get(&self, index: usize) -> Option<T> {
+    pub fn get(&self, index: usize) -> Option<&T> {
         let slice = unsafe { self.indices.as_uninit_slice_mut() };
         let mut val = slice[index];
         unsafe {
@@ -43,8 +44,8 @@ impl<T: Copy> UninitMap<T> {
             );
         }
         let list_index = unsafe { val.assume_init() };
-        if let Some((indice_index, val)) = self.list.get(list_index).copied()
-            && indice_index == index
+        if let Some((indice_index, val)) = self.list.get(list_index)
+            && *indice_index == index
         {
             Some(val)
         } else {
@@ -66,12 +67,20 @@ impl<T: Copy> UninitMap<T> {
         self.list.iter().map(|(i, _)| *i)
     }
     #[inline]
-    pub fn values(&self) -> impl Iterator<Item = T> {
-        self.list.iter().map(|(_, v)| *v)
+    pub fn values(&self) -> impl Iterator<Item = &T> {
+        self.list.iter().map(|(_, v)| v)
     }
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = (usize, T)> {
-        self.list.iter().copied()
+    pub fn iter(&self) -> impl Iterator<Item = (usize, &T)> {
+        self.list.iter().map(|(a, b)| (*a, b))
+    }
+    #[inline]
+    pub fn values_mut(&mut self) -> impl Iterator<Item = &mut T> {
+        self.list.iter_mut().map(|(_, v)| v)
+    }
+    #[inline]
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (usize, &mut T)> {
+        self.list.iter_mut().map(|(a, b)| (*a, b))
     }
 }
 impl<T> Drop for UninitMap<T> {
@@ -90,7 +99,7 @@ pub struct UninitMapArray<T, const N: usize> {
     list: [MaybeUninit<(usize, T)>; N],
     len: usize,
 }
-impl<T: Copy, const N: usize> Default for UninitMapArray<T, N> {
+impl<T, const N: usize> Default for UninitMapArray<T, N> {
     #[inline]
     fn default() -> Self {
         Self {
@@ -101,7 +110,7 @@ impl<T: Copy, const N: usize> Default for UninitMapArray<T, N> {
         }
     }
 }
-impl<T: Copy, const N: usize> UninitMapArray<T, N> {
+impl<T, const N: usize> UninitMapArray<T, N> {
     #[inline]
     pub fn insert(&mut self, index: usize, value: T) {
         self.indices[index].write(self.len);
@@ -111,7 +120,7 @@ impl<T: Copy, const N: usize> UninitMapArray<T, N> {
     #[cfg(not(miri))]
     #[inline]
     #[must_use]
-    pub fn get(&self, index: usize) -> Option<T> {
+    pub fn get(&self, index: usize) -> Option<&T> {
         let mut val = self.indices[index];
         unsafe {
             std::arch::asm!(
@@ -124,8 +133,8 @@ impl<T: Copy, const N: usize> UninitMapArray<T, N> {
         if list_index >= self.len {
             return None;
         }
-        let (indice_index, val) = unsafe { self.list[list_index].assume_init() };
-        if indice_index == index {
+        let (indice_index, val) = unsafe { self.list[list_index].assume_init_ref() };
+        if *indice_index == index {
             Some(val)
         } else {
             None
@@ -145,20 +154,45 @@ impl<T: Copy, const N: usize> UninitMapArray<T, N> {
     pub fn keys(&self) -> impl Iterator<Item = usize> {
         self.list[..self.len]
             .iter()
-            .map(|m| unsafe { m.assume_init() })
-            .map(|(i, _)| i)
+            .map(|m| unsafe { m.assume_init_ref() })
+            .map(|(i, _)| *i)
     }
     #[inline]
-    pub fn values(&self) -> impl Iterator<Item = T> {
+    pub fn values(&self) -> impl Iterator<Item = &T> {
         self.list[..self.len]
             .iter()
-            .map(|m| unsafe { m.assume_init() })
+            .map(|m| unsafe { m.assume_init_ref() })
             .map(|(_, v)| v)
     }
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = (usize, T)> {
+    pub fn iter(&self) -> impl Iterator<Item = (usize, &T)> {
         self.list[..self.len]
             .iter()
-            .map(|m| unsafe { m.assume_init() })
+            .map(|m| unsafe { m.assume_init_ref() })
+            .map(|(a, b)| (*a, b))
+    }
+    #[inline]
+    pub fn values_mut(&mut self) -> impl Iterator<Item = &mut T> {
+        self.list[..self.len]
+            .iter_mut()
+            .map(|m| unsafe { m.assume_init_mut() })
+            .map(|(_, v)| v)
+    }
+    #[inline]
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (usize, &mut T)> {
+        self.list[..self.len]
+            .iter_mut()
+            .map(|m| unsafe { m.assume_init_mut() })
+            .map(|(a, b)| (*a, b))
+    }
+}
+impl<T, const N: usize> Drop for UninitMapArray<T, N> {
+    #[inline]
+    fn drop(&mut self) {
+        for v in self.values_mut() {
+            unsafe {
+                ptr::drop_in_place(v);
+            }
+        }
     }
 }

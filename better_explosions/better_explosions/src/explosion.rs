@@ -265,7 +265,7 @@ impl ExplosionManager {
             let mut i = unsafe { chunk_indices[cy][cx].assume_init() };
             let mut hp_index = 512 * 512 * i + 512 * py + px;
             if let Some(hp) = hp_map.get(hp_index) {
-                let Some(new) = line.energy.checked_sub(hp) else {
+                let Some(new) = line.energy.checked_sub(*hp) else {
                     break;
                 };
                 line.energy = new;
@@ -320,11 +320,10 @@ impl ExplosionManager {
                 cx = x / 512;
                 px = x % 512;
             }
-            if let Some(d) = chunk_map[cy][cx] {
-                c = d;
-            } else {
+            let Some(d) = chunk_map[cy][cx] else {
                 continue;
-            }
+            };
+            c = d;
             i = unsafe { chunk_indices[cy][cx].assume_init() };
             hp_index = 512 * 512 * i + 512 * py + px;
             if hp_map.get(hp_index).is_none() {
