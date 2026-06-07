@@ -9,16 +9,16 @@ pub struct LineIter {
     pub dx_abs: isize,
     pub dy_abs: isize,
     pub dx_abs_div2: isize,
-    pub dy_abs_div2: isize,
     pub error: isize,
     pub first: bool,
 }
 #[derive(Debug)]
+#[repr(u8)]
 pub enum StepCase {
-    Start,
-    Dx,
-    Dy,
-    Both,
+    Start = 0,
+    Dx = 1,
+    Dy = 2,
+    Both = 3,
 }
 impl Iterator for LineIter {
     type Item = (StepCase, usize, usize);
@@ -28,10 +28,7 @@ impl Iterator for LineIter {
             self.first = false;
             return Some((StepCase::Start, self.x0, self.y0));
         }
-        match (
-            self.error >= self.dy_abs_div2,
-            self.error <= self.dx_abs_div2,
-        ) {
+        match (!self.error.is_negative(), self.error <= self.dx_abs_div2) {
             (true, true) => {
                 if self.x0 == self.x1 || self.y0 == self.y1 {
                     return None;
@@ -114,7 +111,6 @@ impl LineIter {
     }
     #[inline]
     #[must_use]
-    #[allow(clippy::similar_names)]
     pub fn new(x0: usize, y0: usize, x1: usize, y1: usize) -> Self {
         let dx = x1.cast_signed() - x0.cast_signed();
         let dy = y1.cast_signed() - y0.cast_signed();
@@ -129,9 +125,8 @@ impl LineIter {
             dy_neg: dy.is_negative(),
             dx_abs,
             dy_abs,
-            dx_abs_div2: dx_abs / 2,
-            dy_abs_div2: dy_abs / 2,
-            error: dx_abs + dy_abs,
+            dx_abs_div2: dx_abs / 2 - dy_abs / 2,
+            error: dx_abs + dy_abs - dy_abs / 2,
             first: true,
         }
     }

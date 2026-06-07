@@ -40,7 +40,6 @@ impl<T: PartialOrd> Vec2<T> {
 }
 impl<T: PartialOrd> AABB<T> {
     #[inline]
-    #[allow(clippy::similar_names)]
     pub fn intersects(self, other: Self) -> bool {
         let self_x_range = Vec2 {
             x: self.top_left.x,
@@ -61,7 +60,6 @@ impl<T: PartialOrd> AABB<T> {
         self_x_range.intersects(&other_x_range) && self_y_range.intersects(&other_y_range)
     }
     #[inline]
-    #[allow(clippy::similar_names)]
     pub fn contains(self, other: Self) -> bool {
         let self_x_range = Vec2 {
             x: self.top_left.x,

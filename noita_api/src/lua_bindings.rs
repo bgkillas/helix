@@ -5,7 +5,6 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 #![allow(clippy::unreadable_literal)]
-#![allow(clippy::similar_names)]
 #![allow(clippy::pub_underscore_fields)]
 use noita_api_macros::gen_stubs;
 pub const WINVER: u32 = 1281;
