@@ -76,22 +76,22 @@ impl ExplosionManager {
                     (ix2, iy2) = (x, y);
                     break;
                 };
-                if let Some(p) = c[py][px] {
-                    if matches!(p.material.cell_type, CellType::Solid) {
-                        continue;
-                    }
-                    if !config.hole_enabled
-                        || p.material.durability > config.max_durability_to_destroy
-                    {
-                        (ix2, iy2) = (x, y);
-                        break;
-                    }
-                    let Some(new) = energy.checked_sub(p.hp) else {
-                        (ix2, iy2) = (x, y);
-                        break;
-                    };
-                    energy = new;
+                let Some(p) = c[py][px] else {
+                    continue;
+                };
+                if matches!(p.material.cell_type, CellType::Solid) {
+                    continue;
                 }
+                if !config.hole_enabled || p.material.durability > config.max_durability_to_destroy
+                {
+                    (ix2, iy2) = (x, y);
+                    break;
+                }
+                let Some(new) = energy.checked_sub(p.hp) else {
+                    (ix2, iy2) = (x, y);
+                    break;
+                };
+                energy = new;
             }
             let r = if (ix2, iy2) == (ix1, iy1) {
                 truncate_f32u(config.explosion_radius)
@@ -118,28 +118,29 @@ impl ExplosionManager {
             for (x, y) in ArcIter::new(ix0, iy0, ix3, iy3, ix4, iy4, r * r) {
                 let px = x % 512;
                 let py = y % 512;
-                if let Some(mut c) = chunk_map[y / 512][x / 512] {
-                    if let Some(p) = c[py][px] {
-                        if p.material.durability > config.max_durability_to_destroy
-                            || !config.hole_enabled
-                            || matches!(p.material.cell_type, CellType::Solid)
-                        {
-                            continue;
-                        }
-                        p.ptr.free();
+                let Some(mut c) = chunk_map[y / 512][x / 512] else {
+                    continue;
+                };
+                if let Some(p) = c[py][px] {
+                    if p.material.durability > config.max_durability_to_destroy
+                        || !config.hole_enabled
+                        || matches!(p.material.cell_type, CellType::Solid)
+                    {
+                        continue;
                     }
-                    if rng.sample(bern) {
-                        c[py][px] = (self.construct_cell)(
-                            grid_world,
-                            x.cast_signed() - 512 * 256,
-                            y.cast_signed() - 512 * 256,
-                            cell_create,
-                            std::ptr::null_mut(),
-                        );
-                    } else {
-                        c[py][px] = None;
-                    }
+                    p.ptr.free();
                 }
+                c[py][px] = if rng.sample(bern) {
+                    (self.construct_cell)(
+                        grid_world,
+                        x.cast_signed() - 512 * 256,
+                        y.cast_signed() - 512 * 256,
+                        cell_create,
+                        std::ptr::null_mut(),
+                    )
+                } else {
+                    None
+                };
             }
         }
     }
@@ -270,7 +271,7 @@ impl ExplosionManager {
                 };
                 line.energy = new;
             } else {
-                if let Some(p) = c[py][px] {
+                let hp = if let Some(p) = c[py][px] {
                     if matches!(p.material.cell_type, CellType::Solid) {
                         continue;
                     }
@@ -282,23 +283,24 @@ impl ExplosionManager {
                     let Some(new) = line.energy.checked_sub(p.hp) else {
                         break;
                     };
-                    hp_map.insert(hp_index, p.hp);
                     line.energy = new;
                     p.ptr.free();
+                    p.hp
                 } else {
-                    hp_map.insert(hp_index, 0);
-                }
-                if rng.sample(bern) {
-                    c[py][px] = (self.construct_cell)(
+                    0
+                };
+                hp_map.insert(hp_index, hp);
+                c[py][px] = if rng.sample(bern) {
+                    (self.construct_cell)(
                         grid_world,
                         x.cast_signed() - 512 * 256,
                         y.cast_signed() - 512 * 256,
                         cell_create,
                         std::ptr::null_mut(),
-                    );
+                    )
                 } else {
-                    c[py][px] = None;
-                }
+                    None
+                };
             }
             if !matches!(case, StepCase::Both) {
                 continue;
@@ -326,31 +328,33 @@ impl ExplosionManager {
             c = d;
             i = unsafe { chunk_indices[cy][cx].assume_init() };
             hp_index = 512 * 512 * i + 512 * py + px;
-            if hp_map.get(hp_index).is_none() {
-                if let Some(p) = c[py][px] {
-                    if !line.config.hole_enabled
-                        || p.material.durability > line.config.max_durability_to_destroy
-                        || matches!(p.material.cell_type, CellType::Solid)
-                    {
-                        continue;
-                    }
-                    hp_map.insert(hp_index, p.hp);
-                    p.ptr.free();
-                } else {
-                    hp_map.insert(hp_index, 0);
-                }
-                if rng.sample(bern) {
-                    c[py][px] = (self.construct_cell)(
-                        grid_world,
-                        x.cast_signed() - 512 * 256,
-                        y.cast_signed() - 512 * 256,
-                        cell_create,
-                        std::ptr::null_mut(),
-                    );
-                } else {
-                    c[py][px] = None;
-                }
+            if hp_map.get(hp_index).is_some() {
+                continue;
             }
+            let hp = if let Some(p) = c[py][px] {
+                if !line.config.hole_enabled
+                    || p.material.durability > line.config.max_durability_to_destroy
+                    || matches!(p.material.cell_type, CellType::Solid)
+                {
+                    continue;
+                }
+                p.ptr.free();
+                p.hp
+            } else {
+                0
+            };
+            hp_map.insert(hp_index, hp);
+            c[py][px] = if rng.sample(bern) {
+                (self.construct_cell)(
+                    grid_world,
+                    x.cast_signed() - 512 * 256,
+                    y.cast_signed() - 512 * 256,
+                    cell_create,
+                    std::ptr::null_mut(),
+                )
+            } else {
+                None
+            };
         }
     }
 }

@@ -16,7 +16,7 @@ impl<T> UninitMap<T> {
             .as_ptr();
         Self {
             #[allow(clippy::cast_ptr_alignment)]
-            indices: NonNull::new(std::ptr::slice_from_raw_parts_mut(
+            indices: NonNull::new(ptr::slice_from_raw_parts_mut(
                 alloc.as_mut_ptr().cast::<usize>(),
                 n,
             ))
@@ -111,6 +111,15 @@ impl<T, const N: usize> Default for UninitMapArray<T, N> {
     }
 }
 impl<T, const N: usize> UninitMapArray<T, N> {
+    #[inline]
+    #[must_use]
+    pub fn default_box() -> Box<Self> {
+        let mut res = Box::<UninitMapArray<T, N>>::new_uninit();
+        unsafe {
+            (*res.as_mut_ptr()).len = 0;
+            res.assume_init()
+        }
+    }
     #[inline]
     pub fn insert(&mut self, index: usize, value: T) {
         self.indices[index].write(self.len);
