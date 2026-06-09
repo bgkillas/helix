@@ -7,7 +7,7 @@ impl Iterator for Circumference {
     type Item = (usize, usize);
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.x < self.y {
+        if self.x.cast_signed() < self.y.cast_signed() {
             None
         } else {
             let (x, y) = (self.x, self.y);
@@ -15,7 +15,7 @@ impl Iterator for Circumference {
             self.error += self.y;
             if let Some(e) = self.error.checked_sub(self.x) {
                 self.error = e;
-                self.x -= 1;
+                self.x = self.x.overflowing_sub(1).0;
             }
             Some((x, y))
         }
