@@ -8,7 +8,7 @@ pub struct LineIter {
     pub dy_neg: bool,
     pub dx_abs: isize,
     pub dy_abs: isize,
-    pub dx_abs_div2: isize,
+    pub error_test: isize,
     pub error: isize,
     pub first: bool,
 }
@@ -28,7 +28,7 @@ impl Iterator for LineIter {
             self.first = false;
             return Some((StepCase::Start, self.x0, self.y0));
         }
-        match (!self.error.is_negative(), self.error <= self.dx_abs_div2) {
+        match (!self.error.is_negative(), self.error <= self.error_test) {
             (true, true) => {
                 if self.x0 == self.x1 || self.y0 == self.y1 {
                     return None;
@@ -125,7 +125,7 @@ impl LineIter {
             dy_neg: dy.is_negative(),
             dx_abs,
             dy_abs,
-            dx_abs_div2: dx_abs / 2 - dy_abs / 2,
+            error_test: dx_abs / 2 - dy_abs / 2,
             error: dx_abs + dy_abs - dy_abs / 2,
             first: true,
         }
@@ -178,6 +178,60 @@ fn test_line() {
                 assert_eq!(iter_b.last(), start_c, "{i} {j} {k}");
                 assert_eq!(iter_c.last(), start_a, "{i} {j} {k}");
             }
+        }
+    }
+}
+#[derive(Debug, Clone)]
+pub struct LineIterCompact {
+    pub x0: usize,
+    pub y0: usize,
+    pub dx_neg: bool,
+    pub dy_neg: bool,
+    pub dx_abs: isize,
+    pub dy_abs: isize,
+    pub error: isize,
+    pub first: bool,
+}
+impl From<LineIter> for LineIterCompact {
+    #[inline]
+    fn from(value: LineIter) -> Self {
+        Self {
+            x0: value.x0,
+            y0: value.y0,
+            dx_neg: value.dx_neg,
+            dy_neg: value.dy_neg,
+            dx_abs: value.dx_abs,
+            dy_abs: value.dx_abs,
+            error: value.error,
+            first: value.first,
+        }
+    }
+}
+impl From<LineIterCompact> for LineIter {
+    #[inline]
+    fn from(value: LineIterCompact) -> Self {
+        let x1 = if value.dx_neg {
+            value.x0 - value.dx_abs.cast_unsigned()
+        } else {
+            value.x0 + value.dx_abs.cast_unsigned()
+        };
+        let y1 = if value.dy_neg {
+            value.y0 - value.dy_abs.cast_unsigned()
+        } else {
+            value.y0 + value.dy_abs.cast_unsigned()
+        };
+        Self {
+            x0: value.x0,
+            y0: value.y0,
+            x1,
+            y1,
+            dx_neg: value.dx_neg,
+            dy_neg: value.dy_neg,
+            dx_abs: value.dx_abs,
+            error_test: value.dx_abs / 2 - value.dy_abs / 2,
+            dy_abs: value.dx_abs,
+            error: value.error,
+            first: value.first,
         }
     }
 }

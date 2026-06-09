@@ -1,6 +1,6 @@
 use crate::arc::ArcIter;
 use crate::circumference::Circumference;
-use crate::line::{LineIter, StepCase};
+use crate::line::{LineIter, LineIterCompact, StepCase};
 use crate::octant::octant;
 use crate::uninit_map::UninitMap;
 use noita_api::{
@@ -22,7 +22,7 @@ pub struct ExplosionManager {
 unsafe impl Send for ExplosionManager {}
 unsafe impl Sync for ExplosionManager {}
 pub struct LineContinue {
-    pub line: LineIter,
+    pub line: LineIterCompact,
     pub config: Rc<ConfigExplosion>,
     pub energy: usize,
 }
@@ -224,7 +224,7 @@ impl ExplosionManager {
                 let mult = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
                 self.explosion_line(
                     LineContinue {
-                        line: LineIter::new(ix0, iy0, ix2, iy2),
+                        line: LineIter::new(ix0, iy0, ix2, iy2).into(),
                         config: config_arc.clone(),
                         energy: truncate_f32u(truncate_usize(energy) / mult),
                     },
@@ -252,12 +252,14 @@ impl ExplosionManager {
         bern: Bernoulli,
         cell_create: StdBox<CellData>,
     ) {
-        while let Some((case, mut x, mut y)) = line.line.next() {
+        let mut line_iter = LineIter::from(line.line);
+        while let Some((case, mut x, mut y)) = line_iter.next() {
             let mut cx = x / 512;
             let mut cy = y / 512;
             let Some(mut c) = chunk_map[cy][cx] else {
                 let vec = self.lines[cy][cx].get_or_insert_with(|| Vec::with_capacity(512));
-                line.line.back(case);
+                line_iter.back(case);
+                line.line = line_iter.into();
                 vec.push(line);
                 break;
             };
@@ -305,8 +307,8 @@ impl ExplosionManager {
             if !matches!(case, StepCase::Both) {
                 continue;
             }
-            if line.line.dy_abs > line.line.dx_abs {
-                if line.line.dy_neg {
+            if line_iter.dy_abs > line_iter.dx_abs {
+                if line_iter.dy_neg {
                     y += 1;
                 } else {
                     y -= 1;
@@ -314,7 +316,7 @@ impl ExplosionManager {
                 cy = y / 512;
                 py = y % 512;
             } else {
-                if line.line.dx_neg {
+                if line_iter.dx_neg {
                     x += 1;
                 } else {
                     x -= 1;
