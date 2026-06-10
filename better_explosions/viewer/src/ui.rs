@@ -101,12 +101,13 @@ impl App {
             }
         } else if let Some(p) = pixel {
             let game_global = GameGlobal::global();
-            p.material = StdBox::from(&game_global.m_cell_factory.cell_data[usize::from(color)]);
+            p.material =
+                StdBox::from(&game_global.m_cell_factory.cell_data[color.strict_cast::<usize>()]);
             p.hp = p.material.hp;
         } else {
             let game_global = GameGlobal::global();
             let cell = Cell::new(StdBox::from(
-                &game_global.m_cell_factory.cell_data[usize::from(color)],
+                &game_global.m_cell_factory.cell_data[color.strict_cast::<usize>()],
             ));
             *pixel = Some(cell);
         }
@@ -126,7 +127,8 @@ impl App {
     }
     pub fn fill(&mut self, mat: u16) {
         let game_global = GameGlobal::global();
-        let matptr = StdBox::from(&game_global.m_cell_factory.cell_data[usize::from(mat)]);
+        let matptr =
+            StdBox::from(&game_global.m_cell_factory.cell_data[mat.strict_cast::<usize>()]);
         let grid_world = game_global.m_grid_world;
         for (_, _, mut c) in grid_world.chunk_map.flat_iter() {
             for (_, _, p) in c.iter_mut() {
@@ -171,12 +173,13 @@ fn make_texture(
         vec![Color32::from_rgba_premultiplied(60, 60, 140, 255); chunk[0].len() * chunk.len()];
     for (x, y, pixel) in chunk.flat_iter() {
         let color = pixel.material.graphics.color;
-        vec[usize::from(y) * 512 + usize::from(x)] = Color32::from_rgba_premultiplied(
-            color.r,
-            color.g,
-            color.b,
-            if is_loaded { color.a } else { color.a / 2 },
-        );
+        vec[y.strict_cast::<usize>() * 512 + x.strict_cast::<usize>()] =
+            Color32::from_rgba_premultiplied(
+                color.r,
+                color.g,
+                color.b,
+                if is_loaded { color.a } else { color.a / 2 },
+            );
     }
     let image = ColorImage::new([chunk[0].len(), chunk.len()], vec);
     ui.load_texture(format!("{x}x{y}"), image, TextureOptions::NEAREST)
@@ -195,7 +198,7 @@ impl eframe::App for App {
                         config.ray_energy = energy;
                         let game_global = GameGlobal::global();
                         config.create_cell_material = game_global.m_cell_factory.cell_data
-                            [usize::from(self.material)]
+                            [self.material.strict_cast::<usize>()]
                         .name
                         .clone();
                         config.create_cell_probability =
@@ -216,7 +219,7 @@ impl eframe::App for App {
                         config.ray_energy = energy;
                         let game_global = GameGlobal::global();
                         config.create_cell_material = game_global.m_cell_factory.cell_data
-                            [usize::from(self.material)]
+                            [self.material.strict_cast::<usize>()]
                         .name
                         .clone();
                         config.create_cell_probability =

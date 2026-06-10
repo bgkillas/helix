@@ -269,7 +269,7 @@ pub struct Pixel {
 impl From<usize> for Pixel {
     fn from(value: usize) -> Self {
         Self {
-            id: u16::try_from(value).unwrap(),
+            id: value.strict_cast::<u16>(),
         }
     }
 }

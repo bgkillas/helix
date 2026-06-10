@@ -3,6 +3,7 @@
 #![feature(allocator_api)]
 #![feature(ptr_as_uninit)]
 #![feature(slice_ptr_get)]
+#![feature(integer_casts)]
 extern crate test;
 pub mod arc;
 #[cfg(test)]

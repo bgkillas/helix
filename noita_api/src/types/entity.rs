@@ -227,13 +227,13 @@ impl Entity {
         let mut em = EntityManager::global();
         if let Some(n) = tag_manager.tag_indices.get(tag).copied() {
             self.tags.set(n, true);
-            em.entity_buckets[usize::from(n)].push(self);
+            em.entity_buckets[n.strict_cast::<usize>()].push(self);
             true
         } else {
             let stdstring = StdString::from(tag);
             let n = tag_manager.insert_new(stdstring);
             self.tags.set(n, true);
-            em.entity_buckets[usize::from(n)].push(self);
+            em.entity_buckets[n.strict_cast::<usize>()].push(self);
             false
         }
     }
@@ -244,7 +244,7 @@ impl Entity {
         if let Some(n) = tag_manager.tag_indices.get(tag).copied() {
             self.tags.set(n, false);
             let mut em = EntityManager::global();
-            let eb = &mut em.entity_buckets[usize::from(n)];
+            let eb = &mut em.entity_buckets[n.strict_cast::<usize>()];
             let i = eb.iter().position(|e| e.ptr == self.ptr).unwrap();
             eb.swap_remove(i);
             true
@@ -298,7 +298,9 @@ impl Entity {
     pub fn iter_with_tag(tag: &str) -> impl DoubleEndedIterator<Item = Self> {
         if let Some(n) = TagManager::<u16>::global().tag_indices.get(tag).copied() {
             let em = EntityManager::global();
-            em.as_ref().entity_buckets[usize::from(n)].iter().copied()
+            em.as_ref().entity_buckets[n.strict_cast::<usize>()]
+                .iter()
+                .copied()
         } else {
             [].iter().copied()
         }

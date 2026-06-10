@@ -31,7 +31,7 @@ impl ExplosionManager {
     pub fn explosion(&mut self, config: &ConfigExplosion, pos: Vec2<f32>) {
         let r = truncate_f32u(config.explosion_radius);
         let n = (8 * r.div_ceil(16)).max((((r * 63) / 10) / 16) & !7);
-        let rays: u16 = u16::try_from(n).unwrap();
+        let rays: u16 = n.strict_cast::<u16>();
         self.explosion_with_rays(config, pos, rays);
     }
     #[inline]
@@ -56,7 +56,7 @@ impl ExplosionManager {
             Bernoulli::from_ratio(u32::try_from(config.create_cell_probability).unwrap(), 100)
                 .unwrap()
         };
-        let mut radii = Vec::with_capacity(usize::from(rays));
+        let mut radii = Vec::with_capacity(rays.strict_cast::<usize>());
         for ray in 0..rays {
             let theta = (f32::from(ray) + 0.5) * delta_theta;
             let (sin, cos) = theta.sin_cos();
@@ -105,7 +105,7 @@ impl ExplosionManager {
             radii.push(r);
         }
         for (rayu, r) in radii.into_iter().enumerate() {
-            let ray = u16::try_from(rayu).unwrap();
+            let ray = rayu.strict_cast::<u16>();
             let rf = truncate_usize(r);
             let theta = f32::from(ray) * delta_theta;
             let (sin, cos) = theta.sin_cos();
@@ -154,10 +154,10 @@ impl ExplosionManager {
         let mut chunk_indices: Box<[[MaybeUninit<usize>; 512]; 512]> =
             unsafe { Box::new_uninit().assume_init() };
         for (i, (x, y, _)) in grid_world.chunk_map.flat_iter().enumerate() {
-            chunk_indices[usize::from(y)][usize::from(x)].write(i);
+            chunk_indices[y.strict_cast::<usize>()][x.strict_cast::<usize>()].write(i);
         }
         for (x, y, _) in chunk_map.iter() {
-            if let Some(v) = self.lines[usize::from(y)][usize::from(x)].take() {
+            if let Some(v) = self.lines[y.strict_cast::<usize>()][x.strict_cast::<usize>()].take() {
                 for line in v {
                     let cell_create_id = game_global
                         .m_cell_factory
@@ -212,7 +212,7 @@ impl ExplosionManager {
         let mut chunk_indices: Box<[[MaybeUninit<usize>; 512]; 512]> =
             unsafe { Box::new_uninit().assume_init() };
         for (i, (x, y, _)) in grid_world.chunk_map.flat_iter().enumerate() {
-            chunk_indices[usize::from(y)][usize::from(x)].write(i);
+            chunk_indices[y.strict_cast::<usize>()][x.strict_cast::<usize>()].write(i);
         }
         let r = truncate_f32u(config.explosion_radius);
         let config_arc = Rc::new(config.clone());
@@ -387,8 +387,11 @@ pub fn lines_colors() {
     let ix0 = 68;
     let iy0 = 68;
     let r: u16 = 64;
-    let mut image = image::RgbImage::new(2 * u32::from(r) + 8, 2 * u32::from(r) + 8);
-    for (i, (ix1, iy1)) in Circumference::new(usize::from(r)).enumerate() {
+    let mut image = image::RgbImage::new(
+        2 * r.strict_cast::<u32>() + 8,
+        2 * r.strict_cast::<u32>() + 8,
+    );
+    for (i, (ix1, iy1)) in Circumference::new(r.strict_cast::<usize>()).enumerate() {
         octant(ix0, iy0, ix1, iy1, |o, ix2, iy2| {
             for (case, x, y) in LineIter::new(ix0, iy0, ix2, iy2) {
                 let mut p = &mut image

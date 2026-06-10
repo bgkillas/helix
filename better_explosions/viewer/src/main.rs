@@ -1,3 +1,4 @@
+#![feature(integer_casts)]
 #![allow(clippy::shadow_reuse)]
 #[cfg(not(test))]
 mod ui;

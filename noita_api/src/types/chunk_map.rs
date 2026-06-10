@@ -53,8 +53,7 @@ impl ChunkMap {
             let y = usize::try_from(256 + yi).unwrap();
             (self.min_chunk.x..=self.max_chunk.x).filter_map(move |xi| {
                 let x = usize::try_from(256 + xi).unwrap();
-                self.chunk_array[y][x]
-                    .map(|c| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), c))
+                self.chunk_array[y][x].map(|c| (x.strict_cast::<u16>(), y.strict_cast::<u16>(), c))
             })
         })
     }
@@ -80,8 +79,8 @@ impl ChunkMap {
     }
     #[inline]
     pub fn remove(&mut self, x: u16, y: u16) -> Option<StdBox<Chunk>> {
-        let xu = usize::from(x);
-        let yu = usize::from(y);
+        let xu = x.strict_cast::<usize>();
+        let yu = y.strict_cast::<usize>();
         if let Some(ret) = self.chunk_array[yu][xu].take() {
             self.min_chunk.x = isize::MAX;
             self.min_chunk.y = isize::MAX;
@@ -89,8 +88,8 @@ impl ChunkMap {
             self.max_chunk.y = isize::MIN;
             self.chunk_count -= 1;
             for (cx, cy, _) in self.chunk_array.flat_iter() {
-                let xi = isize::try_from(cx).unwrap() - 256;
-                let yi = isize::try_from(cy).unwrap() - 256;
+                let xi = cx.strict_cast::<isize>() - 256;
+                let yi = cy.strict_cast::<isize>() - 256;
                 self.min_chunk.x = self.min_chunk.x.min(xi);
                 self.min_chunk.y = self.min_chunk.y.min(yi);
                 self.max_chunk.x = self.max_chunk.x.max(xi);
@@ -107,8 +106,8 @@ impl ChunkMap {
     }
     #[inline]
     pub fn insert_box(&mut self, x: u16, y: u16, chunk: StdBox<Chunk>) {
-        let xu = usize::from(x);
-        let yu = usize::from(y);
+        let xu = x.strict_cast::<usize>();
+        let yu = y.strict_cast::<usize>();
         if let Some(mut n) = self.chunk_array[yu][xu] {
             for (_, _, p) in n.flat_iter() {
                 p.ptr.free();
@@ -118,8 +117,8 @@ impl ChunkMap {
             self.chunk_count += 1;
         }
         self.chunk_array[yu][xu] = Some(chunk);
-        let xi = isize::try_from(x).unwrap() - 256;
-        let yi = isize::try_from(y).unwrap() - 256;
+        let xi = x.strict_cast::<isize>() - 256;
+        let yi = y.strict_cast::<isize>() - 256;
         self.min_chunk.x = self.min_chunk.x.min(xi);
         self.min_chunk.y = self.min_chunk.y.min(yi);
         self.max_chunk.x = self.max_chunk.x.max(xi);
@@ -132,7 +131,7 @@ impl<T> ChunkArrayGeneric<T> {
         self.array.iter().enumerate().flat_map(|(y, yc)| {
             yc.iter()
                 .enumerate()
-                .map(move |(x, xc)| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), xc))
+                .map(move |(x, xc)| (x.strict_cast::<u16>(), y.strict_cast::<u16>(), xc))
         })
     }
     #[inline]
@@ -140,7 +139,7 @@ impl<T> ChunkArrayGeneric<T> {
         self.array.iter_mut().enumerate().flat_map(|(y, yc)| {
             yc.iter_mut()
                 .enumerate()
-                .map(move |(x, xc)| (u16::try_from(x).unwrap(), u16::try_from(y).unwrap(), xc))
+                .map(move |(x, xc)| (x.strict_cast::<u16>(), y.strict_cast::<u16>(), xc))
         })
     }
 }

@@ -30,24 +30,26 @@ impl WorldWrite {
         let map = &grid_world.chunk_map;
         for chunk in chunks {
             if let Some(mut real_chunk) = map.chunk_array[chunk.pos.y][chunk.pos.x] {
-                for ((sx, sy, pixel), new) in
-                    get_section_mut_enumerate(usize::from(chunk.pos.section), &mut real_chunk)
-                        .zip(chunk.pixel_run.iter())
-                        .filter(|((_, _, p), n)| {
-                            *n != Pixel::MAX
-                                && p.map_or(n.id != 0, |v| {
-                                    v.material.material_type != usize::from(n.id)
-                                        && !matches!(v.material.cell_type, CellType::Solid)
-                                })
+                for ((sx, sy, pixel), new) in get_section_mut_enumerate(
+                    chunk.pos.section.strict_cast::<usize>(),
+                    &mut real_chunk,
+                )
+                .zip(chunk.pixel_run.iter())
+                .filter(|((_, _, p), n)| {
+                    *n != Pixel::MAX
+                        && p.map_or(n.id != 0, |v| {
+                            v.material.material_type != n.id.strict_cast::<usize>()
+                                && !matches!(v.material.cell_type, CellType::Solid)
                         })
-                {
+                }) {
                     if let Some(inner) = pixel {
                         inner.ptr.free();
                         *pixel = None;
                     }
                     if new.id != 0 {
                         let mat = StdBox::from(
-                            &mut game_global.m_cell_factory.cell_data[usize::from(new.id)],
+                            &mut game_global.m_cell_factory.cell_data
+                                [new.id.strict_cast::<usize>()],
                         );
                         let x = (chunk.pos.x.cast_signed() - 256) * 512 + sx.cast_signed();
                         let y = (chunk.pos.y.cast_signed() - 256) * 512 + sy.cast_signed();

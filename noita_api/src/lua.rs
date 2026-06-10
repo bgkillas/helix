@@ -123,7 +123,7 @@ impl LuaState {
     }
     #[inline]
     pub fn push_bool(self, val: bool) {
-        unsafe { lua_pushboolean(self.lua, i32::from(val)) };
+        unsafe { lua_pushboolean(self.lua, u8::from(val).strict_cast::<i32>()) };
     }
     #[inline]
     pub fn push_str(self, s: &str) {

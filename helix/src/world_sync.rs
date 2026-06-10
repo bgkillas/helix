@@ -28,7 +28,7 @@ impl WorldSync {
     pub fn push_world(&mut self, send_type: SendType, peer: PeerId, mut chunks: Vec<Chunk>) {
         let mut send_back = Vec::with_capacity(chunks.len());
         for chunk in chunks.drain(..) {
-            let section = usize::from(chunk.pos.section);
+            let section: usize = chunk.pos.section.strict_cast();
             if let Some(prev) = &mut self.chunks[chunk.pos.y][chunk.pos.x][section] {
                 if prev.peer == peer {
                     prev.pixel_run = chunk.pixel_run;
@@ -76,7 +76,7 @@ impl WorldSync {
     }
     pub fn del_world(&mut self, src: PeerId, chunks: Vec<ChunkPos>) {
         for pos in chunks {
-            let section = usize::from(pos.section);
+            let section = pos.section.strict_cast::<usize>();
             if let Some(prev) = &mut self.chunks[pos.y][pos.x][section]
                 && prev.peer == src
             {

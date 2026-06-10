@@ -101,12 +101,12 @@ fn test() {
     use image::RgbImage;
     use std::f32::consts::TAU;
     let r: u16 = 256;
-    let mut image = RgbImage::new(u32::from(r) + 8, u32::from(r) + 8);
+    let mut image = RgbImage::new(r.strict_cast::<u32>() + 8, r.strict_cast::<u32>() + 8);
     let rays: u16 = 64;
     let delta_theta = TAU / f32::from(rays);
     for ray in 0..rays / 4 {
         let r = r - ray * 16;
-        let r2: usize = usize::from(r).pow(2);
+        let r2: usize = r.strict_cast::<usize>().pow(2);
         let rf = f32::from(r);
         let ix0: usize = 0;
         let iy0: usize = 0;

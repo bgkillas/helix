@@ -37,7 +37,7 @@ macro_rules! define_bitset {
             #[inline]
             pub fn len(&self) -> usize {
                 let n: u32 = self.iter().map(|s| s.count_ones()).sum();
-                usize::try_from(n).unwrap()
+                n.strict_cast::<usize>()
             }
             #[must_use]
             #[inline]
@@ -67,13 +67,13 @@ macro_rules! define_bitset {
             pub fn iter_tags(&self) -> impl Iterator<Item = &str> {
                 let tag_manager = TagManager::<$ty>::global().as_ref();
                 self.iter_indices()
-                    .map(|i| tag_manager.tags[usize::from(i)].as_str())
+                    .map(|i| tag_manager.tags[i.strict_cast::<usize>()].as_str())
             }
             #[inline]
             pub fn iter_tags_indices(&self) -> impl Iterator<Item = ($ty, &str)> {
                 let tag_manager = TagManager::<$ty>::global().as_ref();
                 self.iter_indices()
-                    .map(|i| (i, tag_manager.tags[usize::from(i)].as_str()))
+                    .map(|i| (i, tag_manager.tags[i.strict_cast::<usize>()].as_str()))
             }
         }
     };
