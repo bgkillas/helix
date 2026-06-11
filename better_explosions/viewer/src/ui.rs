@@ -443,8 +443,8 @@ impl eframe::App for App {
                             }
                             Wand::Load(x0, y0) | Wand::Unload(x0, y0) => {
                                 (*x0, *y0) = (
-                                    i16::try_from(x.div_euclid(512)).unwrap(),
-                                    i16::try_from(y.div_euclid(512)).unwrap(),
+                                    x.div_euclid(512).strict_cast(),
+                                    y.div_euclid(512).strict_cast(),
                                 );
                             }
                             Wand::Fill => {}

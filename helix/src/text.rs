@@ -29,7 +29,7 @@ impl Context {
                 let seed_str = seed.trim();
                 self.world_seed = seed_str
                     .parse()
-                    .unwrap_or_else(|_| usize::try_from(rand::rng().next_u32()).unwrap());
+                    .unwrap_or_else(|_| rand::rng().next_u32().strict_cast());
                 if let Err(e) = self.net.broadcast(
                     &Message::World(self.world_seed),
                     Reliability::Reliable,

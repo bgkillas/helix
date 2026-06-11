@@ -123,7 +123,7 @@ impl LuaState {
     }
     #[inline]
     pub fn push_bool(self, val: bool) {
-        unsafe { lua_pushboolean(self.lua, u8::from(val).strict_cast::<i32>()) };
+        unsafe { lua_pushboolean(self.lua, i32::from(val)) };
     }
     #[inline]
     pub fn push_str(self, s: &str) {
@@ -269,11 +269,11 @@ impl LuaFnRet for LuaRawFn {
 impl<T: LuaFnRet> LuaFnRet for Vec<T> {
     #[inline]
     fn do_return(self, lua: LuaState) -> c_int {
-        lua.create_table(c_int::try_from(self.len()).unwrap(), 0);
+        lua.create_table(self.len().strict_cast(), 0);
         for (i, el) in self.into_iter().enumerate() {
             let elements = el.do_return(lua);
             assert_eq!(elements, 1, "Vec<T>'s T should only put one value on stack");
-            lua.rawset_table(-2, i32::try_from(i + 1).unwrap());
+            lua.rawset_table(-2, (i + 1).strict_cast());
         }
         1
     }
@@ -282,11 +282,11 @@ impl<T: LuaFnRet> LuaFnRet for Vec<T> {
 impl<T: LuaFnRet, const N: usize> LuaFnRet for [T; N] {
     #[inline]
     fn do_return(self, lua: LuaState) -> c_int {
-        lua.create_table(c_int::try_from(self.len()).unwrap(), 0);
+        lua.create_table(self.len().strict_cast(), 0);
         for (i, el) in self.into_iter().enumerate() {
             let elements = el.do_return(lua);
             assert_eq!(elements, 1, "[T; N]'s T should only put one value on stack");
-            lua.rawset_table(-2, i32::try_from(i + 1).unwrap());
+            lua.rawset_table(-2, (i + 1).strict_cast());
         }
         1
     }

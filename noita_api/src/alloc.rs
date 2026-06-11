@@ -49,7 +49,7 @@ impl<T: Sized> StdPtr<T> {
                 fn(c_uint) -> *mut c_void
             )
         };
-        let ptr = NonNull::new(operator_new(size_of::<T>() as c_uint).cast()).unwrap();
+        let ptr = NonNull::new(operator_new(size_of::<T>().strict_cast()).cast()).unwrap();
         Self { ptr }
     }
     #[cfg(all(target_os = "windows", target_pointer_width = "32", feature = "log"))]
@@ -60,7 +60,7 @@ impl<T: Sized> StdPtr<T> {
                 fn(c_uint) -> *mut c_void
             )
         };
-        let ptr = NonNull::new(operator_new((size_of::<T>() * n) as c_uint).cast()).unwrap();
+        let ptr = NonNull::new(operator_new((size_of::<T>() * n).strict_cast()).cast()).unwrap();
         Self { ptr }
     }
     #[cfg(all(
@@ -69,7 +69,8 @@ impl<T: Sized> StdPtr<T> {
         not(feature = "log")
     ))]
     pub fn malloc() -> Self {
-        let ptr = NonNull::new(unsafe { operator_new(size_of::<T>() as c_uint).cast() }).unwrap();
+        let ptr =
+            NonNull::new(unsafe { operator_new(size_of::<T>().strict_cast()).cast() }).unwrap();
         Self { ptr }
     }
     #[cfg(all(
@@ -78,8 +79,8 @@ impl<T: Sized> StdPtr<T> {
         not(feature = "log")
     ))]
     pub fn malloc_array(n: usize) -> Self {
-        let ptr =
-            NonNull::new(unsafe { operator_new((size_of::<T>() * n) as c_uint).cast() }).unwrap();
+        let ptr = NonNull::new(unsafe { operator_new((size_of::<T>() * n).strict_cast()).cast() })
+            .unwrap();
         Self { ptr }
     }
     #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]

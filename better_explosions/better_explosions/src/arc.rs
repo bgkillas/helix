@@ -122,9 +122,9 @@ fn test() {
             let p = &mut image
                 .get_pixel_mut(x.try_into().unwrap(), y.try_into().unwrap())
                 .0;
-            p[0] = 128 + u8::try_from(i % 128).unwrap();
-            p[1] = 128 + u8::try_from(i % 128).unwrap();
-            p[2] = 128 + u8::try_from(i % 128).unwrap();
+            p[0] = 128 + (i % 128).strict_cast::<u8>();
+            p[1] = 128 + (i % 128).strict_cast::<u8>();
+            p[2] = 128 + (i % 128).strict_cast::<u8>();
         }
     }
     image.save("../../test.png").unwrap();

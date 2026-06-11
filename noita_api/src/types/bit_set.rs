@@ -19,18 +19,18 @@ macro_rules! define_bitset {
             #[must_use]
             #[inline]
             pub fn get(&self, n: $ty) -> bool {
-                let out_index = n / <$ty>::try_from(<$ty>::BITS).unwrap();
-                let in_index = n % <$ty>::try_from(<$ty>::BITS).unwrap();
-                self[usize::from(out_index)] & (1 << in_index) != 0
+                let out_index = n / <$ty>::BITS.strict_cast::<$ty>();
+                let in_index = n % <$ty>::BITS.strict_cast::<$ty>();
+                self[out_index.strict_cast::<usize>()] & (1 << in_index) != 0
             }
             #[inline]
             pub fn set(&mut self, n: $ty, value: bool) {
-                let out_index = n / <$ty>::try_from(<$ty>::BITS).unwrap();
-                let in_index = n % <$ty>::try_from(<$ty>::BITS).unwrap();
+                let out_index = n / <$ty>::BITS.strict_cast::<$ty>();
+                let in_index = n % <$ty>::BITS.strict_cast::<$ty>();
                 if value {
-                    self[usize::from(out_index)] |= 1 << in_index;
+                    self[out_index.strict_cast::<usize>()] |= 1 << in_index;
                 } else {
-                    self[usize::from(out_index)] &= !(1 << in_index);
+                    self[out_index.strict_cast::<usize>()] &= !(1 << in_index);
                 }
             }
             #[must_use]

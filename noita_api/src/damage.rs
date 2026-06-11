@@ -1,6 +1,6 @@
 use crate::{Entity, StdBox, StdString, Vec2, fast_call};
 use noita_api_macros::{search, search_fun};
-use retour::RawDetour;
+use retour::{Function as _, RawDetour};
 use std::sync::OnceLock;
 #[repr(C)]
 #[derive(Debug)]
@@ -56,14 +56,14 @@ pub fn install_damage_function_manual(
     // 0x0103_4ad0
     let fun_addr = search_fun!(0x68, ptr);
     unsafe {
-        let raw = RawDetour::new(fun_addr.cast(), damage_fun_hook as *const ()).unwrap();
+        let raw = RawDetour::new(fun_addr.cast(), damage_fun_hook.to_ptr()).unwrap();
         raw.enable().unwrap();
         RAW.set(raw).unwrap();
     }
 }
 #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 fn get_ptr() -> *const () {
-    RAW.get().unwrap().trampoline() as *const ()
+    std::ptr::from_ref(RAW.get().unwrap().trampoline())
 }
 #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
 #[unsafe(naked)]

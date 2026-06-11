@@ -1108,7 +1108,7 @@ fn search_data(tokens: TokenStream) -> (Vec<TokenStream>, Vec<TokenStream>) {
             }
             TokenTree::Ident(ident) => {
                 let b = (0..4usize).map(|i| {
-                    quote! {(#ident as usize).to_ne_bytes()[#i]}
+                    quote! {#ident.addr().to_ne_bytes()[#i]}
                 });
                 Some(quote! {#(crate::search::Token::Byte(#b),)*})
             }
@@ -1291,7 +1291,7 @@ pub fn fake_fast_call(tokens: proc_macro::TokenStream) -> proc_macro::TokenStrea
         pub type #type_name = fast_call!(#fun);
         #[allow(unused)]
         fn get_ptr() -> *const () {
-            RAW.get().unwrap().trampoline() as *const ()
+            std::ptr::from_ref(RAW.get().unwrap().trampoline())
         }
         #[cfg(all(target_os = "windows", target_pointer_width = "32"))]
         #[unsafe(naked)]

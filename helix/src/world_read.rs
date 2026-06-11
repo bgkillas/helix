@@ -108,8 +108,7 @@ pub fn get_sections(
     arr: &[[Option<Cell<()>>; 512]; 512],
 ) -> impl Iterator<Item = (Section, Priority, impl Iterator<Item = Option<Cell<()>>>)> + '_ {
     (0..SECTIONS).filter_map(move |s| {
-        section_in(aabb, inner_aabb, x, y, s)
-            .map(|p| (Section::try_from(s).unwrap(), p, get_section(s, arr)))
+        section_in(aabb, inner_aabb, x, y, s).map(|p| (s.strict_cast(), p, get_section(s, arr)))
     })
 }
 fn section_in(

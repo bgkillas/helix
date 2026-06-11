@@ -50,9 +50,9 @@ impl ChunkMap {
     #[inline]
     pub fn flat_iter(&self) -> impl Iterator<Item = (u16, u16, StdBox<Chunk>)> {
         (self.min_chunk.y..=self.max_chunk.y).flat_map(move |yi| {
-            let y = usize::try_from(256 + yi).unwrap();
+            let y = (256 + yi).strict_cast::<usize>();
             (self.min_chunk.x..=self.max_chunk.x).filter_map(move |xi| {
-                let x = usize::try_from(256 + xi).unwrap();
+                let x = (256 + xi).strict_cast::<usize>();
                 self.chunk_array[y][x].map(|c| (x.strict_cast::<u16>(), y.strict_cast::<u16>(), c))
             })
         })

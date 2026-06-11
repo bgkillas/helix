@@ -53,8 +53,7 @@ impl ExplosionManager {
         let bern = if cell_create_id == 0 {
             Bernoulli::from_ratio(0, 1).unwrap()
         } else {
-            Bernoulli::from_ratio(u32::try_from(config.create_cell_probability).unwrap(), 100)
-                .unwrap()
+            Bernoulli::from_ratio(config.create_cell_probability.strict_cast(), 100).unwrap()
         };
         let mut radii = Vec::with_capacity(rays.strict_cast::<usize>());
         for ray in 0..rays {
@@ -170,7 +169,7 @@ impl ExplosionManager {
                     let chance = if cell_create_id == 0 {
                         0
                     } else {
-                        u32::try_from(line.config.create_cell_probability).unwrap()
+                        line.config.create_cell_probability.strict_cast()
                     };
                     let bern = Bernoulli::from_ratio(chance, 100).unwrap();
                     self.explosion_line(
@@ -205,7 +204,7 @@ impl ExplosionManager {
         let chance = if cell_create_id == 0 {
             0
         } else {
-            u32::try_from(config.create_cell_probability).unwrap()
+            config.create_cell_probability.strict_cast()
         };
         let bern = Bernoulli::from_ratio(chance, 100).unwrap();
         let mut hp_map = UninitMap::new(512 * 512 * grid_world.chunk_map.chunk_count);
@@ -397,9 +396,9 @@ pub fn lines_colors() {
                 let mut p = &mut image
                     .get_pixel_mut(x.try_into().unwrap(), y.try_into().unwrap())
                     .0;
-                p[0] = 128 + 32 * u8::try_from(i % 4).unwrap();
-                p[1] = 128 + 32 * u8::try_from(i % 4).unwrap();
-                p[2] = 128 + 32 * u8::try_from(i % 4).unwrap();
+                p[0] = 128 + 32 * (i % 4).strict_cast::<u8>();
+                p[1] = 128 + 32 * (i % 4).strict_cast::<u8>();
+                p[2] = 128 + 32 * (i % 4).strict_cast::<u8>();
                 if matches!(case, crate::line::StepCase::Both) {
                     if o == 1 || o == 2 || o == 5 || o == 6 {
                         p = &mut image
@@ -420,9 +419,9 @@ pub fn lines_colors() {
                             )
                             .0;
                     }
-                    p[0] = 128 + 32 * u8::try_from(i % 4).unwrap();
-                    p[1] = 128 + 32 * u8::try_from(i % 4).unwrap();
-                    p[2] = 128 + 32 * u8::try_from(i % 4).unwrap();
+                    p[0] = 128 + 32 * (i % 4).strict_cast::<u8>();
+                    p[1] = 128 + 32 * (i % 4).strict_cast::<u8>();
+                    p[2] = 128 + 32 * (i % 4).strict_cast::<u8>();
                 }
             }
         })

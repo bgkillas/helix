@@ -318,7 +318,7 @@ impl Entity {
     #[inline]
     pub fn iter_with_tag_id(tag_id: u16) -> impl DoubleEndedIterator<Item = Self> {
         let em = EntityManager::global();
-        em.as_ref().entity_buckets[usize::from(tag_id)]
+        em.as_ref().entity_buckets[tag_id.strict_cast::<usize>()]
             .iter()
             .copied()
     }
@@ -326,7 +326,7 @@ impl Entity {
     #[inline]
     pub fn get_with_tag_id(id: usize, tag_id: u16) -> Option<Self> {
         let em = EntityManager::global();
-        em.entity_buckets[usize::from(tag_id)]
+        em.entity_buckets[tag_id.strict_cast::<usize>()]
             .iter()
             .find(|e| e.id == id)
             .copied()
