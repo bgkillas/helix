@@ -459,7 +459,7 @@ fn luaopen(
     quote! {
         #[unsafe(no_mangle)]
         unsafe extern "C" fn luaopen(lua: *mut noita_api::lua_bindings::lua_State) -> std::ffi::c_int {
-            std::panic::set_hook(Box::new(|panic| noita_api::log_println!("{panic}")));
+            std::panic::set_hook(Box::new(|panic| noita_api::nprintln!("{panic}")));
             #keep_loaded
             #(#groups_funs)*
             #(#inner_funs)*

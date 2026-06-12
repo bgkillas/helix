@@ -94,7 +94,6 @@ impl ArcIter {
 #[test]
 fn test() {
     #[allow(clippy::cast_possible_truncation)]
-    #[allow(clippy::as_conversions)]
     fn round_f32(f: f32) -> isize {
         f.round() as isize
     }

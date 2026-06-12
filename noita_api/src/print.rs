@@ -2,7 +2,7 @@ use crate::{GameGlobal, LogFlush, StdBox, StdStringRef, get_this_call};
 use std::ffi::{CStr, c_char, c_void};
 use std::ptr;
 #[inline]
-pub fn log_print(value: &CStr) {
+pub fn nprint(value: &CStr) {
     let orig = LogFlush::global().flush;
     LogFlush::global().flush = true;
     let ptr = ptr::without_provenance_mut(0x0115_5538);
@@ -11,15 +11,15 @@ pub fn log_print(value: &CStr) {
     LogFlush::global().flush = orig;
 }
 #[macro_export]
-macro_rules! log_print {
+macro_rules! nprint {
     ($($arg:tt)*) => {
-        $crate::log_print(std::ffi::CStr::from_bytes_with_nul(format!("{}\0", format_args!($($arg)*)).as_bytes()).unwrap())
+        $crate::nprint(std::ffi::CStr::from_bytes_with_nul(format!("{}\0", format_args!($($arg)*)).as_bytes()).unwrap())
     };
 }
 #[macro_export]
-macro_rules! log_println {
+macro_rules! nprintln {
     ($($arg:tt)*) => {
-        $crate::log_print!("{}\n", format_args!($($arg)*))
+        $crate::nprint!("{}\n", format_args!($($arg)*))
     };
 }
 #[inline]

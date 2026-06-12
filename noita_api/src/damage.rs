@@ -37,7 +37,6 @@ pub type DamageFun = fast_call!(
 );
 static RAW: OnceLock<RawDetour> = OnceLock::new();
 #[inline]
-#[allow(clippy::as_conversions)]
 pub fn install_damage_function_manual(
     damage_fun_hook: fast_call!(
         fn(
