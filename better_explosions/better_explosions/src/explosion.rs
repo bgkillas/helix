@@ -21,6 +21,7 @@ pub struct ExplosionManager {
 }
 unsafe impl Send for ExplosionManager {}
 unsafe impl Sync for ExplosionManager {}
+#[derive(Clone)]
 pub struct LineContinue {
     pub line: LineIterCompact,
     pub config: Rc<ConfigExplosion>,
@@ -172,7 +173,7 @@ impl ExplosionManager {
                         line.config.create_cell_probability.strict_cast()
                     };
                     let bern = Bernoulli::from_ratio(chance, 100).unwrap();
-                    self.explosion_line(
+                    self.explosion_line_in_chunk(
                         line,
                         &mut rng,
                         grid_world,
@@ -240,6 +241,24 @@ impl ExplosionManager {
     }
     #[inline]
     #[allow(clippy::too_many_arguments)]
+    pub fn explosion_line_in_chunk<const ORIG: bool>(
+        &mut self,
+        mut line: LineContinue,
+        rng: &mut ThreadRng,
+        grid_world: StdBox<GridWorld>,
+        chunk_map: ChunkArray,
+        hp_map: &mut UninitMap<usize>,
+        chunk_indices: &mut [[MaybeUninit<usize>; 512]; 512],
+        bern: Bernoulli,
+        cell_create: StdBox<CellData>,
+    ) {
+        let mut line_iter = LineIter::from(line.line);
+        while let Some((_, mut x, mut y)) = line_iter.next() {
+
+        }
+    }
+    #[inline]
+    #[allow(clippy::too_many_arguments)]
     pub fn explosion_line(
         &mut self,
         mut line: LineContinue,
@@ -252,16 +271,35 @@ impl ExplosionManager {
         cell_create: StdBox<CellData>,
     ) {
         let mut line_iter = LineIter::from(line.line);
+        let mut last = (0, 0);
+        let energy_orig = line.energy;
+        let mut i: usize = 0;
         while let Some((case, mut x, mut y)) = line_iter.next() {
             let mut cx = x / 512;
             let mut cy = y / 512;
             let Some(mut c) = chunk_map[cy][cx] else {
-                let vec = self.lines[cy][cx].get_or_insert_with(|| Vec::with_capacity(512));
-                line_iter.back(case);
-                line.line = line_iter.into();
-                vec.push(line);
-                break;
+                    if last == (cx, cy) {
+                        if energy_orig == line.energy {
+                            i += 1;
+                            continue;
+                        }
+                        let hp = (energy_orig - line.energy) / i;
+                        let Some(new) = line.energy.checked_sub(hp) else {
+                            break;
+                        };
+                        line.energy = new;
+                    } else {
+                        last = (cx, cy);
+                        let vec = self.lines[cy][cx].get_or_insert_with(|| Vec::with_capacity(512));
+                        let mut line_iter_back = line_iter.clone();
+                        line_iter_back.back(case);
+                        line.line = line_iter_back.into();
+                        vec.push(line.clone());
+                    }
+                    i += 1;
+                    continue;
             };
+            i += 1;
             let mut px = x % 512;
             let mut py = y % 512;
             let mut i = unsafe { chunk_indices[cy][cx].assume_init() };
