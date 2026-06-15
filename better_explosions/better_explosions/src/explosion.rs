@@ -26,6 +26,7 @@ pub struct LineContinue {
     pub line: LineIterCompact,
     pub config: Rc<ConfigExplosion>,
     pub energy: usize,
+    pub take: usize,
 }
 impl ExplosionManager {
     #[inline]
@@ -215,7 +216,7 @@ impl ExplosionManager {
             chunk_indices[y.strict_cast::<usize>()][x.strict_cast::<usize>()].write(i);
         }
         let r = truncate_f32u(config.explosion_radius);
-        let config_arc = Rc::new(config.clone());
+        let config_rc = Rc::new(config.clone());
         let energy = config.ray_energy;
         for (ix1, iy1) in Circumference::new(r) {
             octant(ix0, iy0, ix1, iy1, |_, ix2, iy2| {
@@ -223,11 +224,9 @@ impl ExplosionManager {
                 let dx = truncate_usize(ix2.abs_diff(ix0));
                 let mult = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
                 self.explosion_line(
-                    LineContinue {
-                        line: LineIter::new(ix0, iy0, ix2, iy2).into(),
-                        config: config_arc.clone(),
-                        energy: truncate_f32u(truncate_usize(energy) / mult),
-                    },
+                    LineIter::new(ix0, iy0, ix2, iy2).into(),
+                    config_rc.clone(),
+                    truncate_f32u(truncate_usize(energy) / mult),
                     &mut rng,
                     grid_world,
                     chunk_map,
@@ -241,7 +240,7 @@ impl ExplosionManager {
     }
     #[inline]
     #[allow(clippy::too_many_arguments)]
-    pub fn explosion_line_in_chunk<const ORIG: bool>(
+    pub fn explosion_line_in_chunk(
         &mut self,
         mut line: LineContinue,
         rng: &mut ThreadRng,
@@ -253,15 +252,16 @@ impl ExplosionManager {
         cell_create: StdBox<CellData>,
     ) {
         let mut line_iter = LineIter::from(line.line);
-        while let Some((_, mut x, mut y)) = line_iter.next() {
-
-        }
+        while let Some((_, mut x, mut y)) = line_iter.next() {}
     }
     #[inline]
     #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::needless_pass_by_value)]
     pub fn explosion_line(
         &mut self,
-        mut line: LineContinue,
+        mut line_iter: LineIter,
+        config: Rc<ConfigExplosion>,
+        mut energy: usize,
         rng: &mut ThreadRng,
         grid_world: StdBox<GridWorld>,
         chunk_map: ChunkArray,
@@ -270,34 +270,39 @@ impl ExplosionManager {
         bern: Bernoulli,
         cell_create: StdBox<CellData>,
     ) {
-        let mut line_iter = LineIter::from(line.line);
         let mut last = (0, 0);
-        let energy_orig = line.energy;
+        let energy_orig = energy;
         let mut i: usize = 0;
+        let mut take = 0;
         while let Some((case, mut x, mut y)) = line_iter.next() {
             let mut cx = x / 512;
             let mut cy = y / 512;
             let Some(mut c) = chunk_map[cy][cx] else {
-                    if last == (cx, cy) {
-                        if energy_orig == line.energy {
-                            i += 1;
-                            continue;
-                        }
-                        let hp = (energy_orig - line.energy) / i;
-                        let Some(new) = line.energy.checked_sub(hp) else {
-                            break;
-                        };
-                        line.energy = new;
-                    } else {
-                        last = (cx, cy);
-                        let vec = self.lines[cy][cx].get_or_insert_with(|| Vec::with_capacity(512));
-                        let mut line_iter_back = line_iter.clone();
-                        line_iter_back.back(case);
-                        line.line = line_iter_back.into();
-                        vec.push(line.clone());
+                if last == (cx, cy) {
+                    if energy_orig == energy {
+                        i += 1;
+                        continue;
                     }
-                    i += 1;
-                    continue;
+                    let hp = (energy_orig - energy) / i;
+                    let Some(new) = energy.checked_sub(hp) else {
+                        break;
+                    };
+                    energy = new;
+                } else {
+                    last = (cx, cy);
+                    let vec = self.lines[cy][cx].get_or_insert_with(|| Vec::with_capacity(512));
+                    let mut line_iter_back = line_iter.clone();
+                    line_iter_back.back(case);
+                    vec.push(LineContinue {
+                        line: line_iter_back.into(),
+                        config: config.clone(),
+                        energy,
+                        take: i - take,
+                    });
+                    take = i;
+                }
+                i += 1;
+                continue;
             };
             i += 1;
             let mut px = x % 512;
@@ -305,24 +310,24 @@ impl ExplosionManager {
             let mut i = unsafe { chunk_indices[cy][cx].assume_init() };
             let mut hp_index = 512 * 512 * i + 512 * py + px;
             if let Some(hp) = hp_map.get(hp_index) {
-                let Some(new) = line.energy.checked_sub(*hp) else {
+                let Some(new) = energy.checked_sub(*hp) else {
                     break;
                 };
-                line.energy = new;
+                energy = new;
             } else {
                 let hp = if let Some(p) = c[py][px] {
                     if matches!(p.material.cell_type, CellType::Solid) {
                         continue;
                     }
-                    if !line.config.hole_enabled
-                        || p.material.durability > line.config.max_durability_to_destroy
+                    if !config.hole_enabled
+                        || p.material.durability > config.max_durability_to_destroy
                     {
                         break;
                     }
-                    let Some(new) = line.energy.checked_sub(p.hp) else {
+                    let Some(new) = energy.checked_sub(p.hp) else {
                         break;
                     };
-                    line.energy = new;
+                    energy = new;
                     p.ptr.free();
                     p.hp
                 } else {
@@ -371,8 +376,8 @@ impl ExplosionManager {
                 continue;
             }
             let hp = if let Some(p) = c[py][px] {
-                if !line.config.hole_enabled
-                    || p.material.durability > line.config.max_durability_to_destroy
+                if !config.hole_enabled
+                    || p.material.durability > config.max_durability_to_destroy
                     || matches!(p.material.cell_type, CellType::Solid)
                 {
                     continue;

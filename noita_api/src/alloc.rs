@@ -43,7 +43,7 @@ impl<T: Sized> StdPtr<T> {
     pub fn malloc() -> Self {
         let operator_new = unsafe {
             crate::get_cdecl!(
-                ptr::without_provenance::<usize>(0x00f0_7500)
+                ptr::with_exposed_provenance::<usize>(0x00f0_7500)
                     .cast::<usize>()
                     .read(),
                 fn(c_uint) -> *mut c_void
@@ -56,7 +56,7 @@ impl<T: Sized> StdPtr<T> {
     pub fn malloc_array(n: usize) -> Self {
         let operator_new = unsafe {
             crate::get_cdecl!(
-                ptr::without_provenance::<usize>(0x00f0_7500).read(),
+                ptr::with_exposed_provenance::<usize>(0x00f0_7500).read(),
                 fn(c_uint) -> *mut c_void
             )
         };
@@ -110,7 +110,7 @@ impl<T: Sized> StdPtr<T> {
     pub fn free(&mut self) {
         let operator_delete = unsafe {
             crate::get_cdecl!(
-                ptr::without_provenance::<usize>(0x00f0_7504).read(),
+                ptr::with_exposed_provenance::<usize>(0x00f0_7504).read(),
                 fn(*mut c_void)
             )
         };
@@ -143,7 +143,7 @@ impl<T: Sized> StdPtr<T> {
     #[must_use]
     #[inline]
     pub const fn new(value: usize) -> Self {
-        let ptr = NonNull::new(ptr::without_provenance_mut(value)).unwrap();
+        let ptr = NonNull::new(ptr::with_exposed_provenance_mut(value)).unwrap();
         Self { ptr }
     }
     #[inline]
