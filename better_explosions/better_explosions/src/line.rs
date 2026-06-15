@@ -12,6 +12,12 @@ pub struct LineIter {
     pub error: isize,
     pub first: bool,
 }
+impl Default for LineIter {
+    #[inline]
+    fn default() -> Self {
+        Self::new(0, 0, 0, 0)
+    }
+}
 #[derive(Debug)]
 #[repr(u8)]
 pub enum StepCase {
@@ -191,6 +197,12 @@ pub struct LineIterCompact {
     pub dy_abs: isize,
     pub error: isize,
     pub first: bool,
+}
+impl Default for LineIterCompact {
+    #[inline]
+    fn default() -> Self {
+        LineIter::default().into()
+    }
 }
 impl From<LineIter> for LineIterCompact {
     #[inline]

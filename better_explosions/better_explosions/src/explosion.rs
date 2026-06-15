@@ -224,7 +224,7 @@ impl ExplosionManager {
                 let dx = truncate_usize(ix2.abs_diff(ix0));
                 let mult = ((if dy > dx { dx / dy } else { dy / dx }).powi(2) + 1.0).sqrt();
                 self.explosion_line(
-                    LineIter::new(ix0, iy0, ix2, iy2).into(),
+                    LineIter::new(ix0, iy0, ix2, iy2),
                     config_rc.clone(),
                     truncate_f32u(truncate_usize(energy) / mult),
                     &mut rng,
@@ -251,8 +251,55 @@ impl ExplosionManager {
         bern: Bernoulli,
         cell_create: StdBox<CellData>,
     ) {
-        let mut line_iter = LineIter::from(line.line);
-        while let Some((_, mut x, mut y)) = line_iter.next() {}
+        let line_iter = LineIter::from(line.line);
+        let cx = line_iter.x0 / 512;
+        let cy = line_iter.y0 / 512;
+        let Some(mut c) = chunk_map[cy][cx] else {
+            unreachable!()
+        };
+        for (_, x, y) in line_iter.take(line.take) {
+            let px = x % 512;
+            let py = y % 512;
+            let i = unsafe { chunk_indices[cy][cx].assume_init() };
+            let hp_index = 512 * 512 * i + 512 * py + px;
+            if let Some(hp) = hp_map.get(hp_index) {
+                let Some(new) = line.energy.checked_sub(*hp) else {
+                    break;
+                };
+                line.energy = new;
+            } else {
+                let hp = if let Some(p) = c[py][px] {
+                    if matches!(p.material.cell_type, CellType::Solid) {
+                        continue;
+                    }
+                    if !line.config.hole_enabled
+                        || p.material.durability > line.config.max_durability_to_destroy
+                    {
+                        break;
+                    }
+                    let Some(new) = line.energy.checked_sub(p.hp) else {
+                        break;
+                    };
+                    line.energy = new;
+                    p.ptr.free();
+                    p.hp
+                } else {
+                    0
+                };
+                hp_map.insert(hp_index, hp);
+                c[py][px] = if rng.sample(bern) {
+                    (self.construct_cell)(
+                        grid_world,
+                        x.cast_signed() - 512 * 256,
+                        y.cast_signed() - 512 * 256,
+                        cell_create,
+                        std::ptr::null_mut(),
+                    )
+                } else {
+                    None
+                };
+            }
+        }
     }
     #[inline]
     #[allow(clippy::too_many_arguments)]
@@ -274,6 +321,7 @@ impl ExplosionManager {
         let energy_orig = energy;
         let mut i: usize = 0;
         let mut take = 0;
+        let mut last_line = LineIterCompact::default();
         while let Some((case, mut x, mut y)) = line_iter.next() {
             let mut cx = x / 512;
             let mut cy = y / 512;
@@ -288,17 +336,19 @@ impl ExplosionManager {
                         break;
                     };
                     energy = new;
-                } else {
+                } else if take == 0 {
                     last = (cx, cy);
+                    take = i;
+                    last_line = line_iter.clone().into();
+                } else {
                     let vec = self.lines[cy][cx].get_or_insert_with(|| Vec::with_capacity(512));
-                    let mut line_iter_back = line_iter.clone();
-                    line_iter_back.back(case);
                     vec.push(LineContinue {
-                        line: line_iter_back.into(),
+                        line: std::mem::replace(&mut last_line, line_iter.clone().into()),
                         config: config.clone(),
                         energy,
                         take: i - take,
                     });
+                    last = (cx, cy);
                     take = i;
                 }
                 i += 1;
