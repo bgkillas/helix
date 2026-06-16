@@ -257,10 +257,10 @@ impl ExplosionManager {
         let Some(mut c) = chunk_map[cy][cx] else {
             unreachable!()
         };
+        let i = unsafe { chunk_indices[cy][cx].assume_init() };
         for (_, x, y) in line_iter.take(line.take) {
             let px = x % 512;
             let py = y % 512;
-            let i = unsafe { chunk_indices[cy][cx].assume_init() };
             let hp_index = 512 * 512 * i + 512 * py + px;
             if let Some(hp) = hp_map.get(hp_index) {
                 let Some(new) = line.energy.checked_sub(*hp) else {

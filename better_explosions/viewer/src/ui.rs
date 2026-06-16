@@ -32,18 +32,23 @@ enum Menu {
 impl Default for App {
     fn default() -> Self {
         let mut unloaded = FxHashMap::with_capacity_and_hasher(512, FxBuildHasher);
-        unloaded.insert((257, 257), StdBox::default());
-        unloaded.insert((256, 257), StdBox::default());
-        unloaded.insert((255, 257), StdBox::default());
-        unloaded.insert((254, 257), StdBox::default());
-        unloaded.insert((254, 256), StdBox::default());
-        unloaded.insert((254, 255), StdBox::default());
-        unloaded.insert((254, 254), StdBox::default());
-        unloaded.insert((255, 254), StdBox::default());
-        unloaded.insert((256, 254), StdBox::default());
-        unloaded.insert((257, 254), StdBox::default());
-        unloaded.insert((257, 255), StdBox::default());
-        unloaded.insert((257, 256), StdBox::default());
+        let mut game_global = GameGlobal::global();
+        game_global
+            .m_cell_factory
+            .generate_cell_data(include_str!("../../materials.xml"))
+            .unwrap();
+        let grid_world = game_global.m_grid_world;
+        let n = 8u16;
+        for i in 256 - n..256 + n {
+            for j in 256 - n..256 + n {
+                if grid_world.chunk_map.chunk_array[j.strict_cast::<usize>()]
+                    [i.strict_cast::<usize>()]
+                .is_none()
+                {
+                    unloaded.insert((i, j), StdBox::default());
+                }
+            }
+        }
         Self {
             wand: Wand::ExplosiveLines(0, 0, 0.0, 12, usize::MAX),
             menu: Menu::Map,

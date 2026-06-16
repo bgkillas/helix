@@ -14,10 +14,12 @@ fn main() -> eframe::Result {
         .generate_cell_data(include_str!("../../materials.xml"))
         .unwrap();
     let mut grid_world = game_global.m_grid_world;
-    grid_world.chunk_map.insert(256, 256, Chunk::default());
-    grid_world.chunk_map.insert(255, 256, Chunk::default());
-    grid_world.chunk_map.insert(256, 255, Chunk::default());
-    grid_world.chunk_map.insert(255, 255, Chunk::default());
+    let n = 2;
+    for i in 256 - n..256 + n {
+        for j in 256 - n..256 + n {
+            grid_world.chunk_map.insert(i, j, Chunk::default());
+        }
+    }
     let mut args = args();
     if let Some(r) = args.nth(1).and_then(|s| s.parse::<u16>().ok())
         && let Some(n) = args.next().and_then(|s| s.parse::<u128>().ok())
