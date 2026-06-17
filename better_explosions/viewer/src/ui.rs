@@ -174,17 +174,19 @@ fn make_texture(
     chunk: StdBox<Chunk>,
     is_loaded: bool,
 ) -> TextureHandle {
-    let mut vec =
-        vec![Color32::from_rgba_premultiplied(60, 60, 140, 255); chunk[0].len() * chunk.len()];
-    for (x, y, pixel) in chunk.flat_iter() {
-        let color = pixel.material.graphics.color;
-        vec[y.strict_cast::<usize>() * 512 + x.strict_cast::<usize>()] =
+    let mut vec = Vec::with_capacity(chunk[0].len() * chunk.len());
+    for (_, _, op) in chunk.iter() {
+        vec.push(if let Some(pixel) = op {
+            let color = pixel.material.graphics.color;
             Color32::from_rgba_premultiplied(
                 color.r,
                 color.g,
                 color.b,
                 if is_loaded { color.a } else { color.a / 2 },
-            );
+            )
+        } else {
+            Color32::from_rgba_premultiplied(60, 60, 140, 255)
+        });
     }
     let image = ColorImage::new([chunk[0].len(), chunk.len()], vec);
     ui.load_texture(format!("{x}x{y}"), image, TextureOptions::NEAREST)
