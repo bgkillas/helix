@@ -82,18 +82,26 @@ impl ChunkMap {
         let xu = x.strict_cast::<usize>();
         let yu = y.strict_cast::<usize>();
         if let Some(ret) = self.chunk_array[yu][xu].take() {
+            let min_x = (self.min_chunk.x + 256).strict_cast_unsigned();
+            let max_x = (self.max_chunk.x + 256).strict_cast_unsigned();
+            let min_y = (self.min_chunk.y + 256).strict_cast_unsigned();
+            let max_y = (self.max_chunk.y + 256).strict_cast_unsigned();
             self.min_chunk.x = isize::MAX;
             self.min_chunk.y = isize::MAX;
             self.max_chunk.x = isize::MIN;
             self.max_chunk.y = isize::MIN;
             self.chunk_count -= 1;
-            for (cx, cy, _) in self.chunk_array.flat_iter() {
-                let xi = cx.strict_cast::<isize>() - 256;
-                let yi = cy.strict_cast::<isize>() - 256;
-                self.min_chunk.x = self.min_chunk.x.min(xi);
-                self.min_chunk.y = self.min_chunk.y.min(yi);
-                self.max_chunk.x = self.max_chunk.x.max(xi);
-                self.max_chunk.y = self.max_chunk.y.max(yi);
+            for cy in min_y..=max_y {
+                for cx in min_x..=max_x {
+                    if self.chunk_array[cy][cx].is_some() {
+                        let xi = cx.strict_cast::<isize>() - 256;
+                        let yi = cy.strict_cast::<isize>() - 256;
+                        self.min_chunk.x = self.min_chunk.x.min(xi);
+                        self.min_chunk.y = self.min_chunk.y.min(yi);
+                        self.max_chunk.x = self.max_chunk.x.max(xi);
+                        self.max_chunk.y = self.max_chunk.y.max(yi);
+                    }
+                }
             }
             Some(ret)
         } else {

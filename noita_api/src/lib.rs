@@ -7,6 +7,7 @@
 #![feature(const_default)]
 #![feature(const_trait_impl)]
 #![feature(integer_casts)]
+#![feature(integer_cast_extras)]
 pub mod alloc;
 pub mod damage;
 pub mod explosion;

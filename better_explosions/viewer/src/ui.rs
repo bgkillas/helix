@@ -38,7 +38,7 @@ impl Default for App {
             .generate_cell_data(include_str!("../../materials.xml"))
             .unwrap();
         let grid_world = game_global.m_grid_world;
-        let n = 8u16;
+        let n = 4u16;
         for i in 256 - n..256 + n {
             for j in 256 - n..256 + n {
                 if grid_world.chunk_map.chunk_array[j.strict_cast::<usize>()]
@@ -192,7 +192,7 @@ fn make_texture(
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut Ui, _: &mut Frame) {
         Panel::left("left").show_inside(ui, |ui| {
-            if ui.button("Apply").clicked() || ui.input(|i| i.key_pressed(Key::Space)) {
+            if ui.button("Apply").clicked() || ui.input(|i| i.key_down(Key::Space)) {
                 self.update_textures = true;
                 #[allow(clippy::match_same_arms)]
                 match self.wand {
@@ -290,17 +290,22 @@ impl eframe::App for App {
                         let y0 = (256 + y0).cast_unsigned();
                         let game_global = GameGlobal::global();
                         let mut grid_world = game_global.m_grid_world;
-                        let chunk = if let Some(chunk) = self.unloaded.remove(&(x0, y0)) {
-                            chunk
-                        } else {
-                            let mut chunk = Chunk::default();
-                            for (_, _, p) in chunk.iter_mut() {
-                                self.paint_pixel(p);
-                            }
-                            StdBox::new(chunk)
-                        };
-                        grid_world.chunk_map.insert_box(x0, y0, chunk);
-                        self.em.explosion_chunk_update();
+                        if grid_world.chunk_map.chunk_array[y0.strict_cast::<usize>()]
+                            [x0.strict_cast::<usize>()]
+                        .is_none()
+                        {
+                            let chunk = if let Some(chunk) = self.unloaded.remove(&(x0, y0)) {
+                                chunk
+                            } else {
+                                let mut chunk = Chunk::default();
+                                for (_, _, p) in chunk.iter_mut() {
+                                    self.paint_pixel(p);
+                                }
+                                StdBox::new(chunk)
+                            };
+                            grid_world.chunk_map.insert_box(x0, y0, chunk);
+                            self.em.explosion_chunk_update();
+                        }
                     }
                     Wand::Unload(x0, y0) => {
                         let x0 = (256 + x0).cast_unsigned();

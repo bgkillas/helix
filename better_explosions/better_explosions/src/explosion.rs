@@ -157,7 +157,7 @@ impl ExplosionManager {
         for (i, (x, y, _)) in grid_world.chunk_map.flat_iter().enumerate() {
             chunk_indices[y.strict_cast::<usize>()][x.strict_cast::<usize>()].write(i);
         }
-        for (x, y, _) in chunk_map.iter() {
+        for (x, y, _) in grid_world.chunk_map.flat_iter() {
             if let Some(v) = self.lines[y.strict_cast::<usize>()][x.strict_cast::<usize>()].take() {
                 for line in v {
                     let cell_create_id = game_global
