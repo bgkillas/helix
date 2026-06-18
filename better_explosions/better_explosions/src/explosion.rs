@@ -476,6 +476,7 @@ fn truncate_usize(f: usize) -> f32 {
 #[cfg(feature = "test")]
 #[test]
 pub fn lines_colors() {
+    use crate::octant::Octant;
     let ix0 = 68;
     let iy0 = 68;
     let r: u16 = 64;
@@ -493,21 +494,29 @@ pub fn lines_colors() {
                 p[1] = 128 + 32 * (i % 4).strict_cast::<u8>();
                 p[2] = 128 + 32 * (i % 4).strict_cast::<u8>();
                 if matches!(case, crate::line::StepCase::Both) {
-                    if o == 1 || o == 2 || o == 5 || o == 6 {
+                    if matches!(o, Octant::One | Octant::Two | Octant::Five | Octant::Six) {
                         p = &mut image
                             .get_pixel_mut(
                                 x.try_into().unwrap(),
-                                if o == 1 || o == 2 { y - 1 } else { y + 1 }
-                                    .try_into()
-                                    .unwrap(),
+                                if matches!(o, Octant::One | Octant::Two) {
+                                    y - 1
+                                } else {
+                                    y + 1
+                                }
+                                .try_into()
+                                .unwrap(),
                             )
                             .0;
                     } else {
                         p = &mut image
                             .get_pixel_mut(
-                                if o == 0 || o == 7 { x - 1 } else { x + 1 }
-                                    .try_into()
-                                    .unwrap(),
+                                if matches!(o, Octant::Zero | Octant::Seven) {
+                                    x - 1
+                                } else {
+                                    x + 1
+                                }
+                                .try_into()
+                                .unwrap(),
                                 y.try_into().unwrap(),
                             )
                             .0;

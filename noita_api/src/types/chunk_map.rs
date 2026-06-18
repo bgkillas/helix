@@ -82,10 +82,10 @@ impl ChunkMap {
         let xu = x.strict_cast::<usize>();
         let yu = y.strict_cast::<usize>();
         if let Some(ret) = self.chunk_array[yu][xu].take() {
-            let min_x = (self.min_chunk.x + 256).strict_cast_unsigned();
-            let max_x = (self.max_chunk.x + 256).strict_cast_unsigned();
-            let min_y = (self.min_chunk.y + 256).strict_cast_unsigned();
-            let max_y = (self.max_chunk.y + 256).strict_cast_unsigned();
+            let min_x = (self.min_chunk.x + 256).cast_unsigned();
+            let max_x = (self.max_chunk.x + 256).cast_unsigned();
+            let min_y = (self.min_chunk.y + 256).cast_unsigned();
+            let max_y = (self.max_chunk.y + 256).cast_unsigned();
             self.min_chunk.x = isize::MAX;
             self.min_chunk.y = isize::MAX;
             self.max_chunk.x = isize::MIN;
