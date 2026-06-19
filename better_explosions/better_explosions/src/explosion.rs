@@ -281,8 +281,9 @@ impl ExplosionManager {
                         break;
                     };
                     line.energy = new;
+                    let hp = p.hp;
                     p.ptr.free();
-                    p.hp
+                    hp
                 } else {
                     0
                 };
@@ -378,8 +379,9 @@ impl ExplosionManager {
                         break;
                     };
                     energy = new;
+                    let hp = p.hp;
                     p.ptr.free();
-                    p.hp
+                    hp
                 } else {
                     0
                 };
@@ -432,8 +434,9 @@ impl ExplosionManager {
                 {
                     continue;
                 }
+                let hp = p.hp;
                 p.ptr.free();
-                p.hp
+                hp
             } else {
                 0
             };
