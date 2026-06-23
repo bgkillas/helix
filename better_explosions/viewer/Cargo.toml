@@ -12,6 +12,7 @@ egui = "0.34.2"
 eframe = "0.34.2"
 rand = "0.10.1"
 rustc-hash = "2.1.2"
+shapes = {workspace = true}
 
 [lints]
 workspace = true

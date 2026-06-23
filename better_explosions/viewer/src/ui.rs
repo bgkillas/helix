@@ -1,6 +1,4 @@
-use better_explosions::circle::Circle;
 use better_explosions::explosion::ExplosionManager;
-use better_explosions::line::LineIter;
 use eframe::Frame;
 use eframe::emath::{Pos2, Rect, Vec2};
 use eframe::epaint::textures::TextureOptions;
@@ -11,6 +9,8 @@ use egui::{
 use noita_api::{Cell, Chunk, ConfigExplosion, GameGlobal, StdBox};
 use rand::RngExt as _;
 use rustc_hash::{FxBuildHasher, FxHashMap};
+use shapes::circle::Circle;
+use shapes::line::LineIter;
 #[allow(unused)]
 pub struct App {
     wand: Wand,

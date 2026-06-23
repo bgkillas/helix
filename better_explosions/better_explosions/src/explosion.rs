@@ -1,7 +1,3 @@
-use crate::arc::ArcIter;
-use crate::circumference::Circumference;
-use crate::line::{LineIter, LineIterCompact, StepCase};
-use crate::octant::octant;
 use crate::uninit_map::UninitMap;
 use noita_api::{
     Cell, CellData, CellType, ChunkArray, ChunkArrayGeneric, ConfigExplosion, GameGlobal,
@@ -10,6 +6,10 @@ use noita_api::{
 use rand::RngExt as _;
 use rand::distr::Bernoulli;
 use rand::rngs::ThreadRng;
+use shapes::arc::ArcIter;
+use shapes::circumference::Circumference;
+use shapes::line::{LineIter, LineIterCompact, StepCase};
+use shapes::octant::octant;
 use std::f32::consts::TAU;
 use std::mem::MaybeUninit;
 use std::rc::Rc;

@@ -5,14 +5,9 @@
 #![feature(slice_ptr_get)]
 #![feature(integer_casts)]
 extern crate test;
-pub mod arc;
 #[cfg(test)]
 mod benches;
-pub mod circle;
-pub mod circumference;
 pub mod explosion;
-pub mod line;
-pub mod octant;
 pub mod uninit_map;
 use crate::explosion::{ExplosionManager, LineContinue};
 use noita_api::ChunkArrayGeneric;

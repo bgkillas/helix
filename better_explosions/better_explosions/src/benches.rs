@@ -1,6 +1,6 @@
 use crate::ExplosionManager;
-use crate::line::LineIter;
 use noita_api::{Cell, Chunk, ConfigExplosion, GameGlobal, StdBox, Vec2};
+use shapes::line::LineIter;
 use std::hint::black_box;
 #[bench]
 fn bench0_line1(bencher: &mut test::Bencher) {

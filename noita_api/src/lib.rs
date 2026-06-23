@@ -53,6 +53,7 @@ pub fn dump_mem(s: &str) {
 pub fn get_construct_cell()
 -> this_call!(fn(StdBox<GridWorld>, isize, isize, StdBox<CellData>, *mut ()) -> Option<Cell<()>>) {
     let ptr = search_fun![0x8b, 0x46, 0x38, 0x33, 0xc9, 0x83, 0xf8, 0x01];
+    //0x0070_48c0
     unsafe {
         get_this_call!(
             ptr.addr(),
