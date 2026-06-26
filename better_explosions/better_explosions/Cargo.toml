@@ -17,6 +17,7 @@ noita_api = {workspace = true}
 rand = "0.10.1"
 image = {version = "0.25.10", optional = true}
 shapes = {workspace = true}
+uninit_map = {workspace = true}
 
 [lints]
 workspace = true

@@ -16,7 +16,7 @@ opt-level = 1
 
 [workspace]
 resolver = "3"
-members = ["better_explosions/better_explosions", "better_explosions/shapes", "better_explosions/viewer", "helix", "noita_api", "noita_api_macros"]
+members = ["better_explosions/better_explosions", "better_explosions/shapes", "better_explosions/uninit_map", "better_explosions/viewer", "helix", "noita_api", "noita_api_macros"]
 default-members = ["better_explosions/better_explosions", "helix", "noita_api", "noita_api_macros"]
 
 [workspace.dependencies]
@@ -24,6 +24,7 @@ noita_api = {path = "noita_api"}
 noita_api_macros = {path = "noita_api_macros"}
 better_explosions = {path = "better_explosions/better_explosions"}
 shapes = {path = "better_explosions/shapes"}
+uninit_map = {path = "better_explosions/uninit_map"}
 
 [workspace.lints.clippy]
 pedantic = {level = "warn", priority = -1}

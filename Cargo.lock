@@ -553,6 +553,7 @@ dependencies = [
  "noita_api",
  "rand 0.10.1",
  "shapes",
+ "uninit_map",
 ]
 
 [[package]]
@@ -4463,6 +4464,10 @@ name = "unicode-xid"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
+
+[[package]]
+name = "uninit_map"
+version = "0.1.0"
 
 [[package]]
 name = "untrusted"

@@ -1,4 +1,3 @@
-use crate::uninit_map::UninitMap;
 use noita_api::{
     Cell, CellData, CellType, ChunkArray, ChunkArrayGeneric, ConfigExplosion, GameGlobal,
     GridWorld, StdBox, Vec2, this_call,
@@ -13,6 +12,7 @@ use shapes::octant::octant;
 use std::f32::consts::TAU;
 use std::mem::MaybeUninit;
 use std::rc::Rc;
+use uninit_map::uninit_map::UninitMap;
 pub struct ExplosionManager {
     pub construct_cell: this_call!(
         fn(StdBox<GridWorld>, isize, isize, StdBox<CellData>, *mut ()) -> Option<Cell<()>>

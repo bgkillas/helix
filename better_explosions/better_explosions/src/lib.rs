@@ -1,14 +1,10 @@
 #![feature(sync_unsafe_cell)]
 #![feature(test)]
-#![feature(allocator_api)]
-#![feature(ptr_as_uninit)]
-#![feature(slice_ptr_get)]
 #![feature(integer_casts)]
 extern crate test;
 #[cfg(test)]
 mod benches;
 pub mod explosion;
-pub mod uninit_map;
 use crate::explosion::{ExplosionManager, LineContinue};
 use noita_api::ChunkArrayGeneric;
 #[cfg(not(all(target_os = "windows", target_pointer_width = "32")))]
