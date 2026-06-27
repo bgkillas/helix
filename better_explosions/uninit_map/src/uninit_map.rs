@@ -35,7 +35,11 @@ impl<T> UninitMap<T> {
     #[must_use]
     pub fn get(&self, index: usize) -> Option<&T> {
         let slice = unsafe { self.indices.as_uninit_slice_mut() };
+        #[cfg(not(target_family = "wasm"))]
         let mut val = slice[index];
+        #[cfg(target_family = "wasm")]
+        let val = slice[index];
+        #[cfg(not(target_family = "wasm"))]
         unsafe {
             std::arch::asm!(
                 "/* {} */",
@@ -133,7 +137,7 @@ impl<T, const N: usize> UninitMapArray<T, N> {
         #[cfg(not(target_family = "wasm"))]
         let mut val = self.indices[index];
         #[cfg(target_family = "wasm")]
-        let mut val = self.indices[index];
+        let val = self.indices[index];
         #[cfg(not(target_family = "wasm"))]
         unsafe {
             std::arch::asm!(
