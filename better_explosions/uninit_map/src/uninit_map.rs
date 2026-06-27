@@ -130,7 +130,11 @@ impl<T, const N: usize> UninitMapArray<T, N> {
     #[inline]
     #[must_use]
     pub fn get(&self, index: usize) -> Option<&T> {
+        #[cfg(not(target_family = "wasm"))]
         let mut val = self.indices[index];
+        #[cfg(target_family = "wasm")]
+        let mut val = self.indices[index];
+        #[cfg(not(target_family = "wasm"))]
         unsafe {
             std::arch::asm!(
                 "/* {} */",
